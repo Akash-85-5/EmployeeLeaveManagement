@@ -51,7 +51,7 @@ public class LeaveApplicationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam String reason,
             @RequestParam(required = false) String halfDayType,
-            @RequestParam(defaultValue = "false") boolean confirmLossOfPay, // 👈 NEW PARAMETER
+            @RequestParam(defaultValue = "false") boolean confirmLossOfPay,
             @RequestParam(required = false) MultipartFile[] files
     ) throws IOException {
 
@@ -69,11 +69,14 @@ public class LeaveApplicationController {
         leave.setEndDate(endDate);
         leave.setReason(reason);
 
+        // 🔹 Set status to PENDING to match DB constraints
+        leave.setStatus(com.example.notificationservice.enums.LeaveStatus.PENDING);
+
         if (halfDayType != null && !halfDayType.isEmpty()) {
             leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
         }
 
-        // File handling logic...
+        // File handling
         if (files != null && files.length > 0) {
             Path uploadPath = Paths.get(uploadDir);
             Files.createDirectories(uploadPath);
@@ -90,16 +93,16 @@ public class LeaveApplicationController {
             leave.setAttachments(attachments);
         }
 
-        // 🔹 Pass the confirmation flag to the service
         LeaveResponse response = leaveApplicationService.applyLeave(leave, confirmLossOfPay);
 
-        // Clean up circular reference for JSON response
+        // Clean circular references for JSON
         if (response.getLeaveApplication() != null && response.getLeaveApplication().getAttachments() != null) {
             response.getLeaveApplication().getAttachments().forEach(a -> a.setLeaveApplication(null));
         }
 
         return response;
     }
+
 
     @GetMapping("/employee/{employeeId}")
     public List<LeaveApplication> getEmployeeLeaves(@PathVariable Long employeeId) {

@@ -16,11 +16,12 @@ public class LossOfPayRecord {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
-    @Column(nullable = false)
+    @Column(name = "lop_month")
+    private Integer month;
+
+    @Column(name = "lop_year")
     private Integer year;
 
-    @Column(nullable = false)
-    private Integer month;
 
     // Total LOP percentage accumulated
     @Column(name = "lop_percentage", nullable = false)

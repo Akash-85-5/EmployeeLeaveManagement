@@ -3,7 +3,10 @@ package com.example.notificationservice.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "leave_allocations")
+@Table(name = "leave_allocations",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"employee_id", "allocation_year", "leave_category"})
+        })
 public class LeaveAllocation {
 
     @Id
@@ -16,8 +19,8 @@ public class LeaveAllocation {
     @Column(nullable = false)
     private String leaveCategory; // SICK, CASUAL, etc.
 
-    @Column(nullable = false)
-    private Integer year;
+    @Column(name = "allocation_year")
+    private int year;
 
     @Column(nullable = false)
     private Double allocatedDays;
