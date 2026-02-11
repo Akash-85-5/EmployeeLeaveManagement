@@ -1,19 +1,14 @@
 package com.example.notificationservice.service;
 
 import com.example.notificationservice.dto.EmployeeDashboardResponse;
-
 import com.example.notificationservice.dto.LeaveBalanceResponse;
 import com.example.notificationservice.dto.MonthlyStatsResponse;
 import com.example.notificationservice.dto.TeamMemberBalance;
 import com.example.notificationservice.entity.Employee;
 import com.example.notificationservice.entity.LeaveApplication;
-
 import com.example.notificationservice.enums.LeaveStatus;
-
 import com.example.notificationservice.repository.EmployeeRepository;
 import com.example.notificationservice.repository.LeaveApplicationRepository;
-
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 
 @Service
 @Transactional(readOnly = true)
@@ -34,19 +28,18 @@ public class DashboardService {
     public DashboardService(LeaveBalanceService leaveBalanceService,
                             LeaveApplicationRepository leaveRepository,
                             EmployeeRepository employeeRepository){
-        this.leaveRepository=leaveRepository;
-        this.employeeRepository=employeeRepository;
-        this.leaveBalanceService=leaveBalanceService;
+        this.leaveRepository = leaveRepository;
+        this.employeeRepository = employeeRepository;
+        this.leaveBalanceService = leaveBalanceService;
     }
 
-
+    /* ==============================
+       EMPLOYEE DASHBOARD
+       ============================== */
     public EmployeeDashboardResponse getDashboard(Long employeeId) {
 
         LeaveBalanceResponse balance =
-                leaveBalanceService.getBalance(
-                        employeeId,
-                        java.time.Year.now().getValue()
-                );
+                leaveBalanceService.getBalance(employeeId, java.time.Year.now().getValue());
 
         Map<LeaveStatus, Long> statusCount =
                 leaveRepository.findByEmployeeId(employeeId)
@@ -56,15 +49,12 @@ public class DashboardService {
                                 Collectors.counting()
                         ));
 
-        EmployeeDashboardResponse response =
-                new EmployeeDashboardResponse();
-
+        EmployeeDashboardResponse response = new EmployeeDashboardResponse();
         response.setLeaveBalances(balance.getBreakdown());
         response.setLeaveStatusCount(statusCount);
 
         return response;
     }
-
 
     /* ==============================
        EMPLOYEE: MONTHLY STATS
@@ -77,69 +67,40 @@ public class DashboardService {
         double totalDays = 0;
 
         for (Object[] row : stats) {
-            // 🔥 FIX IS HERE
             String leaveType = row[0].toString();
-
-            long count = ((Number) row[1]).longValue();
+            int count = ((Number) row[1]).intValue();
             double days = ((Number) row[2]).doubleValue();
 
             MonthlyStatsResponse.LeaveTypeStat stat =
-                    new MonthlyStatsResponse.LeaveTypeStat(
-                            leaveType,
-                            (int) count,
-                            days
-                    );
-
-            stat.setLeaveType(leaveType);
-            stat.setCount((int) count);
-            stat.setTotalDays(days);
+                    new MonthlyStatsResponse.LeaveTypeStat(leaveType, count, days);
 
             statsList.add(stat);
             totalDays += days;
         }
 
-        long approvedCount = leaveRepository.countApprovedInMonth(employeeId, year, month);
+        int approvedCount = leaveRepository.countApprovedInMonth(employeeId, year, month);
 
-        MonthlyStatsResponse response =
-                new MonthlyStatsResponse(
-                        employeeId,
-                        year,
-                        month,
-                        (int)  approvedCount,
-                        totalDays,
-                        approvedCount > 2,
-                        statsList
-                );
-
-        response.setEmployeeId(employeeId);
-        response.setYear(year);
-        response.setMonth(month);
-        response.setTotalApprovedCount((int)approvedCount);
-        response.setTotalDays(totalDays);
-        response.setExceededLimit(approvedCount > 2);
-        response.setBreakdown(statsList);
-
-        return response;
+        return new MonthlyStatsResponse(
+                employeeId,
+                year,
+                month,
+                approvedCount,
+                totalDays,
+                approvedCount > 2,
+                statsList
+        );
     }
-
 
     /* ==============================
        MANAGER: TEAM BALANCES
        ============================== */
-    public List<TeamMemberBalance> getTeamBalances(
-            Long managerId,
-            Integer year
-    ) {
+    public List<TeamMemberBalance> getTeamBalances(Long managerId, Integer year) {
 
-        List<Employee> team =
-                employeeRepository.findByManagerId(managerId);
-
+        List<Employee> team = employeeRepository.findByManagerId(managerId);
         List<TeamMemberBalance> result = new ArrayList<>();
 
         for (Employee emp : team) {
-
-            LeaveBalanceResponse balance =
-                    leaveBalanceService.getBalance(emp.getId(), year);
+            LeaveBalanceResponse balance = leaveBalanceService.getBalance(emp.getId(), year);
 
             TeamMemberBalance dto = new TeamMemberBalance();
             dto.setEmployeeId(emp.getId());
@@ -157,24 +118,16 @@ public class DashboardService {
         return result;
     }
 
-
     /* ==============================
        MANAGER: PENDING COUNT
        ============================== */
     public int getPendingCount(Long managerId) {
 
-        List<Long> teamIds =
-                employeeRepository
-                        .findByManagerId(managerId)
-                        .stream()
-                        .map(Employee::getId)
-                        .toList();
+        List<Long> teamIds = employeeRepository.findByManagerId(managerId)
+                .stream()
+                .map(Employee::getId)
+                .toList();
 
-        return leaveRepository
-                .countByEmployeeIdInAndStatus(
-                        teamIds,
-                        LeaveStatus.PENDING
-                );
+        return leaveRepository.countByEmployeeIdInAndStatus(teamIds, LeaveStatus.PENDING);
     }
 }
-

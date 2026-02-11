@@ -22,6 +22,10 @@ public class LeaveApplication {
     @NotNull
     private Long employeeId;
 
+    @Column(name = "lop_month")
+    private Integer month;
+
+
     @Enumerated(EnumType.STRING)
     private LeaveType leaveType;
 
@@ -29,8 +33,8 @@ public class LeaveApplication {
     private HalfDayType halfDayType ;
 
     @NotNull
+    @Column(name = "allocation_year")
     private Integer year;
-
 
     @NotNull
     private LocalDate startDate;
