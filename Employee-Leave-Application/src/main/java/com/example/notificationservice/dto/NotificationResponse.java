@@ -3,12 +3,10 @@ package com.example.notificationservice.dto;
 import com.example.notificationservice.enums.Channel;
 import com.example.notificationservice.enums.EventType;
 import com.example.notificationservice.enums.NotificationStatus;
-import tools.jackson.core.Base64Variant;
 
 import java.time.LocalDateTime;
 
 public class NotificationResponse {
-
 
     private Long id;
     private Long userId;
@@ -17,8 +15,6 @@ public class NotificationResponse {
     private Channel channel;
     private NotificationStatus notificationStatus;
     private LocalDateTime createdAt;
-
-
 
     public Long getId() {
         return id;

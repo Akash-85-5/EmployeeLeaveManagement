@@ -27,9 +27,6 @@ public class LeaveApplicationService {
     private final CompOffService compOffService;
     private final CompOffRepository compOffRepository;
 
-    private final String SERVER_IP = "192.168.1.62";
-    private final String SERVER_PORT = "8080";
-
     public LeaveApplicationService(
             LeaveApplicationRepository leaveApplicationRepository,
             NotificationService notificationService,
@@ -125,7 +122,6 @@ public class LeaveApplicationService {
                             leave.getEndDate()
             );
         }
-        // if nextApprover is null → skip notification (prevents 500 error)
     }
 
     // =========================================================
@@ -214,8 +210,8 @@ public class LeaveApplicationService {
     private void processAttachments(LeaveApplication leave) {
         if (leave.getAttachments() != null) {
             leave.getAttachments().forEach(a -> {
-                a.setFileUrl("http://" + SERVER_IP + ":" +
-                        SERVER_PORT + "/uploads/leaves/" + a.getFileUrl());
+                // Only store the filename, no IP or port
+                a.setFileUrl(a.getFileUrl());
                 a.setLeaveApplication(leave);
             });
         }
