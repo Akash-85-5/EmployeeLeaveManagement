@@ -5,22 +5,21 @@ import com.example.notificationservice.enums.LeaveStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
 
+@Repository
 public interface LeaveApplicationRepository extends JpaRepository<LeaveApplication, Long> {
 
-    // Find all leaves for an employee
+    // Fixed: Added the missing method DashboardService is looking for
+    int countByEmployeeIdInAndStatus(List<Long> employeeIds, LeaveStatus status);
+
     List<LeaveApplication> findByEmployeeId(Long employeeId);
 
-    // Find leaves for multiple employees with a specific status
-    List<LeaveApplication> findByEmployeeIdInAndStatus(
-            List<Long> employeeIds,
-            LeaveStatus status
-    );
+    List<LeaveApplication> findByEmployeeIdInAndStatus(List<Long> employeeIds, LeaveStatus status);
 
-    // Count approved leaves in a month (default APPROVED)
     @Query("""
         SELECT COUNT(l)
         FROM LeaveApplication l
@@ -35,11 +34,8 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("month") Integer month
     );
 
-    // Monthly statistics: count and sum of leave days per type
     @Query("""
-        SELECT l.leaveType,
-               COUNT(l),
-               SUM(l.days)
+        SELECT l.leaveType, COUNT(l), SUM(l.days)
         FROM LeaveApplication l
         WHERE l.employeeId = :employeeId
           AND l.status = 'APPROVED'
@@ -53,13 +49,6 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("month") Integer month
     );
 
-    // Count leaves for multiple employees with specific status
-    int countByEmployeeIdInAndStatus(
-            List<Long> employeeIds,
-            LeaveStatus status
-    );
-
-    // Find leaves by employee, status, and year
     @Query("""
         SELECT l FROM LeaveApplication l
         WHERE l.employeeId = :employeeId
@@ -72,13 +61,12 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("year") Integer year
     );
 
-    // Total used days by status and year
     @Query("""
-        SELECT COALESCE(SUM(lr.days), 0)
-        FROM LeaveApplication lr
-        WHERE lr.employeeId = :empId
-          AND lr.status = :status
-          AND lr.year = :year
+        SELECT COALESCE(SUM(l.days), 0)
+        FROM LeaveApplication l
+        WHERE l.employeeId = :empId
+          AND l.status = :status
+          AND l.year = :year
     """)
     Double getTotalUsedDays(
             @Param("empId") Long employeeId,
@@ -86,7 +74,6 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("year") Integer year
     );
 
-    // Find overlapping leaves with PENDING and APPROVED status
     @Query("""
         SELECT l FROM LeaveApplication l
         WHERE l.employeeId = :empId
@@ -101,5 +88,4 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("pending") LeaveStatus pending,
             @Param("approved") LeaveStatus approved
     );
-
 }
