@@ -115,4 +115,5 @@ public class LeaveApplicationController {
     public List<LeaveApplication> getEmployeeLeaves(@PathVariable Long employeeId) {
         return leaveApplicationService.getLeavesByEmployee(employeeId);
     }
+
 }
