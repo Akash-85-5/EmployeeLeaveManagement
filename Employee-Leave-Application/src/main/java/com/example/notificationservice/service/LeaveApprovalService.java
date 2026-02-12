@@ -1,5 +1,6 @@
 package com.example.notificationservice.service;
 
+import com.example.notificationservice.dto.BulkLeaveDecisionRequest;
 import com.example.notificationservice.dto.LeaveDecisionRequest;
 import com.example.notificationservice.entity.Employee;
 import com.example.notificationservice.entity.LeaveApplication;
@@ -14,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-
-
 @Service
 public class LeaveApprovalService {
 
@@ -25,7 +24,6 @@ public class LeaveApprovalService {
     private final LeaveApprovalRepository leaveApprovalRepository;
     private final LeaveBalanceService leaveBalanceService;
     private final LossOfPayService lossOfPayService;
-
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
                                 LeaveApplicationRepository leaveApplicationRepository,
@@ -38,25 +36,115 @@ public class LeaveApprovalService {
         this.notificationService = notificationService;
         this.leaveApprovalRepository = leaveApprovalRepository;
         this.leaveBalanceService = leaveBalanceService;
-        this.lossOfPayService=lossOfPayService;
+        this.lossOfPayService = lossOfPayService;
     }
 
+    // ✅ FIXED METHOD (Directly using leave.managerId)
     public List<LeaveApplication> getPendingLeavesForManager(Long managerId) {
-
-        List<Employee> employees = employeeRepository.findAll()
-                .stream()
-                .filter(e -> managerId.equals(e.getManagerId()))
-                .toList();
-
-        List<Long> employeeIds = employees.stream()
-                .map(Employee::getId)
-                .toList();
-
-        return leaveApplicationRepository.findByEmployeeIdInAndStatus(
-                employeeIds, LeaveStatus.PENDING
-        );
+        return leaveApplicationRepository
+                .findByManagerIdAndStatus(managerId, LeaveStatus.PENDING);
     }
 
+    public List<LeaveApplication> getEscalatedLeaves() {
+        return leaveApplicationRepository.findByEscalatedTrue();
+    }
+
+    // ✅ HR Decision
+    @Transactional
+    public String hrDecision(Long leaveId, LeaveStatus decision, Long hrId) {
+
+        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                .orElseThrow(() -> new RuntimeException("Leave not found"));
+
+        if (!Boolean.TRUE.equals(leave.getEscalated())) {
+            throw new RuntimeException("This leave is not escalated to HR");
+        }
+
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new RuntimeException("Leave already processed");
+        }
+
+        leave.setStatus(decision);
+        leave.setEscalated(false);
+
+        leaveApplicationRepository.save(leave);
+
+        // ✅ Balance update must be here BEFORE return
+        if (decision == LeaveStatus.APPROVED) {
+
+            leaveBalanceService.applyApprovedLeave(leave);
+
+            int approvedCount =
+                    leaveApplicationRepository.countApprovedInMonth(
+                            leave.getEmployeeId(),
+                            leave.getStartDate().getYear(),
+                            leave.getStartDate().getMonthValue()
+                    );
+
+            if (approvedCount > 2) {
+                lossOfPayService.applyMonthlyLimitViolation(
+                        leave.getEmployeeId(),
+                        leave.getStartDate().getYear(),
+                        leave.getStartDate().getMonthValue()
+                );
+            }
+        }
+
+        LeaveApproval approval = new LeaveApproval();
+        approval.setLeaveId(leave.getId());
+        approval.setManagerId(hrId);
+        approval.setDecision(decision);
+        approval.setDecidedAt(LocalDateTime.now());
+
+        leaveApprovalRepository.save(approval);
+
+        return "HR decision recorded successfully";
+    }
+
+
+    // ✅ Bulk Decision (Manager + HR)
+    @Transactional
+    public String bulkDecision(BulkLeaveDecisionRequest request, boolean isHr) {
+
+        List<LeaveApplication> leaves =
+                leaveApplicationRepository.findAllById(request.getLeaveIds());
+
+        if (leaves.isEmpty()) {
+            throw new RuntimeException("No leaves found");
+        }
+
+        for (LeaveApplication leave : leaves) {
+
+            if (leave.getStatus() != LeaveStatus.PENDING) {
+                continue;
+            }
+
+            if (isHr && !Boolean.TRUE.equals(leave.getEscalated())) {
+                continue;
+            }
+
+            leave.setStatus(request.getDecision());
+
+            if (isHr) {
+                leave.setEscalated(false);
+            }
+
+            leaveApplicationRepository.save(leave);
+
+            LeaveApproval approval = new LeaveApproval();
+            approval.setLeaveId(leave.getId());
+            approval.setManagerId(request.getApproverId());
+            approval.setDecision(request.getDecision());
+            approval.setComments("Bulk decision");
+            approval.setDecidedAt(LocalDateTime.now());
+
+            leaveApprovalRepository.save(approval);
+        }
+
+        return "Bulk decision completed successfully";
+    }
+
+    // ✅ Manager Decision
     @Transactional
     public void decideLeave(LeaveDecisionRequest request) {
 
@@ -78,6 +166,7 @@ public class LeaveApprovalService {
         leaveApplicationRepository.save(leave);
 
         if (request.getDecision() == LeaveStatus.APPROVED) {
+
             leaveBalanceService.applyApprovedLeave(leave);
 
             int approvedCount =
@@ -87,7 +176,6 @@ public class LeaveApprovalService {
                             leave.getStartDate().getMonthValue()
                     );
 
-            // 🔥 Apply LOP if monthly limit exceeded (>2)
             if (approvedCount > 2) {
                 lossOfPayService.applyMonthlyLimitViolation(
                         leave.getEmployeeId(),
@@ -108,7 +196,8 @@ public class LeaveApprovalService {
 
         String context;
         if (request.getDecision() == LeaveStatus.APPROVED) {
-            context = "Your leave from " + leave.getStartDate() + " to " + leave.getEndDate() + " has been approved";
+            context = "Your leave from " + leave.getStartDate() + " to "
+                    + leave.getEndDate() + " has been approved";
         } else if (request.getDecision() == LeaveStatus.MEETING_REQUIRED) {
             context = "Please attend a meeting regarding the leave request.";
         } else {
@@ -136,9 +225,12 @@ public class LeaveApprovalService {
             default -> EventType.LEAVE_APPLIED;
         };
     }
+
+    public List<LeaveApplication> getEscalatedLeavesForHr() {
+        return leaveApplicationRepository
+                .findByEscalatedTrueAndStatus(LeaveStatus.PENDING);
+
+    }
+
+
 }
-
-
-
-
-

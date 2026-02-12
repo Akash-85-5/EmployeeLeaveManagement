@@ -3,8 +3,7 @@ package com.example.notificationservice.dto;
 import com.example.notificationservice.enums.Channel;
 import com.example.notificationservice.enums.EventType;
 import com.example.notificationservice.enums.NotificationStatus;
-import tools.jackson.core.Base64Variant;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 public class NotificationResponse {

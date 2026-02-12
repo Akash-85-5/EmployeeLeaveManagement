@@ -203,6 +203,7 @@ public class LeaveApplicationService {
             }
         }
 
+
         leave.setStatus(LeaveStatus.CANCELLED);
         leaveApplicationRepository.save(leave);
     }
@@ -218,7 +219,6 @@ public class LeaveApplicationService {
         }
         return null;
     }
-
     private void validateDates(LeaveApplication leave) {
         if (leave.getEndDate().isBefore(leave.getStartDate())) {
             throw new BadRequestException("End date cannot be before start date");
@@ -248,6 +248,7 @@ public class LeaveApplicationService {
         if (total.compareTo(BigDecimal.ZERO) == 0) throw new BadRequestException("Selected dates are non-working days.");
         return total;
     }
+
 }
 
 
