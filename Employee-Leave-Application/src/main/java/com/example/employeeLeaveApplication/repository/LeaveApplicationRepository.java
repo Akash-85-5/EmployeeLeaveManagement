@@ -7,19 +7,34 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LeaveApplicationRepository extends JpaRepository<LeaveApplication, Long> {
 
     List<LeaveApplication> findByEmployeeId(Long employeeId);
 
+    List<LeaveApplication> findByStatus(LeaveStatus status);
+
     List<LeaveApplication> findByEmployeeIdInAndStatus(
             List<Long> employeeIds,
             LeaveStatus status
     );
-    List<LeaveApplication> findByStatus(LeaveStatus status);
+    List<LeaveApplication> findByStatusAndSubmittedAtBeforeAndEscalatedFalse(
+            LeaveStatus status,
+            LocalDateTime submittedAt
 
+    );
+    List<LeaveApplication>findByManagerId(
+            Long managerId
+    );
+    List<LeaveApplication> findByManagerIdAndStatus(
+            Long managerId,
+            LeaveStatus status
+    );
+    List<LeaveApplication> findByEscalatedTrueAndStatus(LeaveStatus status);
 
+    List<LeaveApplication> findByEscalatedTrue();
     @Query("""
     SELECT l.leaveType,
            COUNT(l),
@@ -85,7 +100,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     @Query("""
         SELECT l FROM LeaveApplication l
         WHERE l.employeeId = :empId
-        AND l.status IN ('APPLIED','APPROVED')
+        AND l.status IN ('PENDING','APPROVED')
         AND l.startDate <= :endDate
         AND l.endDate >= :startDate
     """)
@@ -94,6 +109,19 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+    @Query(
+            "SELECT l FROM LeaveApplication l " +
+                    "WHERE l.managerId = :managerId " +
+                    "AND l.startDate <= :weekEnd " +
+                    "AND l.endDate >= :weekStart"
+    )
+    List<LeaveApplication> findTeamLeavesForWeek(
+            @Param("managerId") Long managerId,
+            @Param("weekStart") LocalDate weekStart,
+            @Param("weekEnd") LocalDate weekEnd
+    );
+
+
 
 
 
