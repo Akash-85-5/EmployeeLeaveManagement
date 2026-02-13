@@ -2,6 +2,7 @@ package com.example.notificationservice.service;
 
 import com.example.notificationservice.component.HolidayChecker;
 import com.example.notificationservice.dto.LeaveResponse;
+import com.example.notificationservice.dto.LopRequest;
 import com.example.notificationservice.entity.CompOff;
 import com.example.notificationservice.entity.Employee;
 import com.example.notificationservice.entity.LeaveApplication;
@@ -68,7 +69,12 @@ public class LeaveApplicationService {
 
         // 4️⃣ Set calculated fields
         leave.setDays(calculatedDays);
-        leave.setStatus(LeaveStatus.PENDING);
+        if (warning != null) {
+            leave.setStatus(LeaveStatus.PENDING_MANAGER);
+        } else {
+            leave.setStatus(LeaveStatus.PENDING_MANAGER);
+        }
+
 
         LeaveApplication savedLeave =
                 leaveApplicationRepository.save(leave);
@@ -83,6 +89,24 @@ public class LeaveApplicationService {
         notifyManager(savedLeave);
         return new LeaveResponse(savedLeave, null);
     }
+    public void confirmLop(LopRequest request) {
+
+        LeaveApplication leave = leaveApplicationRepository.findById(request.getLeaveId())
+                .orElseThrow(() -> new RuntimeException("Leave not found"));
+
+        if (leave.getStatus() != LeaveStatus.PENDING_LOP_CONFIRMATION) {
+            throw new RuntimeException("Leave is not waiting for LOP confirmation");
+        }
+
+        if (request.isAcceptLop()) {
+            leave.setStatus(LeaveStatus.PENDING_MANAGER);
+        } else {
+            leave.setStatus(LeaveStatus.CANCELLED);
+        }
+
+        leaveApplicationRepository.save(leave);
+    }
+
 
 
     private void notifyManager(LeaveApplication leave) {
@@ -207,6 +231,7 @@ public class LeaveApplicationService {
         leave.setStatus(LeaveStatus.CANCELLED);
         leaveApplicationRepository.save(leave);
     }
+
 
     // --- 🛠️ HELPERS ---
 

@@ -1,6 +1,7 @@
 package com.example.notificationservice.controller;
 
 import com.example.notificationservice.dto.LeaveResponse;
+import com.example.notificationservice.dto.LopRequest;
 import com.example.notificationservice.entity.LeaveAllocation;
 import com.example.notificationservice.entity.LeaveApplication;
 import com.example.notificationservice.entity.LeaveAttachment;
@@ -119,4 +120,10 @@ public class LeaveApplicationController {
     public LeaveAllocation create(@RequestBody LeaveAllocation leaveAllocation){
         return leaveAllocationService.createEmployeeAllocation(leaveAllocation);
     }
+    @PostMapping("/lop-confirm")
+    public ResponseEntity<String> confirmLop(@RequestBody LopRequest request) {
+        leaveApplicationService.confirmLop(request);
+        return ResponseEntity.ok("LOP confirmation updated");
+    }
+
 }
