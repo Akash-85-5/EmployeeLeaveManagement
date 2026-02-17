@@ -52,6 +52,37 @@ public class CompOff {
     @Column(name = "used_leave_application_id")
     private Long usedLeaveApplicationId;
 
+    @Column(name = "year")
+    private Integer year;
+
+
+    @PrePersist
+    @PreUpdate
+    public void setYearFromWorkedDate() {
+        if (this.workedDate != null) {
+            this.year = this.workedDate.getYear();
+        }
+    }
+
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    private String rejectionReason;
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
     // Optional: Reason for working on a holiday
     private String description;
 

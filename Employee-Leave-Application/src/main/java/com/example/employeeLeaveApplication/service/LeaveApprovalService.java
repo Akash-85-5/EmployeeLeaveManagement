@@ -5,16 +5,19 @@ import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveApproval;
 import com.example.employeeLeaveApplication.enums.*;
+import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.LeaveApprovalRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-
+import java.util.stream.Collectors;
 
 @Service
 public class LeaveApprovalService {
@@ -25,7 +28,6 @@ public class LeaveApprovalService {
     private final LeaveApprovalRepository leaveApprovalRepository;
     private final LeaveBalanceService leaveBalanceService;
     private final LossOfPayService lossOfPayService;
-
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
                                 LeaveApplicationRepository leaveApplicationRepository,
@@ -38,11 +40,12 @@ public class LeaveApprovalService {
         this.notificationService = notificationService;
         this.leaveApprovalRepository = leaveApprovalRepository;
         this.leaveBalanceService = leaveBalanceService;
-        this.lossOfPayService=lossOfPayService;
+        this.lossOfPayService = lossOfPayService;
     }
 
-    public List<LeaveApplication> getPendingLeavesForManager(Long managerId) {
+    // ==================== EXISTING METHOD (Updated with Pagination) ====================
 
+    public Page<LeaveApplication> getPendingLeavesForManager(Long managerId, Pageable pageable) {
         List<Employee> employees = employeeRepository.findAll()
                 .stream()
                 .filter(e -> managerId.equals(e.getManagerId()))
@@ -52,14 +55,21 @@ public class LeaveApprovalService {
                 .map(Employee::getId)
                 .toList();
 
-        return leaveApplicationRepository.findByEmployeeIdInAndStatus(
+        List<LeaveApplication> allPending = leaveApplicationRepository.findByEmployeeIdInAndStatus(
                 employeeIds, LeaveStatus.PENDING
         );
+
+        // Manual pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allPending.size());
+
+        List<LeaveApplication> pageContent = allPending.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, allPending.size());
     }
 
     @Transactional
     public void decideLeave(LeaveDecisionRequest request) {
-
         LeaveApplication leave = leaveApplicationRepository.findById(request.getLeaveId())
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
 
@@ -80,14 +90,12 @@ public class LeaveApprovalService {
         if (request.getDecision() == LeaveStatus.APPROVED) {
             leaveBalanceService.applyApprovedLeave(leave);
 
-            int approvedCount =
-                    leaveApplicationRepository.countApprovedInMonth(
-                            leave.getEmployeeId(),
-                            leave.getStartDate().getYear(),
-                            leave.getStartDate().getMonthValue()
-                    );
+            int approvedCount = leaveApplicationRepository.countApprovedInMonth(
+                    leave.getEmployeeId(),
+                    leave.getStartDate().getYear(),
+                    leave.getStartDate().getMonthValue()
+            );
 
-            // 🔥 Apply LOP if monthly limit exceeded (>2)
             if (approvedCount > 2) {
                 lossOfPayService.applyMonthlyLimitViolation(
                         leave.getEmployeeId(),
@@ -128,6 +136,53 @@ public class LeaveApprovalService {
         );
     }
 
+    /**
+     * Approve leave
+     */
+    @Transactional
+    public void approveLeave(Long leaveId, Long managerId, String comments) {
+        LeaveDecisionRequest request = new LeaveDecisionRequest();
+        request.setLeaveId(leaveId);
+        request.setManagerId(managerId);
+        request.setDecision(LeaveStatus.APPROVED);
+        request.setComments(comments);
+        decideLeave(request);
+    }
+
+    /**
+     * Reject leave (alternative endpoint)
+     */
+    @Transactional
+    public void rejectLeave(Long leaveId, Long managerId, String comments) {
+        LeaveDecisionRequest request = new LeaveDecisionRequest();
+        request.setLeaveId(leaveId);
+        request.setManagerId(managerId);
+        request.setDecision(LeaveStatus.REJECTED);
+        request.setComments(comments);
+        decideLeave(request);
+    }
+
+    /**
+     * Get approval history for a specific leave
+     */
+    public Page<LeaveApproval> getApprovalHistory(Long leaveId, Pageable pageable) {
+        return leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, pageable);
+    }
+
+    /**
+     * Get manager's past decisions with pagination
+     */
+    public Page<LeaveApproval> getManagerDecisions(Long managerId, Pageable pageable) {
+        return leaveApprovalRepository.findByManagerIdOrderByDecidedAtDesc(managerId, pageable);
+    }
+
+    /**
+     * Get all pending leaves (admin view) with pagination
+     */
+    public Page<LeaveApplication> getAllPendingLeaves(Pageable pageable) {
+        return leaveApplicationRepository.findByStatus(LeaveStatus.PENDING, pageable);
+    }
+
     private EventType mapEventType(LeaveStatus status) {
         return switch (status) {
             case APPROVED -> EventType.LEAVE_APPROVED;
@@ -137,8 +192,3 @@ public class LeaveApprovalService {
         };
     }
 }
-
-
-
-
-

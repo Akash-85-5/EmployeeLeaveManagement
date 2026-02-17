@@ -2,6 +2,8 @@ package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.enums.CompOffStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,4 +26,15 @@ public interface CompOffRepository extends JpaRepository<CompOff, Long> {
 
     // 🔄 Find the exact Comp-Off records linked to a specific leave application for reversal
     List<CompOff> findByUsedLeaveApplicationId(Long applicationId);
+
+
+    Page<CompOff> findByStatus(CompOffStatus status, Pageable pageable);
+
+    Page<CompOff> findByEmployeeIdAndStatus(Long employeeId, CompOffStatus status, Pageable pageable);
+
+    Page<CompOff> findByEmployeeId(Long employeeId, Pageable pageable);
+
+    Page<CompOff> findByEmployeeIdAndYear(Long employeeId, Integer year, Pageable pageable);
+
+    List<CompOff> findByEmployeeIdAndStatus(Long employeeId, CompOffStatus status);
 }
