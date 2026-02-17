@@ -1,16 +1,21 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.component.HolidayChecker;
+import com.example.employeeLeaveApplication.dto.CompOffBalanceDetailsDTO;
 import com.example.employeeLeaveApplication.dto.CompOffRequestDTO;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.enums.CompOffStatus;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.CompOffRepository;
+import com.example.employeeLeaveApplication.repository.EmployeeRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CompOffService {
@@ -18,14 +23,17 @@ public class CompOffService {
     private final CompOffRepository compOffRepository;
     private final HolidayChecker holidayChecker;
     private final CompOffBalanceService balanceService;
+    private final EmployeeRepository employeeRepository;
 
 
     public CompOffService(CompOffRepository compOffRepository,
                           HolidayChecker holidayChecker,
-                          CompOffBalanceService balanceService ) {
+                          CompOffBalanceService balanceService,
+                          EmployeeRepository employeeRepository) {
         this.compOffRepository = compOffRepository;
         this.holidayChecker = holidayChecker;
         this.balanceService=balanceService;
+        this.employeeRepository=employeeRepository;
     }
 
     /**
@@ -156,5 +164,100 @@ public class CompOffService {
             throw new BadRequestException("Insufficient balance to deduct " + daysToDeduct + " days.");
         }
         balanceService.addUsed(employeeId, daysToDeduct);
+    }
+
+    public CompOff getCompOffRequest(Long id) {
+        return compOffRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Comp-Off request not found"));
+    }
+
+    public void rejectCompOff(Long id, String reason) {
+
+        CompOff compOff = compOffRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Comp-Off request not found"));
+
+        if (compOff.getStatus() != CompOffStatus.PENDING) {
+            throw new BadRequestException("Only PENDING requests can be rejected.");
+        }
+
+        compOff.setStatus(CompOffStatus.REJECTED);
+        compOff.setRejectionReason(reason);
+        compOffRepository.save(compOff);
+    }
+
+    public void deleteCompOffRequest(Long id, Long employeeId) {
+
+        CompOff compOff = compOffRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Comp-Off request not found"));
+
+        if (!compOff.getEmployeeId().equals(employeeId)) {
+            throw new BadRequestException("You can only delete your own Comp-Off request.");
+        }
+
+        if (compOff.getStatus() == CompOffStatus.APPROVED) {
+            throw new BadRequestException("Approved Comp-Off cannot be deleted.");
+        }
+
+        compOffRepository.delete(compOff);
+    }
+
+    public CompOffBalanceDetailsDTO getCompOffBalanceDetails(Long employeeId, Integer year) {
+
+        List<CompOff> approvedList =
+                compOffRepository.findByEmployeeIdAndStatus(employeeId, CompOffStatus.APPROVED);
+
+        BigDecimal totalApproved = approvedList.stream()
+                .map(CompOff::getDays)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal available = getAvailableCompOffDays(employeeId);
+
+        return new CompOffBalanceDetailsDTO(
+                employeeId,
+                year,
+                totalApproved,
+                available
+        );
+    }
+
+
+    public Page<CompOff> getCompOffHistory(Long employeeId,
+                                           Integer year,
+                                           Pageable pageable) {
+
+        if (year != null) {
+            return compOffRepository.findByEmployeeIdAndYear(employeeId, year, pageable);
+        }
+
+        return compOffRepository.findByEmployeeId(employeeId, pageable);
+    }
+
+    public Page<CompOff> getEmployeeCompOffRequests(
+            Long employeeId,
+            String status,
+            Pageable pageable) {
+
+        if (status != null && !status.isBlank()) {
+
+            CompOffStatus compOffStatus;
+            try {
+                compOffStatus = CompOffStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid status value");
+            }
+
+            return compOffRepository
+                    .findByEmployeeIdAndStatus(employeeId, compOffStatus, pageable);
+        }
+
+        return compOffRepository.findByEmployeeId(employeeId, pageable);
+    }
+
+    public Page<CompOff> getPendingCompOffApprovals(Pageable pageable) {
+
+        return compOffRepository.findByStatus(
+                CompOffStatus.PENDING,
+                pageable
+        );
     }
 }

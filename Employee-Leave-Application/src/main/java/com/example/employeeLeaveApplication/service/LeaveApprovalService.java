@@ -6,9 +6,13 @@ import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveApproval;
 import com.example.employeeLeaveApplication.enums.*;
+import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.LeaveApprovalRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +31,7 @@ public class LeaveApprovalService {
     private final LeaveBalanceService leaveBalanceService;
     private final LossOfPayService lossOfPayService;
 
+
     public LeaveApprovalService(EmployeeRepository employeeRepository,
                                 LeaveApplicationRepository leaveApplicationRepository,
                                 NotificationService notificationService,
@@ -41,17 +46,34 @@ public class LeaveApprovalService {
         this.lossOfPayService = lossOfPayService;
     }
 
-    // ✅ FIXED METHOD (Directly using leave.managerId)
-    public List<LeaveApplication> getPendingLeavesForManager(Long managerId) {
-        return leaveApplicationRepository
-                .findByManagerIdAndStatus(managerId, LeaveStatus.PENDING);
+
+    public Page<LeaveApplication> getPendingLeavesForManager(Long managerId, Pageable pageable) {
+        List<Employee> employees = employeeRepository.findAll()
+                .stream()
+                .filter(e -> managerId.equals(e.getManagerId()))
+                .toList();
+
+        List<Long> employeeIds = employees.stream()
+                .map(Employee::getId)
+                .toList();
+
+        List<LeaveApplication> allPending = leaveApplicationRepository.findByEmployeeIdInAndStatus(
+                employeeIds, LeaveStatus.PENDING
+        );
+
+        // Manual pagination
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), allPending.size());
+
+        List<LeaveApplication> pageContent = allPending.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, allPending.size());
     }
 
     public List<LeaveApplication> getEscalatedLeaves() {
         return leaveApplicationRepository.findByEscalatedTrue();
     }
 
-    // ✅ HR Decision
     @Transactional
     public String hrDecision(Long leaveId, LeaveStatus decision, Long hrId) {
 
@@ -170,13 +192,13 @@ public class LeaveApprovalService {
 
             leaveBalanceService.applyApprovedLeave(leave);
 
-            int approvedCount =
-                    leaveApplicationRepository.countApprovedInMonth(
-                            leave.getEmployeeId(),
-                            leave.getStartDate().getYear(),
-                            leave.getStartDate().getMonthValue()
-                    );
+            int approvedCount = leaveApplicationRepository.countApprovedInMonth(
+                    leave.getEmployeeId(),
+                    leave.getStartDate().getYear(),
+                    leave.getStartDate().getMonthValue()
+            );
 
+            // 🔥 Apply LOP if monthly limit exceeded (>2)
             if (approvedCount > 2) {
                 lossOfPayService.applyMonthlyLimitViolation(
                         leave.getEmployeeId(),
@@ -197,8 +219,7 @@ public class LeaveApprovalService {
 
         String context;
         if (request.getDecision() == LeaveStatus.APPROVED) {
-            context = "Your leave from " + leave.getStartDate() + " to "
-                    + leave.getEndDate() + " has been approved";
+            context = "Your leave from " + leave.getStartDate() + " to " + leave.getEndDate() + " has been approved";
         } else if (request.getDecision() == LeaveStatus.MEETING_REQUIRED) {
             context = "Please attend a meeting regarding the leave request.";
         } else {
@@ -216,6 +237,53 @@ public class LeaveApprovalService {
                 Channel.EMAIL,
                 context
         );
+    }
+
+    /**
+     * Approve leave
+     */
+    @Transactional
+    public void approveLeave(Long leaveId, Long managerId, String comments) {
+        LeaveDecisionRequest request = new LeaveDecisionRequest();
+        request.setLeaveId(leaveId);
+        request.setManagerId(managerId);
+        request.setDecision(LeaveStatus.APPROVED);
+        request.setComments(comments);
+        decideLeave(request);
+    }
+
+    /**
+     * Reject leave (alternative endpoint)
+     */
+    @Transactional
+    public void rejectLeave(Long leaveId, Long managerId, String comments) {
+        LeaveDecisionRequest request = new LeaveDecisionRequest();
+        request.setLeaveId(leaveId);
+        request.setManagerId(managerId);
+        request.setDecision(LeaveStatus.REJECTED);
+        request.setComments(comments);
+        decideLeave(request);
+    }
+
+    /**
+     * Get approval history for a specific leave
+     */
+    public Page<LeaveApproval> getApprovalHistory(Long leaveId, Pageable pageable) {
+        return leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, pageable);
+    }
+
+    /**
+     * Get manager's past decisions with pagination
+     */
+    public Page<LeaveApproval> getManagerDecisions(Long managerId, Pageable pageable) {
+        return leaveApprovalRepository.findByManagerIdOrderByDecidedAtDesc(managerId, pageable);
+    }
+
+    /**
+     * Get all pending leaves (admin view) with pagination
+     */
+    public List<LeaveApplication> getAllPendingLeaves(Pageable pageable) {
+        return leaveApplicationRepository.findByStatus(LeaveStatus.PENDING);
     }
 
     private EventType mapEventType(LeaveStatus status) {
