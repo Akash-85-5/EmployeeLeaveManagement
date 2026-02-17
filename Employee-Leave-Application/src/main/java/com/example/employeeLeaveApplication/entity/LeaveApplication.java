@@ -32,7 +32,6 @@ public class LeaveApplication {
     @NotNull
     private Integer year;
 
-
     @NotNull
     private LocalDate startDate;
 
@@ -41,14 +40,54 @@ public class LeaveApplication {
 
     private BigDecimal days;
 
+    @Column(name = "ESCALATED")
+    private Boolean escalated;
+    private LocalDateTime escalatedAt;
+
+    @NotNull
+    private Long managerId;
+
+    @NotNull
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    public LocalDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(LocalDateTime submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+
+    public Long getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(Long managerId) {
+        this.managerId = managerId;
+    }
+
+    public Boolean getEscalated() {
+        return escalated;
+    }
+
+    public void setEscalated(Boolean escalated) {
+        this.escalated = escalated;
+    }
+
+    public LocalDateTime getEscalatedAt() {
+        return escalatedAt;
+    }
+
+    public void setEscalatedAt(LocalDateTime escalatedAt) {
+        this.escalatedAt = escalatedAt;
+    }
+
     @Enumerated(EnumType.STRING)
     private LeaveStatus status = LeaveStatus.PENDING;
 
     @NotNull
     private String reason;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
 
 
     @OneToMany(mappedBy = "leaveApplication",
@@ -56,26 +95,6 @@ public class LeaveApplication {
             orphanRemoval = true)
     private List<LeaveAttachment> attachments = new ArrayList<>();
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        populateYear();
-    }
-
-    @PreUpdate
-    private void populateYear() {
-        if (this.startDate != null) {
-            this.year = this.startDate.getYear();
-        }
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
     public List<LeaveAttachment> getAttachments() {
         return attachments;
     }
@@ -162,6 +181,14 @@ public class LeaveApplication {
 
     public void setYear(Integer year) {
         this.year = year;
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void populateYear() {
+        if (this.startDate != null) {
+            this.year = this.startDate.getYear();
+        }
     }
 }
 

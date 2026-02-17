@@ -135,7 +135,7 @@ public class DashboardService {
     /**
      * Get recent leaves for employee (approved/rejected)
      */
-    public List<LeaveApplication> getRecentLeaves(Long employeeId, int limit) {
+    public Page<LeaveApplication> getRecentLeaves(Long employeeId, int limit) {
         return leaveRepository.findRecentLeaves(employeeId, PageRequest.of(0, limit));
     }
 

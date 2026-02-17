@@ -155,20 +155,20 @@ public class LeaveApplicationService {
     /**
      * Get all leaves with filters and pagination (Admin view)
      */
-    public Page<LeaveApplication> getAllLeaves(
-            Long employeeId,
-            LeaveStatus status,
-            LeaveType leaveType,
-            LocalDate startDate,
-            LocalDate endDate,
-            Integer year,
-            Pageable pageable
-    ) {
-        return leaveApplicationRepository.findAll(
-                createSpecification(employeeId, status, leaveType, startDate, endDate, year),
-                pageable
-        );
-    }
+//    public Page<LeaveApplication> getAllLeaves(
+//            Long employeeId,
+//            LeaveStatus status,
+//            LeaveType leaveType,
+//            LocalDate startDate,
+//            LocalDate endDate,
+//            Integer year,
+//            Pageable pageable
+//    ) {
+//        return leaveApplicationRepository.findAll(
+//                createSpecification(employeeId, status, leaveType, startDate, endDate, year),
+//                pageable
+//        );
+//    }
 
     /**
      * Get single leave by ID
@@ -181,20 +181,20 @@ public class LeaveApplicationService {
     /**
      * Get employee leaves with filters and pagination
      */
-    public Page<LeaveApplication> getLeavesByEmployee(
-            Long employeeId,
-            LeaveStatus status,
-            LeaveType leaveType,
-            LocalDate startDate,
-            LocalDate endDate,
-            Integer year,
-            Pageable pageable
-    ) {
-        return leaveApplicationRepository.findAll(
-                createSpecification(employeeId, status, leaveType, startDate, endDate, year),
-                pageable
-        );
-    }
+//    public Page<LeaveApplication> getLeavesByEmployee(
+//            Long employeeId,
+//            LeaveStatus status,
+//            LeaveType leaveType,
+//            LocalDate startDate,
+//            LocalDate endDate,
+//            Integer year,
+//            Pageable pageable
+//    ) {
+//        return leaveApplicationRepository.findAll(
+//                createSpecification(employeeId, status, leaveType, startDate, endDate, year),
+//                pageable
+//        );
+//    }
 
     /**
      * Update leave before approval

@@ -79,7 +79,7 @@ public class LeaveReminderSchedulerService {
     private void processLeaveReminder(LeaveApplication leave) {
         long daysUntilLeave = ChronoUnit.DAYS.between(LocalDate.now(), leave.getStartDate());
 
-        long daysSinceApplied = ChronoUnit.DAYS.between(leave.getCreatedAt().toLocalDate(), LocalDate.now());
+        long daysSinceApplied = ChronoUnit.DAYS.between(leave.getSubmittedAt().toLocalDate(), LocalDate.now());
 
         logger.debug("Leave ID {}: Days until leave = {}, Days since applied = {}",
                 leave.getId(), daysUntilLeave, daysSinceApplied);

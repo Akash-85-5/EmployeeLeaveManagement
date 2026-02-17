@@ -5,14 +5,14 @@ import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
-public interface LeaveApplicationRepository extends JpaRepository<LeaveApplication, Long>, JpaSpecificationExecutor<LeaveApplication> {
+public interface LeaveApplicationRepository extends JpaRepository<LeaveApplication, Long> {
 
     List<LeaveApplication> findByEmployeeId(Long employeeId);
 
@@ -20,14 +20,26 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             List<Long> employeeIds,
             LeaveStatus status
     );
+    List<LeaveApplication> findByStatusAndSubmittedAtBeforeAndEscalatedFalse(
+            LeaveStatus status,
+            LocalDateTime submittedAt
+    );
 
-    // ===== NEW: Pagination support =====
     List<LeaveApplication> findByStatus(LeaveStatus status);
-
     Page<LeaveApplication> findByStatus(LeaveStatus status, Pageable pageable);
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
+    List<LeaveApplication>findByManagerId(
+            Long managerId
+    );
+    List<LeaveApplication> findByManagerIdAndStatus(
+            Long managerId,
+            LeaveStatus status
+    );
+    List<LeaveApplication> findByEscalatedTrueAndStatus(LeaveStatus status);
+
+    List<LeaveApplication> findByEscalatedTrue();
     @Query("""
     SELECT l.leaveType,
            COUNT(l),
@@ -102,6 +114,19 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+    @Query(
+            "SELECT l FROM LeaveApplication l " +
+                    "WHERE l.managerId = :managerId " +
+                    "AND l.startDate <= :weekEnd " +
+                    "AND l.endDate >= :weekStart"
+    )
+    List<LeaveApplication> findTeamLeavesForWeek(
+            @Param("managerId") Long managerId,
+            @Param("weekStart") LocalDate weekStart,
+            @Param("weekEnd") LocalDate weekEnd
+    );
+
+
 
     // ===== NEW: Additional queries for dashboard =====
     @Query("""
@@ -114,12 +139,16 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     List<LeaveApplication> findUpcomingLeaves(@Param("employeeId") Long employeeId, @Param("currentDate") LocalDate currentDate);
 
     @Query("""
-        SELECT l FROM LeaveApplication l
-        WHERE l.employeeId = :employeeId
-        AND l.status IN ('APPROVED', 'REJECTED')
-        ORDER BY l.createdAt DESC
-    """)
-    List<LeaveApplication> findRecentLeaves(@Param("employeeId") Long employeeId, Pageable pageable);
+    SELECT l FROM LeaveApplication l
+    WHERE l.employeeId = :employeeId
+    AND l.status IN ('APPROVED', 'REJECTED')
+    ORDER BY l.submittedAt DESC
+""")
+    Page<LeaveApplication> findRecentLeaves(
+            @Param("employeeId") Long employeeId,
+            Pageable pageable
+    );
+
 
     // For "Who's Out" feature
     @Query("""

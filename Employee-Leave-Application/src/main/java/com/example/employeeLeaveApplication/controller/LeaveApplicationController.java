@@ -108,20 +108,20 @@ public class LeaveApplicationController {
     }
 
     // ==================== GET ALL LEAVES (WITH PAGINATION & FILTERS) - NEW ====================
-    @GetMapping
-    public Page<LeaveApplication> getAllLeaves(
-            @RequestParam(required = false) Long employeeId,
-            @RequestParam(required = false) LeaveStatus status,
-            @RequestParam(required = false) LeaveType leaveType,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return leaveApplicationService.getAllLeaves(employeeId, status, leaveType, startDate, endDate, year, pageable);
-    }
+//    @GetMapping
+//    public Page<LeaveApplication> getAllLeaves(
+//            @RequestParam(required = false) Long employeeId,
+//            @RequestParam(required = false) LeaveStatus status,
+//            @RequestParam(required = false) LeaveType leaveType,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+//            @RequestParam(required = false) Integer year,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size
+//    ) {
+//        Pageable pageable = PageRequest.of(page, size);
+//        return leaveApplicationService.getAllLeaves(employeeId, status, leaveType, startDate, endDate, year, pageable);
+//    }
 
     // ==================== GET SINGLE LEAVE BY ID - NEW ====================
     @GetMapping("/{id}")
@@ -130,20 +130,20 @@ public class LeaveApplicationController {
     }
 
     // ==================== GET EMPLOYEE LEAVES (WITH PAGINATION & FILTERS) - UPDATED ====================
-    @GetMapping("/employee/{employeeId}")
-    public Page<LeaveApplication> getEmployeeLeaves(
-            @PathVariable Long employeeId,
-            @RequestParam(required = false) LeaveStatus status,
-            @RequestParam(required = false) LeaveType leaveType,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return leaveApplicationService.getLeavesByEmployee(employeeId, status, leaveType, startDate, endDate, year, pageable);
-    }
+//    @GetMapping("/employee/{employeeId}")
+//    public Page<LeaveApplication> getEmployeeLeaves(
+//            @PathVariable Long employeeId,
+//            @RequestParam(required = false) LeaveStatus status,
+//            @RequestParam(required = false) LeaveType leaveType,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+//            @RequestParam(required = false) Integer year,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size
+//    ) {
+//        Pageable pageable = PageRequest.of(page, size);
+//        return leaveApplicationService.getLeavesByEmployee(employeeId, status, leaveType, startDate, endDate, year, pageable);
+//    }
 
     // ==================== UPDATE LEAVE (BEFORE APPROVAL) - NEW ====================
 

@@ -63,7 +63,7 @@ public class DashboardController {
 
     // ==================== RECENT LEAVES FOR EMPLOYEE   ====================
     @GetMapping("/employee/{employeeId}/recent-leaves")
-    public List<LeaveApplication> getRecentLeaves(
+    public Page<LeaveApplication> getRecentLeaves(
             @PathVariable Long employeeId,
             @RequestParam(defaultValue = "5") int limit
     ) {

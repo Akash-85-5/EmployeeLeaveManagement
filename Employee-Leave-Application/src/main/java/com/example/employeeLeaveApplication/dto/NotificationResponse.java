@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.enums.Channel;
 import com.example.employeeLeaveApplication.enums.EventType;
 import com.example.employeeLeaveApplication.enums.NotificationStatus;
 
+
 import java.time.LocalDateTime;
 
 public class NotificationResponse {
