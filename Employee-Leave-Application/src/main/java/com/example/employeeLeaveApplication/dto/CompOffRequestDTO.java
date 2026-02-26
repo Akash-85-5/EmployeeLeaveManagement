@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,7 @@ public class CompOffRequestDTO {
     public static class CompOffEntry {
         private LocalDate workedDate;
         private LocalDate plannedLeaveDate;
-        private int days;
+        private BigDecimal days;
 
         // Getters and Setters
         public LocalDate getWorkedDate() { return workedDate; }
@@ -22,8 +23,13 @@ public class CompOffRequestDTO {
         public LocalDate getPlannedLeaveDate() { return plannedLeaveDate; }
         public void setPlannedLeaveDate(LocalDate plannedLeaveDate) { this.plannedLeaveDate = plannedLeaveDate; }
 
-        public int getDays() { return days; }
-        public void setDays(int days) { this.days = days; }
+        public BigDecimal getDays() {
+            return days;
+        }
+
+        public void setDays(BigDecimal days) {
+            this.days = days;
+        }
     }
 
     // Getters and Setters

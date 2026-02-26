@@ -33,7 +33,8 @@ public class NotificationService {
     // ==================== EXISTING METHODS ====================
 
     public Notification createNotification(Long userId,
-                                           String email,
+                                           String fromEmail,
+                                           String toEmail,
                                            EventType eventType,
                                            Role recipientType,
                                            Channel channel,
@@ -50,9 +51,11 @@ public class NotificationService {
 
         Notification saved = notificationRepository.save(notification);
 
+        // for testing i have used my mail in here.
         if (channel == Channel.EMAIL) {
             emailSender.sendEmail(
-                    email,
+                    "crazyyy1235@gmail.com",
+                    toEmail,
                     emailMessage.getSubject(),
                     emailMessage.getBody()
             );
@@ -83,7 +86,7 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new BadRequestException("Notification not found with ID: " + notificationId));
 
-        notification.setNotificationStatus(NotificationStatus.SENT);
+        notification.setNotificationStatus(NotificationStatus.READ);
         notificationRepository.save(notification);
     }
 
@@ -96,7 +99,7 @@ public class NotificationService {
                 .findByUserIdAndNotificationStatus(userId, NotificationStatus.PENDING);
 
         for (Notification notification : unreadNotifications) {
-            notification.setNotificationStatus(NotificationStatus.SENT);
+            notification.setNotificationStatus(NotificationStatus.READ);
         }
 
         notificationRepository.saveAll(unreadNotifications);

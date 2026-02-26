@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.LeaveApplictionRequest;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
 import com.example.employeeLeaveApplication.entity.LeaveAllocation;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
@@ -38,71 +39,59 @@ import java.util.UUID;
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
-    private final LeaveAllocationService leaveAllocationService;
 
-    public LeaveApplicationController(LeaveApplicationService leaveApplicationService,
-                                      LeaveAllocationService leaveAllocationService) {
+    public LeaveApplicationController(LeaveApplicationService leaveApplicationService) {
         this.leaveApplicationService = leaveApplicationService;
-        this.leaveAllocationService = leaveAllocationService;
     }
 
     @Value("${file.upload-dir:uploads/leaves}")
     private String uploadDir;
 
     // ==================== APPLY LEAVE ====================
-    @PostMapping(value = "/apply", consumes = "multipart/form-data")
-    public LeaveResponse applyLeave(
-            @RequestParam Long employeeId,
-            @RequestParam String leaveType,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam String reason,
-            @RequestParam(required = false) String halfDayType,
-            @RequestParam(defaultValue = "false") boolean confirmLossOfPay,
-            @RequestParam(required = false) MultipartFile[] files
-    ) throws IOException {
+    @PostMapping("/apply")
+    public LeaveResponse applyLeave(@RequestBody LeaveApplictionRequest request) {
 
         LeaveType type;
         try {
-            type = LeaveType.valueOf(leaveType.toUpperCase());
+            type = LeaveType.valueOf(request.getLeaveType().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid leave type");
         }
 
         LeaveApplication leave = new LeaveApplication();
-        leave.setEmployeeId(employeeId);
+        leave.setEmployeeId(request.getEmployeeId());
         leave.setLeaveType(type);
-        leave.setStartDate(startDate);
-        leave.setEndDate(endDate);
-        leave.setReason(reason);
+        leave.setStartDate(request.getStartDate());
+        leave.setEndDate(request.getEndDate());
+        leave.setReason(request.getReason());
 
-        if (halfDayType != null && !halfDayType.isEmpty()) {
-            leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
+        if (request.getHalfDayType() != null) {
+            leave.setHalfDayType(HalfDayType.valueOf(request.getHalfDayType().toUpperCase()));
         }
 
-        // File handling
-        if (files != null && files.length > 0) {
-            Path uploadPath = Paths.get(uploadDir);
-            Files.createDirectories(uploadPath);
-            List<LeaveAttachment> attachments = new ArrayList<>();
-            for (MultipartFile file : files) {
-                if (file.isEmpty()) continue;
-                String uniqueName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                Files.write(uploadPath.resolve(uniqueName), file.getBytes());
-                LeaveAttachment attachment = new LeaveAttachment();
-                attachment.setFileUrl(uniqueName);
-                attachment.setLeaveApplication(leave);
-                attachments.add(attachment);
-            }
-            leave.setAttachments(attachments);
-        }
+//        // File handling
+//        if (files != null && files.length > 0) {
+//            Path uploadPath = Paths.get(uploadDir);
+//            Files.createDirectories(uploadPath);
+//            List<LeaveAttachment> attachments = new ArrayList<>();
+//            for (MultipartFile file : files) {
+//                if (file.isEmpty()) continue;
+//                String uniqueName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+//                Files.write(uploadPath.resolve(uniqueName), file.getBytes());
+//                LeaveAttachment attachment = new LeaveAttachment();
+//                attachment.setFileUrl(uniqueName);
+//                attachment.setLeaveApplication(leave);
+//                attachments.add(attachment);
+//            }
+//            leave.setAttachments(attachments);
+//        }
 
-        LeaveResponse response = leaveApplicationService.applyLeave(leave, confirmLossOfPay);
+        LeaveResponse response = leaveApplicationService.applyLeave(leave, request.isConfirmLossOfPay());
 
         // Clean up circular reference for JSON response
-        if (response.getLeaveApplication() != null && response.getLeaveApplication().getAttachments() != null) {
-            response.getLeaveApplication().getAttachments().forEach(a -> a.setLeaveApplication(null));
-        }
+//        if (response.getLeaveApplication() != null && response.getLeaveApplication().getAttachments() != null) {
+//            response.getLeaveApplication().getAttachments().forEach(a -> a.setLeaveApplication(null));
+//        }
 
         return response;
     }
@@ -130,20 +119,20 @@ public class LeaveApplicationController {
     }
 
     // ==================== GET EMPLOYEE LEAVES (WITH PAGINATION & FILTERS) - UPDATED ====================
-//    @GetMapping("/employee/{employeeId}")
-//    public Page<LeaveApplication> getEmployeeLeaves(
-//            @PathVariable Long employeeId,
-//            @RequestParam(required = false) LeaveStatus status,
-//            @RequestParam(required = false) LeaveType leaveType,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-//            @RequestParam(required = false) Integer year,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size
-//    ) {
-//        Pageable pageable = PageRequest.of(page, size);
-//        return leaveApplicationService.getLeavesByEmployee(employeeId, status, leaveType, startDate, endDate, year, pageable);
-//    }
+    @GetMapping("/employee/{employeeId}")
+    public List<LeaveApplication> getEmployeeLeaves(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) LeaveStatus status,
+            @RequestParam(required = false) LeaveType leaveType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return leaveApplicationService.getLeavesByEmployee(employeeId, pageable);
+    }
 
     // ==================== UPDATE LEAVE (BEFORE APPROVAL) - NEW ====================
 
@@ -205,24 +194,24 @@ public class LeaveApplicationController {
     }
 
     // ==================== LEAVE ALLOCATIONS ====================
-    @PostMapping("/allocations")
-    public LeaveAllocation createAllocation(@RequestBody LeaveAllocation leaveAllocation) {
-        return leaveAllocationService.createEmployeeAllocation(leaveAllocation);
-    }
-
-    @GetMapping("/allocations/{employeeId}")
-    public List<LeaveAllocation> getEmployeeAllocations(
-            @PathVariable Long employeeId,
-            @RequestParam(required = false) Integer year
-    ) {
-        return leaveAllocationService.getEmployeeAllocations(employeeId, year);
-    }
-
-    @PutMapping("/allocations/{id}")
-    public LeaveAllocation updateAllocation(
-            @PathVariable Long id,
-            @RequestBody LeaveAllocation leaveAllocation
-    ) {
-        return leaveAllocationService.updateAllocation(id, leaveAllocation);
-    }
+//    @PostMapping("/allocations")
+//    public LeaveAllocation createAllocation(@RequestBody LeaveAllocation leaveAllocation) {
+//        return leaveAllocationService.createEmployeeAllocation(leaveAllocation);
+//    }
+//
+//    @GetMapping("/allocations/{employeeId}")
+//    public List<LeaveAllocation> getEmployeeAllocations(
+//            @PathVariable Long employeeId,
+//            @RequestParam(required = false) Integer year
+//    ) {
+//        return leaveAllocationService.getEmployeeAllocations(employeeId, year);
+//    }
+//
+//    @PutMapping("/allocations/{id}")
+//    public LeaveAllocation updateAllocation(
+//            @PathVariable Long id,
+//            @RequestBody LeaveAllocation leaveAllocation
+//    ) {
+//        return leaveAllocationService.updateAllocation(id, leaveAllocation);
+//    }
 }

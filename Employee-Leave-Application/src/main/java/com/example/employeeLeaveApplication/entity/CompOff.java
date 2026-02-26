@@ -17,6 +17,9 @@ public class CompOff {
     @Column(nullable = false)
     private Long employeeId;
 
+    @Column(name = "manager_id", nullable = false)
+    private Long managerId;
+
     // The holiday/weekend the employee actually worked
     @Column(nullable = false)
     private LocalDate workedDate;
@@ -48,13 +51,13 @@ public class CompOff {
      * When the employee applies via the Leave Application dropdown,
      * this ID links this credit to that specific leave record.
      */
-    // ✅ ADDED EXPLICIT COLUMN MAPPING
     @Column(name = "used_leave_application_id")
     private Long usedLeaveApplicationId;
 
     @Column(name = "year")
     private Integer year;
 
+    private String rejectionReason;
 
     @PrePersist
     @PreUpdate
@@ -64,6 +67,13 @@ public class CompOff {
         }
     }
 
+    public Long getManagerId() {
+        return managerId;
+    }
+
+    public void setManagerId(Long managerId) {
+        this.managerId = managerId;
+    }
 
     public Integer getYear() {
         return year;
@@ -72,8 +82,6 @@ public class CompOff {
     public void setYear(Integer year) {
         this.year = year;
     }
-
-    private String rejectionReason;
 
     public String getRejectionReason() {
         return rejectionReason;

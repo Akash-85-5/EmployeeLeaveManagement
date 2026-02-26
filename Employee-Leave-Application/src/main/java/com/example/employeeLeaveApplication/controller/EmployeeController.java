@@ -21,10 +21,10 @@ public class EmployeeController {
     }
 
     // ==================== CREATE EMPLOYEE ====================
-    @PostMapping
-    public Employee createEmployee(@RequestBody Employee employee) {
-        return employeeService.createEmployee(employee);
-    }
+//    @PostMapping
+//    public Employee createEmployee(@RequestBody Employee employee) {
+//        return employeeService.createEmployee(employee);
+//    }
 
     // ==================== GET EMPLOYEE BY ID ====================
     @GetMapping("/{id}")
@@ -87,9 +87,5 @@ public class EmployeeController {
         return employeeService.searchEmployees(query);
     }
 
-    // ==================== GET ACTIVE EMPLOYEES COUNT  ====================
-    @GetMapping("/count/active")
-    public Long getActiveEmployeesCount() {
-        return employeeService.getActiveEmployeesCount();
-    }
+
 }

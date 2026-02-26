@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.service.ReportsService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,13 +44,13 @@ public class ReportsController {
     }
 
     // ==================== DEPARTMENT-WISE LEAVE REPORT ====================
-    @GetMapping("/department/{deptId}/leaves")
-    public ResponseEntity<?> getDepartmentLeaveReport(
-            @PathVariable Long deptId,
-            @RequestParam(required = false) Integer year
-    ) {
-        return ResponseEntity.ok(reportService.getDepartmentLeaveReport(deptId, year));
-    }
+//    @GetMapping("/department/{deptId}/leaves")
+//    public ResponseEntity<?> getDepartmentLeaveReport(
+//            @PathVariable Long deptId,
+//            @RequestParam(required = false) Integer year
+//    ) {
+//        return ResponseEntity.ok(reportService.getDepartmentLeaveReport(deptId, year));
+//    }
 
     // ==================== MANAGER'S TEAM LEAVE REPORT ====================
     @GetMapping("/manager/{managerId}/team-report")
@@ -100,12 +101,14 @@ public class ReportsController {
 
     // ==================== EXPORT REPORT (CSV/PDF) - PLACEHOLDER ====================
     @GetMapping("/export/{reportType}")
-    public ResponseEntity<?> exportReport(
+    public ResponseEntity<String> exportReport(
             @PathVariable String reportType,
-            @RequestParam String format, // csv or pdf
-            @RequestParam(required = false) Map<String, Object> filters
-    ) {
-        // Implementation would generate and return file
-        return ResponseEntity.ok("Report export functionality - to be implemented");
+            @RequestParam String format,
+            @RequestParam(required = false) Map<String, Object> filters) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_IMPLEMENTED)
+                .body("Report export is not yet available. " +
+                        "Requested: " + reportType + " in format " + format);
     }
 }

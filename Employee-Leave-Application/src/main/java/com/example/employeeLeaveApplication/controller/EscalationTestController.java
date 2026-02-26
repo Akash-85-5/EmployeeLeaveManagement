@@ -30,13 +30,5 @@ public class EscalationTestController {
         return "Escalation executed";
     }
 
-    @GetMapping("/hr/escalated")
-    public ResponseEntity<List<LeaveApplication>> getEscalatedLeavesForHr() {
 
-        List<LeaveApplication> leaves =
-                leaveApprovalService.getEscalatedLeavesForHr();
-
-        return ResponseEntity.ok(leaves);
-
-    }
 }

@@ -1,12 +1,21 @@
 package com.example.employeeLeaveApplication.entity;
 
-import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "loss_of_pay_records")
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.Data;
 
+@Entity
+@Table(name = "loss_of_pay_record",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "lop_year", "lop_month"}))
 public class LossOfPayRecord {
 
     @Id
@@ -16,17 +25,18 @@ public class LossOfPayRecord {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
-    @Column(nullable = false)
+    @Column(name = "lop_year", nullable = false)  // ✅ Matches H2
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "lop_month", nullable = false)  // ✅ Matches H2
     private Integer month;
 
-    // Total LOP percentage accumulated
-    @Column(name = "lop_percentage", nullable = false)
-    private Double lopPercentage = 0.0;
+    @Column(name = "excess_days", nullable = false)
+    private Double excessDays = 0.0;
 
-    // Number of violations in the month
+    @Column(name = "loss_percentage", nullable = false)
+    private Double lossPercentage = 0.0;
+
     @Column(name = "violation_count", nullable = false)
     private Integer violationCount = 0;
 
@@ -39,60 +49,15 @@ public class LossOfPayRecord {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getEmployeeId() {
-        return employeeId;
-    }
-
-    public void setEmployeeId(Long employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public Integer getYear() {
-        return year;
-    }
-
-    public void setYear(Integer year) {
-        this.year = year;
-    }
-
-    public Integer getMonth() {
-        return month;
-    }
-
-    public void setMonth(Integer month) {
-        this.month = month;
-    }
-
-    public Double getLopPercentage() {
-        return lopPercentage;
-    }
-
-    public void setLopPercentage(Double lopPercentage) {
-        this.lopPercentage = lopPercentage;
-    }
-
-    public Integer getViolationCount() {
-        return violationCount;
-    }
-
-    public void setViolationCount(Integer violationCount) {
-        this.violationCount = violationCount;
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
     public String getReason() {
@@ -103,11 +68,39 @@ public class LossOfPayRecord {
         this.reason = reason;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
+
+
+    public Integer getViolationCount() {
+        return violationCount;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    public void setViolationCount(Integer violationCount) {
+        this.violationCount = violationCount;
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getEmployeeId() { return employeeId; }
+    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
+
+    public Integer getYear() { return year; }
+    public void setYear(Integer year) { this.year = year; }
+
+    public Integer getMonth() { return month; }
+    public void setMonth(Integer month) { this.month = month; }
+
+    public Double getExcessDays() { return excessDays; }
+    public void setExcessDays(Double excessDays) { this.excessDays = excessDays; }
+
+    public Double getLossPercentage() { return lossPercentage; }
+    public void setLossPercentage(Double lossPercentage) {
+        this.lossPercentage = lossPercentage;
+    }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

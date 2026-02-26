@@ -12,11 +12,19 @@ public class CompOffBalance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "employee_id", nullable = false)
     private Long employeeId;
+
+    @Column(nullable = false)
     private Integer year;
 
+    @Column(nullable = false)
     private Double earned = 0.0;
+
+    @Column(nullable = false)
     private Double used = 0.0;
+
+    @Column(nullable = false)
     private Double balance = 0.0;
 
     private LocalDateTime updatedAt;

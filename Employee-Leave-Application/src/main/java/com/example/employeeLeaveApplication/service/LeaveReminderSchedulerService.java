@@ -6,6 +6,7 @@ import com.example.employeeLeaveApplication.entity.LeaveReminder;
 import com.example.employeeLeaveApplication.enums.Channel;
 import com.example.employeeLeaveApplication.enums.EventType;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
+import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
 import com.example.employeeLeaveApplication.repository.LeaveReminderRepository;
@@ -38,19 +39,23 @@ public class LeaveReminderSchedulerService {
     private final LeaveReminderRepository leaveReminderRepository;
     private final EmployeeRepository employeeRepository;
     private final NotificationService notificationService;
+    private final EscalationService escalationService;
 
     public LeaveReminderSchedulerService(
             LeaveApplicationRepository leaveApplicationRepository,
             LeaveReminderRepository leaveReminderRepository,
             EmployeeRepository employeeRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            EscalationService escalationService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.leaveReminderRepository = leaveReminderRepository;
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
+        this.escalationService=escalationService;
     }
 
-    @Scheduled(cron = "0 0 9 * * ?")
+//    @Scheduled(cron = "0 0 9 * * ?")
+    @Scheduled(cron = "0 * * * * ?")
     @Transactional
     public void sendPendingLeaveReminders() {
         logger.info("Starting scheduled job: Sending pending leave reminders");
@@ -79,7 +84,7 @@ public class LeaveReminderSchedulerService {
     private void processLeaveReminder(LeaveApplication leave) {
         long daysUntilLeave = ChronoUnit.DAYS.between(LocalDate.now(), leave.getStartDate());
 
-        long daysSinceApplied = ChronoUnit.DAYS.between(leave.getSubmittedAt().toLocalDate(), LocalDate.now());
+        long daysSinceApplied = ChronoUnit.DAYS.between(leave.getCreatedAt().toLocalDate(), LocalDate.now());
 
         logger.debug("Leave ID {}: Days until leave = {}, Days since applied = {}",
                 leave.getId(), daysUntilLeave, daysSinceApplied);
@@ -124,6 +129,7 @@ public class LeaveReminderSchedulerService {
                                          long daysUntilLeave, long daysSinceApplied) {
 
         if (existingReminder.getReminderCount() >= MAX_REMINDERS) {
+            escalateToHigher(leave);
             logger.info("Leave ID {}: Max reminders ({}) reached", leave.getId(), MAX_REMINDERS);
             return;
         }
@@ -178,6 +184,9 @@ public class LeaveReminderSchedulerService {
             Employee manager = employeeRepository.findById(employee.getManagerId())
                     .orElseThrow(() -> new RuntimeException("Manager not found"));
 
+            Employee hr = employeeRepository.findById(manager.getManagerId())
+                    .orElseThrow(() -> new RuntimeException("Hr not found"));
+
             String urgencyLevel = getUrgencyLevel(daysUntilLeave);
 
             String context = String.format(
@@ -193,6 +202,7 @@ public class LeaveReminderSchedulerService {
 
             notificationService.createNotification(
                     manager.getId(),
+                    hr.getEmail(),
                     manager.getEmail(),
                     EventType.PENDING_LEAVE_REMINDER,
                     manager.getRole(),
@@ -219,5 +229,29 @@ public class LeaveReminderSchedulerService {
         } else {
             return "";
         }
+    }
+
+    @Transactional
+    public void escalateToHigher(LeaveApplication leave) {
+        Employee manager = employeeRepository.findById(leave.getManagerId())
+                .orElseThrow(() -> new RuntimeException("Manager not found: " + leave.getManagerId()));
+
+        Long higherManagerId = manager.getManagerId();
+
+        if (higherManagerId == null) {
+            // Top-level manager — escalate to HR instead
+            List<Employee> hrList = employeeRepository.findByRole(Role.HR);
+            if (!hrList.isEmpty()) {
+                higherManagerId = hrList.get(0).getId();
+            }
+        }
+
+        leave.setEscalated(true);
+        leave.setEscalatedAt(LocalDateTime.now());
+        if (higherManagerId != null) {
+            leave.setManagerId(higherManagerId);
+        }
+
+        leaveApplicationRepository.save(leave);
     }
 }

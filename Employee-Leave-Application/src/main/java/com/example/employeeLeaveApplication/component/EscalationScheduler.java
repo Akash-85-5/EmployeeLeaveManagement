@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.component;
 
+import com.example.employeeLeaveApplication.service.EscalationService;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -8,9 +9,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class EscalationScheduler {
 
-    private final com.example.employeeLeaveApplication.service.EscalationService escalationService;
+    private final EscalationService escalationService;
 
-    public EscalationScheduler(com.example.employeeLeaveApplication.service.EscalationService escalationService) {
+    public EscalationScheduler(EscalationService escalationService) {
         this.escalationService = escalationService;
     }
 

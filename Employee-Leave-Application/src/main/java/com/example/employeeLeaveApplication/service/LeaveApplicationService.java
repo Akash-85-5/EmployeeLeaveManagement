@@ -12,6 +12,7 @@ import com.example.employeeLeaveApplication.repository.CompOffRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
 import com.example.employeeLeaveApplication.repository.LeaveAttachmentRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -33,8 +35,11 @@ public class LeaveApplicationService {
     private final CompOffRepository compOffRepository;
     private final LeaveAttachmentRepository leaveAttachmentRepository;
 
-    private final String SERVER_IP = "192.168.1.62";
-    private final String SERVER_PORT = "8080";
+    @Value("${app.server.ip}")
+    private String serverIp;
+
+    @Value("${app.server.port}")
+    private String serverPort;
 
     public LeaveApplicationService(
             LeaveApplicationRepository leaveApplicationRepository,
@@ -69,9 +74,13 @@ public class LeaveApplicationService {
         if (warning != null && !confirmLossOfPay) {
             return new LeaveResponse(null, warning);
         }
+        Employee employee = employeeRepository.findById(leave.getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        leave.setManagerId(employee.getManagerId());
         leave.setDays(calculatedDays);
         leave.setStatus(LeaveStatus.PENDING);
+        leave.setYear(leave.getStartDate().getYear());
 
         LeaveApplication savedLeave = leaveApplicationRepository.save(leave);
 
@@ -86,7 +95,7 @@ public class LeaveApplicationService {
         return new LeaveResponse(savedLeave, null);
     }
 
-    public List<LeaveApplication> getLeavesByEmployee(Long employeeId) {
+    public List<LeaveApplication> getLeavesByEmployee(Long employeeId, Pageable pageable) {
         return leaveApplicationRepository.findByEmployeeId(employeeId);
     }
 
@@ -117,7 +126,6 @@ public class LeaveApplicationService {
 
         leave.setDays(calculatedDays);
         leave.setStatus(LeaveStatus.APPROVED);
-        processAttachments(leave);
 
         LeaveApplication savedLeave = leaveApplicationRepository.save(leave);
 
@@ -136,18 +144,17 @@ public class LeaveApplicationService {
     }
 
     public BigDecimal calculateLeaveDuration(LeaveApplication leave) {
-        BigDecimal total = BigDecimal.ZERO;
-        LocalDate date = leave.getStartDate();
-        while (!date.isAfter(leave.getEndDate())) {
-            if (!holidayChecker.isNonWorkingDay(date)) {
-                BigDecimal inc = (leave.getLeaveType() == LeaveType.HALF_DAY || (leave.getHalfDayType() != null && date.equals(leave.getEndDate())))
-                        ? new BigDecimal("0.5") : BigDecimal.ONE;
-                total = total.add(inc);
-            }
-            date = date.plusDays(1);
+
+        long days = ChronoUnit.DAYS.between(
+                leave.getStartDate(),
+                leave.getEndDate()
+        ) + 1; // +1 to include both start & end
+
+        if (days <= 0) {
+            throw new BadRequestException("Invalid date range.");
         }
-        if (total.compareTo(BigDecimal.ZERO) == 0) throw new BadRequestException("Selected dates are non-working days.");
-        return total;
+
+        return BigDecimal.valueOf(days);
     }
 
     // ==================== NEW METHODS FOR UPDATED CONTROLLER ====================
@@ -298,11 +305,20 @@ public class LeaveApplicationService {
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        if (employee.getManagerId() == null) {
+            return;
+        }
+
         Employee manager = employeeRepository.findById(employee.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
+                .orElse(null);
+
+        if (manager == null) {
+            return; // Manager record deleted or not found
+        }
 
         notificationService.createNotification(
                 manager.getId(),
+                employee.getEmail(),
                 manager.getEmail(),
                 EventType.LEAVE_APPLIED,
                 manager.getRole(),
@@ -328,8 +344,7 @@ public class LeaveApplicationService {
     }
 
     private void performCancellation(LeaveApplication leave) {
-        if (leave.getLeaveType() == LeaveType.COMP_OFF &&
-                (leave.getStatus() == LeaveStatus.APPROVED || leave.getStatus() == LeaveStatus.PENDING)) {
+        if (leave.getLeaveType() == LeaveType.COMP_OFF && leave.getStatus() == LeaveStatus.PENDING) {
 
             List<CompOff> linkedCredits = compOffRepository.findByUsedLeaveApplicationId(leave.getId());
             BigDecimal restoredDays = BigDecimal.ZERO;
@@ -338,6 +353,7 @@ public class LeaveApplicationService {
                 credit.setStatus(CompOffStatus.EARNED);
                 credit.setUsedLeaveApplicationId(null);
                 compOffRepository.save(credit);
+                restoredDays = restoredDays.add(credit.getDays());
             }
             if (restoredDays.compareTo(BigDecimal.ZERO) > 0) {
                 compOffService.restoreCompOffBalance(leave.getEmployeeId().longValue(), restoredDays);
@@ -364,12 +380,13 @@ public class LeaveApplicationService {
         }
     }
 
-    private void processAttachments(LeaveApplication leave) {
-        if (leave.getAttachments() != null) {
-            leave.getAttachments().forEach(attachment -> {
-                attachment.setFileUrl("http://" + SERVER_IP + ":" + SERVER_PORT + "/uploads/leaves/" + attachment.getFileUrl());
-                attachment.setLeaveApplication(leave);
-            });
-        }
-    }
+//    private void processAttachments(LeaveApplication leave) {
+//        if (leave.getAttachments() != null) {
+//            leave.getAttachments().forEach(attachment -> {
+//                attachment.setFileUrl("http://" + serverIp + ":" + serverPort
+//                        + "/uploads/leaves/" + attachment.getFileUrl());
+//                attachment.setLeaveApplication(leave);
+//            });
+//        }
+//    }
 }

@@ -48,14 +48,14 @@ public class LeaveApprovalService {
 
 
     public Page<LeaveApplication> getPendingLeavesForManager(Long managerId, Pageable pageable) {
-        List<Employee> employees = employeeRepository.findAll()
-                .stream()
-                .filter(e -> managerId.equals(e.getManagerId()))
-                .toList();
+        List<Employee> employees = employeeRepository.findByManagerId(managerId);
 
         List<Long> employeeIds = employees.stream()
                 .map(Employee::getId)
                 .toList();
+        if (employeeIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
 
         List<LeaveApplication> allPending = leaveApplicationRepository.findByEmployeeIdInAndStatus(
                 employeeIds, LeaveStatus.PENDING
@@ -70,9 +70,9 @@ public class LeaveApprovalService {
         return new PageImpl<>(pageContent, pageable, allPending.size());
     }
 
-    public List<LeaveApplication> getEscalatedLeaves() {
-        return leaveApplicationRepository.findByEscalatedTrue();
-    }
+//    public List<LeaveApplication> getEscalatedLeaves() {
+//        return leaveApplicationRepository.findByEscalatedTrue();
+//    }
 
     @Transactional
     public String hrDecision(Long leaveId, LeaveStatus decision, Long hrId) {
@@ -129,6 +129,11 @@ public class LeaveApprovalService {
     @Transactional
     public String bulkDecision(BulkLeaveDecisionRequest request, boolean isHr) {
 
+        if (request.getDecision() != LeaveStatus.APPROVED &&
+                request.getDecision() != LeaveStatus.REJECTED &&
+                request.getDecision() != LeaveStatus.MEETING_REQUIRED) {
+            throw new BadRequestException("Invalid decision: " + request.getDecision());
+        }
         List<LeaveApplication> leaves =
                 leaveApplicationRepository.findAllById(request.getLeaveIds());
 
@@ -154,6 +159,21 @@ public class LeaveApprovalService {
 
             leaveApplicationRepository.save(leave);
 
+            if (request.getDecision() == LeaveStatus.APPROVED) {
+                leaveBalanceService.applyApprovedLeave(leave);
+                int approvedCount = leaveApplicationRepository.countApprovedInMonth(
+                        leave.getEmployeeId(),
+                        leave.getStartDate().getYear(),
+                        leave.getStartDate().getMonthValue()
+                );
+                if (approvedCount > 2) {
+                    lossOfPayService.applyMonthlyLimitViolation(
+                            leave.getEmployeeId(),
+                            leave.getStartDate().getYear(),
+                            leave.getStartDate().getMonthValue()
+                    );
+                }
+            }
             LeaveApproval approval = new LeaveApproval();
             approval.setLeaveId(leave.getId());
             approval.setManagerId(request.getApproverId());
@@ -171,6 +191,12 @@ public class LeaveApprovalService {
     @Transactional
     public void decideLeave(LeaveDecisionRequest request) {
 
+        if (request.getDecision() != LeaveStatus.APPROVED &&
+                request.getDecision() != LeaveStatus.REJECTED &&
+                request.getDecision() != LeaveStatus.MEETING_REQUIRED) {
+            throw new BadRequestException("Invalid decision: " + request.getDecision());
+        }
+
         LeaveApplication leave = leaveApplicationRepository.findById(request.getLeaveId())
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
 
@@ -184,8 +210,13 @@ public class LeaveApprovalService {
         if (!request.getManagerId().equals(employee.getManagerId())) {
             throw new RuntimeException("Unauthorized manager");
         }
+        Employee approver = employeeRepository.findById(request.getManagerId())
+                .orElseThrow(()-> new RuntimeException("Manger Not found"));
 
         leave.setStatus(request.getDecision());
+        leave.setApprovedAt(LocalDateTime.now());
+        leave.setApprovedBy(request.getManagerId());
+        leave.setApprovedRole(approver.getRole());
         leaveApplicationRepository.save(leave);
 
         if (request.getDecision() == LeaveStatus.APPROVED) {
@@ -207,6 +238,8 @@ public class LeaveApprovalService {
                 );
             }
         }
+        Employee manger = employeeRepository.findById(request.getManagerId())
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         LeaveApproval approval = new LeaveApproval();
         approval.setLeaveId(leave.getId());
@@ -231,6 +264,7 @@ public class LeaveApprovalService {
 
         notificationService.createNotification(
                 employee.getId(),
+                manger.getEmail(),
                 employee.getEmail(),
                 mapEventType(request.getDecision()),
                 employee.getRole(),
@@ -282,9 +316,9 @@ public class LeaveApprovalService {
     /**
      * Get all pending leaves (admin view) with pagination
      */
-    public List<LeaveApplication> getAllPendingLeaves(Pageable pageable) {
-        return leaveApplicationRepository.findByStatus(LeaveStatus.PENDING);
-    }
+//    public List<LeaveApplication> getAllPendingLeaves(Pageable pageable) {
+//        return leaveApplicationRepository.findByStatus(LeaveStatus.PENDING);
+//    }
 
     private EventType mapEventType(LeaveStatus status) {
         return switch (status) {

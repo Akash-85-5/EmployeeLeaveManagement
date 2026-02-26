@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.component.HolidayChecker;
 import com.example.employeeLeaveApplication.dto.CompOffBalanceDetailsDTO;
 import com.example.employeeLeaveApplication.dto.CompOffRequestDTO;
 import com.example.employeeLeaveApplication.entity.CompOff;
+import com.example.employeeLeaveApplication.entity.CompOffBalance;
 import com.example.employeeLeaveApplication.enums.CompOffStatus;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.CompOffRepository;
@@ -41,7 +42,7 @@ public class CompOffService {
      * Handles both Admin (Auto-Approved) and Employee (Pending) requests.
      */
     @Transactional
-    public void requestBulkCompOff(CompOffRequestDTO request, boolean isAdmin) {
+    public void requestBulkCompOff(CompOffRequestDTO request) {
         if (request.getEmployeeId() == null) {
             throw new BadRequestException("Employee ID is required");
         }
@@ -63,11 +64,11 @@ public class CompOffService {
             compOff.setPlannedLeaveDate(entry.getPlannedLeaveDate());
 
             // Safety check for days: default to 1 if 0 or null
-            BigDecimal daysCount = (entry.getDays() <= 0) ? BigDecimal.ONE : BigDecimal.valueOf(entry.getDays());
+            BigDecimal daysCount = entry.getDays();
             compOff.setDays(daysCount);
 
-            // ✅ LOGIC FIX: Admin entries go straight to EARNED, Employees stay PENDING
-            compOff.setStatus(isAdmin ? CompOffStatus.EARNED : CompOffStatus.PENDING);
+//            // ✅ LOGIC FIX: Admin entries go straight to EARNED, Employees stay PENDING
+//            compOff.setStatus(isAdmin ? CompOffStatus.EARNED : CompOffStatus.PENDING);
 
             compOffRepository.save(compOff);
         }
@@ -194,7 +195,7 @@ public class CompOffService {
             throw new BadRequestException("You can only delete your own Comp-Off request.");
         }
 
-        if (compOff.getStatus() == CompOffStatus.APPROVED) {
+        if (compOff.getStatus() == CompOffStatus.EARNED) {
             throw new BadRequestException("Approved Comp-Off cannot be deleted.");
         }
 
@@ -204,7 +205,7 @@ public class CompOffService {
     public CompOffBalanceDetailsDTO getCompOffBalanceDetails(Long employeeId, Integer year) {
 
         List<CompOff> approvedList =
-                compOffRepository.findByEmployeeIdAndStatus(employeeId, CompOffStatus.APPROVED);
+                compOffRepository.findListByEmployeeIdAndStatus(employeeId, CompOffStatus.EARNED);
 
         BigDecimal totalApproved = approvedList.stream()
                 .map(CompOff::getDays)
@@ -253,9 +254,10 @@ public class CompOffService {
         return compOffRepository.findByEmployeeId(employeeId, pageable);
     }
 
-    public Page<CompOff> getPendingCompOffApprovals(Pageable pageable) {
+    public Page<CompOff> getPendingCompOffApprovals(Long managerId,Pageable pageable) {
 
-        return compOffRepository.findByStatus(
+        return compOffRepository.findByManagerIdAndStatus(
+                managerId,
                 CompOffStatus.PENDING,
                 pageable
         );

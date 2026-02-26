@@ -23,9 +23,9 @@ public class EmployeeService {
 
     // ==================== EXISTING METHODS ====================
 
-    public Employee createEmployee(Employee employee) {
-        return employeeRepository.save(employee);
-    }
+//    public Employee createEmployee(Employee employee) {
+//        return employeeRepository.save(employee);
+//    }
 
     public Employee getEmployee(Long id) {
         return employeeRepository.findById(id)
@@ -71,9 +71,7 @@ public class EmployeeService {
         if (employee.getManagerId() != null) {
             existing.setManagerId(employee.getManagerId());
         }
-        if (employee.getTotalWorkingDays() != null) {
-            existing.setTotalWorkingDays(employee.getTotalWorkingDays());
-        }
+
 
         return employeeRepository.save(existing);
     }

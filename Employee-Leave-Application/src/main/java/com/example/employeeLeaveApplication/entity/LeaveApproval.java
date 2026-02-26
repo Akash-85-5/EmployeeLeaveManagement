@@ -14,13 +14,17 @@ public class  LeaveApproval {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "leave_id", nullable = false)
     private Long leaveId;
+
+    @Column(name = "manager_id", nullable = false)
     private Long managerId;
 
     @Enumerated(EnumType.STRING)
     private LeaveStatus decision;
 
     private String comments;
+    @Column(name = "decided_at")
     private LocalDateTime decidedAt;
 
     public LocalDateTime getDecidedAt() {

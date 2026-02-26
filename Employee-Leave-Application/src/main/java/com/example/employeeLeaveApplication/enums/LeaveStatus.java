@@ -1,7 +1,7 @@
 package com.example.employeeLeaveApplication.enums;
 
 public enum LeaveStatus {
-    PENDING_MANAGER,
+//    PENDING_MANAGER,
     PENDING,
     APPROVED,
     REJECTED,

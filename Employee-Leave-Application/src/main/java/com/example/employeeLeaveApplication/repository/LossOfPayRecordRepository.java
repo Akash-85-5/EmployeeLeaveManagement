@@ -1,28 +1,49 @@
 package com.example.employeeLeaveApplication.repository;
 
-import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
-import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.List;
 import java.util.Optional;
 
-public interface LossOfPayRecordRepository
-        extends JpaRepository<LossOfPayRecord, Long> {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
-    Optional<LossOfPayRecord>
-    findByEmployeeIdAndYearAndMonth(Long employeeId, Integer year, Integer month);
+import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
+
+@Repository
+public interface LossOfPayRecordRepository extends JpaRepository<LossOfPayRecord, Long> {
 
     /**
-     * YEARLY LOP = SUM OF MONTHLY LOP
-     * Comp-off is NOT involved
+     * Find LOP record for specific employee, year, and month
      */
-//    @Query("""
-//        SELECT COALESCE(SUM(l.monthlyViolationLop), 0.0)
-//        FROM LossOfPayRecord l
-//        WHERE l.employeeId = :empId
-//        AND l.year = :year
-//    """)
-//    Double getTotalLopForYear(
-//            @Param("empId") Long empId,
-//            @Param("year") Integer year
-//    );
+    Optional<LossOfPayRecord> findByEmployeeIdAndYearAndMonth(
+            Long employeeId,
+            Integer year,
+            Integer month
+    );
+
+    /**
+     * Get all LOP records for an employee ordered by year and month descending
+     */
+    List<LossOfPayRecord> findByEmployeeIdOrderByYearDescMonthDesc(Long employeeId);
+
+    /**
+     * Get all LOP records for an employee in a specific year
+     */
+    List<LossOfPayRecord> findByEmployeeIdAndYear(Long employeeId, Integer year);
+
+    /**
+     * Get total LOP percentage for employee in a year
+     */
+    @Query("SELECT SUM(l.lossPercentage) FROM LossOfPayRecord l " +
+            "WHERE l.employeeId = :employeeId AND l.year = :year")
+    Double getTotalLossPercentageByEmployeeIdAndYear(
+            @Param("employeeId") Long employeeId,
+            @Param("year") Integer year
+    );
+
+    /**
+     * Delete LOP record for specific employee, year, and month
+     */
+    void deleteByEmployeeIdAndYearAndMonth(Long employeeId, Integer year, Integer month);
 }

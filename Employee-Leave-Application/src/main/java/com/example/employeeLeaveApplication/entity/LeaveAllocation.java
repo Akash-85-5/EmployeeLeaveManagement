@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.entity;
 
+import com.example.employeeLeaveApplication.enums.LeaveType;
 import jakarta.persistence.*;
 
 @Entity
@@ -13,8 +14,9 @@ public class LeaveAllocation {
     @Column(nullable = false)
     private Long employeeId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String leaveCategory; // SICK, CASUAL, etc.
+    private LeaveType leaveCategory;// SICK, CASUAL, etc.
 
     @Column(nullable = false)
     private Integer year;
@@ -41,11 +43,11 @@ public class LeaveAllocation {
         this.employeeId = employeeId;
     }
 
-    public String getLeaveCategory() {
+    public LeaveType getLeaveCategory() {
         return leaveCategory;
     }
 
-    public void setLeaveCategory(String leaveCategory) {
+    public void setLeaveCategory(LeaveType leaveCategory) {
         this.leaveCategory = leaveCategory;
     }
 

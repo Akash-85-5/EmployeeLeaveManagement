@@ -51,14 +51,9 @@ public class ReportsService {
 
         // Basic stats
         long totalEmployees = employeeRepository.count();
-        List<LeaveApplication> allLeaves = leaveApplicationRepository.findAll();
-
-        // Filter by year and approved status
         final Integer finalYear = year;
-        List<LeaveApplication> yearLeaves = allLeaves.stream()
-                .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .toList();
+        List<LeaveApplication> yearLeaves = leaveApplicationRepository
+                .findByYearAndStatus(year, LeaveStatus.APPROVED);
 
         // Total approved leaves
         long totalLeavesApproved = yearLeaves.size();
@@ -220,58 +215,58 @@ public class ReportsService {
         return summary;
     }
 
-    /**
-     * 4. Department Leave Report
-     * GET /api/reports/department/{deptId}/leaves
-     */
-    public Map<String, Object> getDepartmentLeaveReport(Long managerId, Integer year) {
-        if (year == null) {
-            year = Year.now().getValue();
-        }
-
-        List<Employee> teamMembers = employeeRepository.findByManagerId(managerId);
-        List<Long> teamIds = teamMembers.stream()
-                .map(Employee::getId)
-                .toList();
-
-        final Integer finalYear = year;
-        List<LeaveApplication> allTeamLeaves = new ArrayList<>();
-        for (Long empId : teamIds) {
-            List<LeaveApplication> empLeaves = leaveApplicationRepository.findByEmployeeId(empId)
-                    .stream()
-                    .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
-                    .toList();
-            allTeamLeaves.addAll(empLeaves);
-        }
-
-        long totalLeaves = allTeamLeaves.stream()
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .count();
-
-        double totalDays = allTeamLeaves.stream()
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .mapToDouble(l -> l.getDays().doubleValue())
-                .sum();
-
-        // Group by leave type
-        Map<LeaveType, Long> typeDistribution = allTeamLeaves.stream()
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .collect(Collectors.groupingBy(
-                        LeaveApplication::getLeaveType,
-                        Collectors.counting()
-                ));
-
-        Map<String, Object> report = new HashMap<>();
-        report.put("departmentId", managerId);
-        report.put("year", year);
-        report.put("teamSize", teamMembers.size());
-        report.put("totalLeavesApproved", totalLeaves);
-        report.put("totalDaysUsed", totalDays);
-        report.put("leaveTypeDistribution", typeDistribution);
-        report.put("leaves", allTeamLeaves);
-
-        return report;
-    }
+//    /**
+//     * 4. Department Leave Report
+//     * GET /api/reports/department/{deptId}/leaves
+//     */
+//    public Map<String, Object> getDepartmentLeaveReport(Long managerId, Integer year) {
+//        if (year == null) {
+//            year = Year.now().getValue();
+//        }
+//
+//        List<Employee> teamMembers = employeeRepository.findByManagerId(managerId);
+//        List<Long> teamIds = teamMembers.stream()
+//                .map(Employee::getId)
+//                .toList();
+//
+//        final Integer finalYear = year;
+//        List<LeaveApplication> allTeamLeaves = new ArrayList<>();
+//        for (Long empId : teamIds) {
+//            List<LeaveApplication> empLeaves = leaveApplicationRepository.findByEmployeeId(empId)
+//                    .stream()
+//                    .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
+//                    .toList();
+//            allTeamLeaves.addAll(empLeaves);
+//        }
+//
+//        long totalLeaves = allTeamLeaves.stream()
+//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
+//                .count();
+//
+//        double totalDays = allTeamLeaves.stream()
+//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
+//                .mapToDouble(l -> l.getDays().doubleValue())
+//                .sum();
+//
+//        // Group by leave type
+//        Map<LeaveType, Long> typeDistribution = allTeamLeaves.stream()
+//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
+//                .collect(Collectors.groupingBy(
+//                        LeaveApplication::getLeaveType,
+//                        Collectors.counting()
+//                ));
+//
+//        Map<String, Object> report = new HashMap<>();
+//        report.put("departmentId", managerId);
+//        report.put("year", year);
+//        report.put("teamSize", teamMembers.size());
+//        report.put("totalLeavesApproved", totalLeaves);
+//        report.put("totalDaysUsed", totalDays);
+//        report.put("leaveTypeDistribution", typeDistribution);
+//        report.put("leaves", allTeamLeaves);
+//
+//        return report;
+//    }
 
     /**
      * 5. Manager Team Report
@@ -405,16 +400,11 @@ public class ReportsService {
             year = Year.now().getValue();
         }
 
-        List<LeaveApplication> leaves = leaveApplicationRepository.findAll();
         final Integer finalYear = year;
-
+        List<LeaveApplication> leaves = leaveApplicationRepository
+                .findByYearAndStatus(year, LeaveStatus.APPROVED);
         Map<LeaveType, Long> countByType = leaves.stream()
-                .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .collect(Collectors.groupingBy(
-                        LeaveApplication::getLeaveType,
-                        Collectors.counting()
-                ));
+                .collect(Collectors.groupingBy(LeaveApplication::getLeaveType, Collectors.counting()));
 
         Map<LeaveType, Double> daysByType = leaves.stream()
                 .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
@@ -453,11 +443,8 @@ public class ReportsService {
      * ⚠️ CORRECTED METHOD NAME TO MATCH CONTROLLER
      */
     public Map<String, Object> getMonthlyReport(Integer year, Integer month) {
-        List<LeaveApplication> monthLeaves = leaveApplicationRepository.findAll().stream()
-                .filter(l -> l.getStartDate().getYear() == year)
-                .filter(l -> l.getStartDate().getMonthValue() == month)
-                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-                .toList();
+        List<LeaveApplication> monthLeaves = leaveApplicationRepository
+                .findByYearAndMonthAndStatus(year, month, LeaveStatus.APPROVED);
 
         long totalLeaves = monthLeaves.size();
         double totalDays = monthLeaves.stream()
@@ -514,7 +501,7 @@ public class ReportsService {
                 .toList();
 
         double totalLopPercentage = lopRecords.stream()
-                .mapToDouble(LossOfPayRecord::getLopPercentage)
+                .mapToDouble(LossOfPayRecord::getLossPercentage)
                 .sum();
 
         long employeesAffected = lopRecords.stream()
@@ -533,7 +520,7 @@ public class ReportsService {
         Map<Integer, Double> monthlyLopPercentage = lopRecords.stream()
                 .collect(Collectors.groupingBy(
                         LossOfPayRecord::getMonth,
-                        Collectors.summingDouble(LossOfPayRecord::getLopPercentage)
+                        Collectors.summingDouble(LossOfPayRecord::getLossPercentage)
                 ));
 
         // Employee-wise breakdown
@@ -548,7 +535,7 @@ public class ReportsService {
             Employee emp = employeeRepository.findById(empId).orElse(null);
 
             double empTotalLop = empRecords.stream()
-                    .mapToDouble(LossOfPayRecord::getLopPercentage)
+                    .mapToDouble(LossOfPayRecord::getLossPercentage)
                     .sum();
 
             Map<String, Object> empData = new HashMap<>();

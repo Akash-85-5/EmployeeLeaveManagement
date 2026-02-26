@@ -15,9 +15,9 @@ public class EmailSender {
     }
 
     @Async
-    public void sendEmail(String to, String subject, String body){
+    public void sendEmail(String from, String to, String subject, String body){
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("something@gmail.com");
+        message.setFrom(from);
         message.setTo(to);
         message.setSubject(subject);
         message.setText(body);

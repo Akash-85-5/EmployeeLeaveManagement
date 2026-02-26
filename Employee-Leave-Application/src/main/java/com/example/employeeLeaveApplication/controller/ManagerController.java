@@ -8,8 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/manager")
-public class
-ManagerController {
+public class ManagerController {
 
     private final TeamService teamService;
 

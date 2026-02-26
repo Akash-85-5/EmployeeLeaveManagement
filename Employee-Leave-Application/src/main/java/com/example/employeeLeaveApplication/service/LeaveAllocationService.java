@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.entity.LeaveAllocation;
+import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.LeaveAllocationRepository;
 import org.springframework.stereotype.Service;
@@ -8,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Year;
 import java.util.List;
+
+import static com.example.employeeLeaveApplication.enums.CompOffStatus.EARNED;
+import static com.example.employeeLeaveApplication.enums.LeaveType.*;
 
 @Service
 public class LeaveAllocationService {
@@ -96,7 +100,7 @@ public class LeaveAllocationService {
         }
 
         // Standard categories with default allocations
-        String[] categories = {"SICK", "CASUAL", "EARNED", "PERSONAL"};
+        LeaveType[] categories = {SICK, CASUAL, EARNED_LEAVES, PERSONAL};
         double[] allocations = {12.0, 6.0, 4.0, 2.0};  // Total = 24
 
         List<LeaveAllocation> created = new java.util.ArrayList<>();

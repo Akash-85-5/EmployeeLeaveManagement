@@ -7,6 +7,7 @@ import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +32,7 @@ public class EscalationService {
                 LocalDateTime.now().minusHours(SLA_HOURS);
 
         List<LeaveApplication> overdueLeaves =
-                leaveRepo.findByStatusAndSubmittedAtBeforeAndEscalatedFalse(
+                leaveRepo.findByStatusAndCreatedAtBeforeAndEscalatedFalse(
                         LeaveStatus.PENDING,
                         deadline
                 );
@@ -47,8 +48,6 @@ public class EscalationService {
 
             leave.setEscalated(true);
             leave.setEscalatedAt(LocalDateTime.now());
-            leave.setManagerId(hr.getId());
-
             leaveRepo.save(leave);
         }
     }

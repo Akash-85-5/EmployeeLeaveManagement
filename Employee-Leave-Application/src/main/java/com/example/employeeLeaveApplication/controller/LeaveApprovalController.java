@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.BulkLeaveDecisionRequest;
 import com.example.employeeLeaveApplication.dto.LeaveDecisionRequest;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveApproval;
@@ -7,9 +8,8 @@ import com.example.employeeLeaveApplication.service.LeaveApprovalService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/leave-approvals")
@@ -21,63 +21,82 @@ public class LeaveApprovalController {
         this.leaveApprovalService = leaveApprovalService;
     }
 
-    // ==================== GET PENDING LEAVES FOR MANAGER (WITH PAGINATION) - UPDATED ====================
     @GetMapping("/pending/{managerEmployeeId}")
-    public Page<LeaveApplication> getPendingLeaves(
+    public ResponseEntity<Page<LeaveApplication>> getPendingLeaves(
             @PathVariable Long managerEmployeeId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return leaveApprovalService.getPendingLeavesForManager(managerEmployeeId, pageable);
+        return ResponseEntity.ok(
+                leaveApprovalService.getPendingLeavesForManager(managerEmployeeId, pageable));
     }
 
-    // ==================== MAKE DECISION (APPROVE/REJECT)  ====================
+    // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/decision")
-    public String decideLeave(@RequestBody LeaveDecisionRequest request) {
+    public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
-        return "Leave " + request.getDecision();
+        return ResponseEntity.ok("Leave decision recorded: " + request.getDecision());
     }
 
-    // ==================== APPROVE LEAVE (ALTERNATIVE ENDPOINT) - NEW ====================
+    // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/{leaveId}/approve")
-    public String approveLeave(
+    public ResponseEntity<String> approveLeave(
             @PathVariable Long leaveId,
             @RequestParam Long managerId,
-            @RequestParam(required = false) String comments
-    ) {
+            @RequestParam(required = false) String comments) {
         leaveApprovalService.approveLeave(leaveId, managerId, comments);
-        return "Leave approved successfully";
+        return ResponseEntity.ok("Leave approved successfully");
     }
 
-    // ==================== REJECT LEAVE (ALTERNATIVE ENDPOINT) - NEW ====================
+    // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/{leaveId}/reject")
-    public String rejectLeave(
+    public ResponseEntity<String> rejectLeave(
             @PathVariable Long leaveId,
             @RequestParam Long managerId,
-            @RequestParam(required = false) String comments
-    ) {
+            @RequestParam(required = false) String comments) {
         leaveApprovalService.rejectLeave(leaveId, managerId, comments);
-        return "Leave rejected successfully";
+        return ResponseEntity.ok("Leave rejected successfully");
     }
 
-    // ==================== GET APPROVAL HISTORY FOR A LEAVE  ====================
     @GetMapping("/history/{leaveId}")
-    public Page<LeaveApproval> getApprovalHistory(@PathVariable Long leaveId,
-                                                  @RequestParam(defaultValue = "0") int page,
-                                                  @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<Page<LeaveApproval>> getApprovalHistory(
+            @PathVariable Long leaveId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return leaveApprovalService.getApprovalHistory(leaveId, pageable);
+        return ResponseEntity.ok(leaveApprovalService.getApprovalHistory(leaveId, pageable));
     }
 
-    // ==================== GET MANAGER'S PAST DECISIONS  ====================
     @GetMapping("/my-decisions/{managerId}")
-    public Page<LeaveApproval> getManagerDecisions(
+    public ResponseEntity<Page<LeaveApproval>> getManagerDecisions(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return leaveApprovalService.getManagerDecisions(managerId, pageable);
+        return ResponseEntity.ok(leaveApprovalService.getManagerDecisions(managerId, pageable));
+    }
+
+    @PostMapping("/hr/decision")
+    public ResponseEntity<String> hrDecision(@RequestBody LeaveDecisionRequest request) {
+        return ResponseEntity.ok(leaveApprovalService.hrDecision(
+                request.getLeaveId(), request.getDecision(), request.getManagerId()));
+    }
+
+    @PostMapping("/manager/bulk-decision")
+    public ResponseEntity<String> managerBulkDecision(
+            @RequestBody BulkLeaveDecisionRequest request) {
+        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, false));
+    }
+
+    @PostMapping("/hr/bulk-decision")
+    public ResponseEntity<String> hrBulkDecision(
+            @RequestBody BulkLeaveDecisionRequest request) {
+        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, true));
+    }
+
+    // ✅ ADDED: Missing endpoint — get escalated leaves for HR
+    @GetMapping("/hr/escalated")
+    public ResponseEntity<?> getEscalatedLeavesForHr() {
+        return ResponseEntity.ok(leaveApprovalService.getEscalatedLeavesForHr());
     }
 }
