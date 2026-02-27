@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.dto.*;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.service.DashboardService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class DashboardController {
     }
 
     @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<EmployeeDashboardResponse> getEmployeeDashboard(
             @PathVariable Long employeeId) {
         log.info("[API] GET employee dashboard: {}", employeeId);
@@ -36,6 +38,7 @@ public class DashboardController {
     }
 
     @GetMapping("/monthly-stats/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public MonthlyStatsResponse getMonthlyStats(
             @PathVariable Long employeeId,
             @RequestParam Integer year,
@@ -46,6 +49,7 @@ public class DashboardController {
     // ✅ FIXED: renamed from /manager/{managerId} to /manager/summary/{managerId}
     // Old: @GetMapping("/manager/{managerId}") -- conflicted with /manager/team-balances/{id}
     @GetMapping("/manager/summary/{managerId}")
+    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public ResponseEntity<ManagerDashboardResponse> getManagerDashboard(
             @PathVariable Long managerId) {
         log.info("[API] GET manager dashboard: {}", managerId);
@@ -58,6 +62,7 @@ public class DashboardController {
     }
 
     @GetMapping("/hr")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<HRDashboardResponse> getHRDashboard() {
         log.info("[API] GET HR dashboard");
         try {
@@ -69,6 +74,7 @@ public class DashboardController {
     }
 
     @GetMapping("/admin/{adminId}")
+    @PreAuthorize("hasRole('ADMIN') and #adminId == authentication.principal.user.id ")
     public ResponseEntity<AdminDashboardResponse> getAdminDashboard(
             @PathVariable Long adminId) {
         log.info("[API] GET admin dashboard: {}", adminId);
@@ -94,6 +100,7 @@ public class DashboardController {
     }
 
     @GetMapping("/manager/team-balances/{managerId}")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<List<TeamMemberBalance>> getTeamBalances(
             @PathVariable Long managerId,
             @RequestParam Integer year) {
@@ -107,6 +114,7 @@ public class DashboardController {
     }
 
     @GetMapping("/manager/pending-count/{managerId}")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Integer> getPendingCount(@PathVariable Long managerId) {
         log.info("[API] GET pending count: manager={}", managerId);
         try {
@@ -119,6 +127,7 @@ public class DashboardController {
 
     // ✅ FIXED: now returns DTO list, not raw LeaveApplication entities
     @GetMapping("/manager/pending-requests/{managerId}")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<List<ManagerDashboardResponse.TeamPendingLeaveDTO>> getPendingRequests(
             @PathVariable Long managerId) {
         log.info("[API] GET pending requests: manager={}", managerId);
@@ -134,6 +143,7 @@ public class DashboardController {
 
     // ✅ FIXED: returns EmployeeSummaryDTO, not raw Employee entity
     @GetMapping("/hr/on-leave")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<EmployeeSummaryDTO>> getEmployeesOnLeave() {
         log.info("[API] GET employees on leave");
         try {
@@ -146,6 +156,7 @@ public class DashboardController {
 
     // ✅ FIXED: returns EmployeeSummaryDTO, not raw Employee entity
     @GetMapping("/hr/managers-upcoming-leave")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<EmployeeSummaryDTO>> getManagersWithUpcomingLeave() {
         log.info("[API] GET managers with upcoming leave");
         try {
@@ -158,6 +169,7 @@ public class DashboardController {
 
     // ✅ FIXED: returns EmployeeSummaryDTO, not raw Employee entity
     @GetMapping("/hr/admins-upcoming-leave")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<EmployeeSummaryDTO>> getAdminsWithUpcomingLeave() {
         log.info("[API] GET admins with upcoming leave");
         try {
@@ -171,12 +183,14 @@ public class DashboardController {
     // ── MANAGER ──────────────────────────────────────────
 
     @GetMapping("/manager/team-on-leave/{managerId}")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<List<TeamMemberBalance>> getTeamMembersOnLeaveToday(
             @PathVariable Long managerId) {
         return ResponseEntity.ok(dashboardService.getTeamMembersOnLeaveToday(managerId));
     }
 
     @GetMapping("/manager/team-calendar/{managerId}")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<Map<String, List<TeamMemberBalance>>> getTeamLeaveCalendar(
             @PathVariable Long managerId) {
         return ResponseEntity.ok(dashboardService.getTeamLeaveCalendar(managerId));
@@ -185,12 +199,14 @@ public class DashboardController {
 // ── HR ───────────────────────────────────────────────
 
     @GetMapping("/hr/company-stats")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<Map<String, Object>> getCompanyWideStats(
             @RequestParam Integer year) {
         return ResponseEntity.ok(dashboardService.getCompanyWideStats(year));
     }
 
     @GetMapping("/hr/low-balance")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<TeamMemberBalance>> getEmployeesWithLowBalance(
             @RequestParam Integer year,
             @RequestParam(defaultValue = "5.0") Double threshold) {
@@ -198,6 +214,7 @@ public class DashboardController {
     }
 
     @GetMapping("/hr/high-lop")
+    @PreAuthorize("hasRole('HR')")
     public ResponseEntity<List<TeamMemberBalance>> getEmployeesWithHighLOP(
             @RequestParam Integer year,
             @RequestParam(defaultValue = "5.0") Double threshold) {
@@ -205,12 +222,14 @@ public class DashboardController {
     }
     // ── ADMIN ────────────────────────────────────────────
     @GetMapping("/admin/carry-forward-eligible")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TeamMemberBalance>> getCarryForwardEligible(
             @RequestParam Integer year) {
         return ResponseEntity.ok(dashboardService.getCarryForwardEligible(year));
     }
 
     @GetMapping("/admin/exceeding-monthly-limit")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TeamMemberBalance>> getEmployeesExceedingMonthlyLimit(
             @RequestParam Integer year,
             @RequestParam Integer month) {

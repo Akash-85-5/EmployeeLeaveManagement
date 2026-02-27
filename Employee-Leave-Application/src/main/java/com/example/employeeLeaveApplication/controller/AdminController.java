@@ -28,6 +28,7 @@ public class AdminController {
     }
 
     @PostMapping("/carry-forward")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> processCarryForward(
             @RequestParam Integer fromYear) {
 
@@ -45,6 +46,7 @@ public class AdminController {
     }
 
     @PostMapping("/carry-forward/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> processEmployeeCarryForward(
             @PathVariable Long employeeId,
             @RequestParam Integer fromYear) {

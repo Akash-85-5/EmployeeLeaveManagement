@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.entity.LeaveAllocation;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.service.LeaveAllocationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

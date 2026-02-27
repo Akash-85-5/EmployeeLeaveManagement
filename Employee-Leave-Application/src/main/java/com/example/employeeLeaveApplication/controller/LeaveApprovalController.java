@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,7 +22,8 @@ public class LeaveApprovalController {
         this.leaveApprovalService = leaveApprovalService;
     }
 
-    @GetMapping("/pending/{managerEmployeeId}")
+    @GetMapping("/pending/{managerId}")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplication>> getPendingLeaves(
             @PathVariable Long managerEmployeeId,
             @RequestParam(defaultValue = "0") int page,
@@ -33,6 +35,7 @@ public class LeaveApprovalController {
 
     // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/decision")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
         return ResponseEntity.ok("Leave decision recorded: " + request.getDecision());
@@ -40,6 +43,7 @@ public class LeaveApprovalController {
 
     // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/{leaveId}/approve")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveLeave(
             @PathVariable Long leaveId,
             @RequestParam Long managerId,
@@ -50,6 +54,7 @@ public class LeaveApprovalController {
 
     // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/{leaveId}/reject")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> rejectLeave(
             @PathVariable Long leaveId,
             @RequestParam Long managerId,
@@ -68,6 +73,7 @@ public class LeaveApprovalController {
     }
 
     @GetMapping("/my-decisions/{managerId}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<Page<LeaveApproval>> getManagerDecisions(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,8 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
     @GetMapping("/user/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+
     public Page<NotificationResponse> getNotifications(
             @PathVariable Long employeeId,
             @RequestParam(defaultValue = "0") int page,

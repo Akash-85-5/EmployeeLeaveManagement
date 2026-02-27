@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -48,6 +49,7 @@ public class CompOffController {
     }
 
     @GetMapping("/pending/{managerId}/approvals")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public Page<CompOff> getPendingCompOffApprovals(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
@@ -64,12 +66,14 @@ public class CompOffController {
     }
 
     @PatchMapping("/approve/{id}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveCompOff(@PathVariable Long id) {
         compOffService.approveCompOff(id);
         return ResponseEntity.ok("Comp-Off credit approved.");
     }
 
     @PatchMapping("/reject/{id}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> rejectCompOff(
             @PathVariable Long id,
             @RequestParam(required = false) String reason) {
@@ -78,6 +82,7 @@ public class CompOffController {
     }
 
     @DeleteMapping("/{id}/cancel")
+    @PreAuthorize("#id == authentication.principal.user.id")
     public ResponseEntity<String> deleteCompOffRequest(
             @PathVariable Long id,
             @RequestParam Long employeeId) {
@@ -86,11 +91,13 @@ public class CompOffController {
     }
 
     @GetMapping("/balance/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<BigDecimal> getBalance(@PathVariable Long employeeId) {
         return ResponseEntity.ok(compOffService.getAvailableCompOffDays(employeeId));
     }
 
     @GetMapping("/balance/{employeeId}/details")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<CompOffBalanceDetailsDTO> getBalanceDetails(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -98,6 +105,7 @@ public class CompOffController {
     }
 
     @GetMapping("/history/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public Page<CompOff> getCompOffHistory(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year,

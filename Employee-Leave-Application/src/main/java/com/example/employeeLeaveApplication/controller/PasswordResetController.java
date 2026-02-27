@@ -26,6 +26,7 @@ public class PasswordResetController {
     }
 
     @PostMapping("/approve/{requestId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void approve(@PathVariable Long requestId) {
 
         String email = SecurityContextHolder
@@ -37,6 +38,7 @@ public class PasswordResetController {
     }
 
     @PostMapping("/reject/{requestId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public void reject(@PathVariable Long requestId) {
 
         String email = SecurityContextHolder

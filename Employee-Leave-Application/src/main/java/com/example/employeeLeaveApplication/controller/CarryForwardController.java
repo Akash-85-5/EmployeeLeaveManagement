@@ -5,6 +5,7 @@ import com.example.employeeLeaveApplication.dto.CarryForwardEligibilityResponse;
 import com.example.employeeLeaveApplication.service.CarryForwardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class CarryForwardController {
     private final CarryForwardService carryForwardService;
 
     @GetMapping("/balance/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<CarryForwardBalanceResponse> getBalance(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {

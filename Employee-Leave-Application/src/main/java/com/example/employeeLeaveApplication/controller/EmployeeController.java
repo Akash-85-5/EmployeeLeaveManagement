@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class EmployeeController {
 
     // ==================== GET ALL EMPLOYEES (WITH PAGINATION & FILTERS) - NEW ====================
     @GetMapping("/all")
+    @PreAuthorize("hasRole('HR')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -50,6 +52,7 @@ public class EmployeeController {
 
     // ==================== DELETE/DEACTIVATE EMPLOYEE  ====================
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully");
@@ -57,6 +60,7 @@ public class EmployeeController {
 
     // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
     @GetMapping("/manager/{managerId}/team")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
     }

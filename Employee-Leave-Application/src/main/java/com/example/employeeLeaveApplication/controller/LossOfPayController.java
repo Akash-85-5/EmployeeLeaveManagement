@@ -42,7 +42,6 @@ public class  LossOfPayController {
         return ResponseEntity.ok(lossOfPayService.getForEmployeeAndYear(employeeId, year));
     }
 
-    // ✅ ADDED: Missing endpoint for restoreLossOfPay() service method
     @DeleteMapping("/employee/{employeeId}/year/{year}/month/{month}")
     public ResponseEntity<String> restoreLop(
             @PathVariable Long employeeId,

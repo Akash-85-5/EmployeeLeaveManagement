@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.dto.LeaveBalanceResponse;
 import com.example.employeeLeaveApplication.service.LeaveBalanceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Year;
@@ -20,6 +21,7 @@ public class LeaveBalanceController {
     }
 
     @GetMapping("/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<LeaveBalanceResponse> getBalance(
             @PathVariable Long employeeId,
             @RequestParam Integer year) {
@@ -51,6 +53,7 @@ public class LeaveBalanceController {
     }
 
     @GetMapping("/lop/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<Double> getLossOfPay(
             @PathVariable Long employeeId,
             @RequestParam Integer year) {
