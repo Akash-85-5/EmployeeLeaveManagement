@@ -153,6 +153,10 @@ public class LeaveApplicationService {
         if (days <= 0) {
             throw new BadRequestException("Invalid date range.");
         }
+        if (leave.getHalfDayType() != null) {
+            return BigDecimal.valueOf(days)
+                    .multiply(new BigDecimal("0.5"));
+        }
 
         return BigDecimal.valueOf(days);
     }
