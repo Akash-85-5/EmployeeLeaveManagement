@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.example.employeeLeaveApplication.enums.BiometricVpnStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -126,8 +127,8 @@ public class AdminDashboardResponse {
         private String email;
         private LocalDate joiningDate;
         private Integer daysInCompany;
-        private String biometricStatus; // PENDING, COMPLETED
-        private String vpnStatus;       // PENDING, COMPLETED
+        private BiometricVpnStatus biometricStatus;
+        private BiometricVpnStatus vpnStatus;
         private Boolean onboardingComplete;
         private LocalDateTime completionDate;
     }

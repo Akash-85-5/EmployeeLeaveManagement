@@ -25,10 +25,10 @@ public class LossOfPayRecord {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
-    @Column(name = "lop_year", nullable = false)  // ✅ Matches H2
+    @Column(name = "year", nullable = false)
     private Integer year;
 
-    @Column(name = "lop_month", nullable = false)  // ✅ Matches H2
+    @Column(name = "month", nullable = false)
     private Integer month;
 
     @Column(name = "excess_days", nullable = false)

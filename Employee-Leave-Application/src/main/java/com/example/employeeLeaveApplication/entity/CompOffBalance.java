@@ -27,6 +27,7 @@ public class CompOffBalance {
     @Column(nullable = false)
     private Double balance = 0.0;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     public void calculateBalance() {

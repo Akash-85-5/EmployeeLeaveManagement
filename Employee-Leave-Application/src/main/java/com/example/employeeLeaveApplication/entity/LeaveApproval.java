@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "leave_approval")
 
-public class  LeaveApproval {
+public class    LeaveApproval {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

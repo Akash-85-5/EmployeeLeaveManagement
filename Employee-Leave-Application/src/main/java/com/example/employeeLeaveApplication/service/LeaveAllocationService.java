@@ -1,8 +1,10 @@
 package com.example.employeeLeaveApplication.service;
 
+import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveAllocation;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
+import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveAllocationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +19,12 @@ import static com.example.employeeLeaveApplication.enums.LeaveType.*;
 public class LeaveAllocationService {
 
     private final LeaveAllocationRepository leaveAllocationRepository;
+    private final EmployeeRepository  employeeRepository;
 
-    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository) {
+    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository,
+                                  EmployeeRepository employeeRepository) {
         this.leaveAllocationRepository = leaveAllocationRepository;
+        this.employeeRepository=employeeRepository;
     }
 
 
@@ -92,6 +97,8 @@ public class LeaveAllocationService {
         if (year == null) {
             year = Year.now().getValue();
         }
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(()-> new RuntimeException("Employee not found"));
 
         // Check if allocations already exist
         List<LeaveAllocation> existing = leaveAllocationRepository.findByEmployeeIdAndYear(employeeId, year);

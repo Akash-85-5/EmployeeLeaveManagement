@@ -39,23 +39,24 @@ public class LeaveApplication {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "leave_type", nullable = false)
     private LeaveType leaveType;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "half_day_type")
     private HalfDayType halfDayType;
 
     @Column(name = "leave_year", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(nullable = false)
+    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
     @Column(nullable = false)
@@ -105,8 +106,9 @@ public class LeaveApplication {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "ESCALATED")
+    @Column(name = "escalated")
     private Boolean escalated = false;
+    @Column(name = "escalated_at")
     private LocalDateTime escalatedAt;
 
     @NotNull

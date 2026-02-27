@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "leave_reminders")
+@Table(name = "leave_reminder")
 public class LeaveReminder {
 
     @Id

@@ -14,14 +14,14 @@ public class CompOff {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
     @Column(name = "manager_id", nullable = false)
     private Long managerId;
 
     // The holiday/weekend the employee actually worked
-    @Column(nullable = false)
+    @Column(name = "worked_date", nullable = false)
     private LocalDate workedDate;
 
     /**
@@ -57,6 +57,7 @@ public class CompOff {
     @Column(name = "year")
     private Integer year;
 
+    @Column(name = "rejection_reason")
     private String rejectionReason;
 
     @PrePersist

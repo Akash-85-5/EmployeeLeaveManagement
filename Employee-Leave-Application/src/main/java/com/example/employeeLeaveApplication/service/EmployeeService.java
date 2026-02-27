@@ -1,9 +1,13 @@
 package com.example.employeeLeaveApplication.service;
 
+import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
+import com.example.employeeLeaveApplication.entity.User;
 import com.example.employeeLeaveApplication.enums.Role;
+import com.example.employeeLeaveApplication.enums.Status;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
+import com.example.employeeLeaveApplication.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,9 +20,11 @@ import java.util.List;
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository,UserRepository userRepository) {
         this.employeeRepository = employeeRepository;
+        this.userRepository=userRepository;
     }
 
     // ==================== EXISTING METHODS ====================
@@ -26,10 +32,35 @@ public class EmployeeService {
 //    public Employee createEmployee(Employee employee) {
 //        return employeeRepository.save(employee);
 //    }
+//    public Employee getEmployee(Long id) {
+//        return employeeRepository.findById(id)
+//                .orElseThrow(() -> new BadRequestException("Employee not found"));
+//    }
 
-    public Employee getEmployee(Long id) {
-        return employeeRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Employee not found"));
+
+    public ProfileResponse getProfile(Long employeeId) {
+
+        User user = userRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ProfileResponse response = new ProfileResponse();
+
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setRole(user.getRole().name());
+        response.setManagerId(user.getManagerId());
+
+        response.setActive(user.getStatus() == Status.ACTIVE);
+        response.setMustChangePassword(user.isForcePwdChange());
+
+        response.setJoiningDate(user.getJoiningDate());
+        response.setBiometricStatus(user.getBiometricStatus().name());
+        response.setVpnStatus(user.getVpnStatus().name());
+        response.setCreatedAt(user.getCreatedAt());
+        response.setUpdatedAt(user.getUpdatedAt());
+
+        return response;
     }
 
     // ==================== NEW METHODS ====================

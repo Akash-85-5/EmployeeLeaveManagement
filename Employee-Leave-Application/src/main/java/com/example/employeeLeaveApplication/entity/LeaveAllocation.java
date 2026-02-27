@@ -4,27 +4,27 @@ import com.example.employeeLeaveApplication.enums.LeaveType;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "leave_allocations")
+@Table(name = "leave_allocation")
 public class LeaveAllocation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "leave_category", nullable = false)
     private LeaveType leaveCategory;// SICK, CASUAL, etc.
 
-    @Column(nullable = false)
+    @Column(name = "allocation_year", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "allocated_days", nullable = false)
     private Double allocatedDays;
 
-    @Column(nullable = false)
+    @Column(name = "carry_forward_days", nullable = false)
     private Double carriedForwardDays = 0.0;
 
     public Long getId() {

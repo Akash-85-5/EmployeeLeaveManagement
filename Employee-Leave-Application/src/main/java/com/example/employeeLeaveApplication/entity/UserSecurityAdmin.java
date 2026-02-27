@@ -12,7 +12,7 @@ public class UserSecurityAdmin {
     private Long id;
 
     // 🔹 This links to the Employee table
-    @Column(nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
     @Column(name = "vpn_enabled")

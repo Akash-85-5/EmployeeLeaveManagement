@@ -1069,8 +1069,7 @@ public class DashboardService {
                 .orElseThrow(() -> new RuntimeException("Admin not found: " + adminId));
 
         int currentYear = LocalDate.now().getYear();
-        com.example.employeeLeaveApplication.dto.AdminDashboardResponse response =
-                new com.example.employeeLeaveApplication.dto.AdminDashboardResponse();
+        AdminDashboardResponse response = new AdminDashboardResponse();
 
         response.setCurrentYear(currentYear);
         response.setAdminId(adminId);

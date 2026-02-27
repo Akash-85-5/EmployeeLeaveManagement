@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import org.springframework.data.domain.Page;
@@ -26,14 +27,8 @@ public class EmployeeController {
 //        return employeeService.createEmployee(employee);
 //    }
 
-    // ==================== GET EMPLOYEE BY ID ====================
-    @GetMapping("/{id}")
-    public Employee getEmployee(@PathVariable Long id) {
-        return employeeService.getEmployee(id);
-    }
-
     // ==================== GET ALL EMPLOYEES (WITH PAGINATION & FILTERS) - NEW ====================
-    @GetMapping
+    @GetMapping("/all")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -68,8 +63,8 @@ public class EmployeeController {
 
     // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
     @GetMapping("/profile")
-    public Employee getCurrentEmployee(@RequestParam Long employeeId) {
-        return employeeService.getEmployee(employeeId);
+    public ProfileResponse getCurrentEmployee(@RequestParam Long employeeId) {
+        return employeeService.getProfile(employeeId);
     }
 
     // ==================== UPDATE CURRENT EMPLOYEE (SELF)  ====================

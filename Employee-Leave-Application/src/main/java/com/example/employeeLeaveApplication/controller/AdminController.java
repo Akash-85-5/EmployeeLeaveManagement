@@ -62,7 +62,7 @@ public class AdminController {
         }
     }
 
-    @PostMapping("/users")
+    @PostMapping("/users/add")
     @PreAuthorize("hasRole('ADMIN')")
     public void createUser(@RequestBody CreateUserRequest request) {
         adminService.createUser(request);

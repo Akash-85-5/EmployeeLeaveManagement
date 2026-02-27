@@ -2,7 +2,7 @@ package com.example.employeeLeaveApplication.dto;
 
 public class ChangePasswordRequest {
 
-    private String oldPassword;
+    private String oldPassword = "1234";
     private String newPassword;
 
     public String getOldPassword() {
