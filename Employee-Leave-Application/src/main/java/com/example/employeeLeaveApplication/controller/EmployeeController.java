@@ -66,15 +66,17 @@ public class EmployeeController {
     }
 
     // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
-    @GetMapping("/profile")
-    public ProfileResponse getCurrentEmployee(@RequestParam Long employeeId) {
+    @GetMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
         return employeeService.getProfile(employeeId);
     }
 
     // ==================== UPDATE CURRENT EMPLOYEE (SELF)  ====================
-    @PutMapping("/profile")
+    @PutMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public Employee updateCurrentEmployee(
-            @RequestParam Long employeeId,
+            @PathVariable Long employeeId,
             @RequestBody Employee employee
     ) {
         return employeeService.updateEmployee(employeeId, employee);
