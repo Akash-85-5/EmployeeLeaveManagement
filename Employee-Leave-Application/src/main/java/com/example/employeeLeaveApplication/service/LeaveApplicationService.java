@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.component.HolidayChecker;
+import com.example.employeeLeaveApplication.dto.LeaveBalanceResponse;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.entity.Employee;
@@ -33,6 +34,7 @@ public class LeaveApplicationService {
     private final HolidayChecker holidayChecker;
     private final CompOffService compOffService;
     private final CompOffRepository compOffRepository;
+    private final LeaveBalanceService leaveBalanceService;
     private final LeaveAttachmentRepository leaveAttachmentRepository;
 
     @Value("${app.server.ip}")
@@ -48,7 +50,8 @@ public class LeaveApplicationService {
             HolidayChecker holidayChecker,
             CompOffService compOffService,
             CompOffRepository compOffRepository,
-            LeaveAttachmentRepository leaveAttachmentRepository
+            LeaveAttachmentRepository leaveAttachmentRepository,
+            LeaveBalanceService leaveBalanceService
     ) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService = notificationService;
@@ -57,6 +60,7 @@ public class LeaveApplicationService {
         this.compOffService = compOffService;
         this.compOffRepository = compOffRepository;
         this.leaveAttachmentRepository = leaveAttachmentRepository;
+        this.leaveBalanceService=leaveBalanceService;
     }
 
     // ==================== EXISTING METHODS ====================
@@ -368,13 +372,18 @@ public class LeaveApplicationService {
         leaveApplicationRepository.save(leave);
     }
 
-    private String checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
+    private String  checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
         if (leave.getLeaveType() == LeaveType.COMP_OFF) {
             BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId().longValue());
             if (available.compareTo(calculatedDays) < 0) {
                 return "Insufficient leave balance (Available: " + available + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
             }
         }
+//        LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(),leave.getYear());
+//        BigDecimal totalAvaliableBalance = balance.getTotalRemaining();
+//        if(totalAvaliableBalance.compareTo(calculatedDays)<0){
+//            return "Insufficient leave balance (Avaliable: " + balance.getTotalRemaining() + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
+//        }
         return null;
     }
 

@@ -42,6 +42,9 @@ public class LeaveApplication {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
+    @Column(name = "employee_name", nullable = false)
+    private String employeeName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "leave_type", nullable = false)
     private LeaveType leaveType;
@@ -144,6 +147,14 @@ public class LeaveApplication {
     // ═══════════════════════════════════════════════════════════════
     // GETTERS AND SETTERS
     // ═══════════════════════════════════════════════════════════════
+
+    public String getEmployeeName() {
+        return employeeName;
+    }
+
+    public void setEmployeeName(String employeeName) {
+        this.employeeName = employeeName;
+    }
 
     public Long getManagerId() {
         return managerId;

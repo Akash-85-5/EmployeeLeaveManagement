@@ -2,14 +2,17 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.LeaveApplictionRequest;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
+import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveAllocation;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveAttachment;
 import com.example.employeeLeaveApplication.enums.HalfDayType;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.service.LeaveAllocationService;
 import com.example.employeeLeaveApplication.service.LeaveApplicationService;
+import com.example.employeeLeaveApplication.service.LeaveBalanceService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -40,9 +43,12 @@ import java.util.UUID;
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
+    private final EmployeeRepository employeeRepository;
 
-    public LeaveApplicationController(LeaveApplicationService leaveApplicationService) {
+    public LeaveApplicationController(LeaveApplicationService leaveApplicationService,
+                                      EmployeeRepository employeeRepository) {
         this.leaveApplicationService = leaveApplicationService;
+        this.employeeRepository=employeeRepository;
     }
 
     @Value("${file.upload-dir:uploads/leaves}")
@@ -61,6 +67,11 @@ public class LeaveApplicationController {
 
         LeaveApplication leave = new LeaveApplication();
         leave.setEmployeeId(request.getEmployeeId());
+
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(()-> new RuntimeException("Employee not found"));
+
+        leave.setEmployeeName(employee.getName());
         leave.setLeaveType(type);
         leave.setStartDate(request.getStartDate());
         leave.setEndDate(request.getEndDate());

@@ -25,12 +25,12 @@ public class LeaveApprovalController {
     @GetMapping("/pending/{managerId}")
     @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplication>> getPendingLeaves(
-            @PathVariable Long managerEmployeeId,
+            @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(
-                leaveApprovalService.getPendingLeavesForManager(managerEmployeeId, pageable));
+                leaveApprovalService.getPendingLeavesForManager(managerId, pageable));
     }
 
     // ✅ FIXED: now returns ResponseEntity<String>
