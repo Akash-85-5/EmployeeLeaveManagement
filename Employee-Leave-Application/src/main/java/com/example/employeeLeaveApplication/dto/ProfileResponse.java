@@ -8,6 +8,25 @@ public class ProfileResponse {
     private Long id;
     private String name;
     private String email;
+    private Long managerId;
+    private String managerName;
+    private boolean active;
+    private boolean mustChangePassword;
+    private String role;
+    private LocalDate joiningDate;
+    private String biometricStatus;
+    private String vpnStatus;
+    private LocalDateTime onboardingCompletedAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+
+    public String getManagerName() {
+        return managerName;
+    }
+    public void setManagerName(String managerName) {
+        this.managerName = managerName;
+    }
 
     public Long getId() {
         return id;
@@ -113,18 +132,7 @@ public class ProfileResponse {
         this.updatedAt = updatedAt;
     }
 
-    private String role;
 
-    private Long managerId;
-    private boolean active;
-    private boolean mustChangePassword;
-
-    private LocalDate joiningDate;
-    private String biometricStatus;
-    private String vpnStatus;
-    private LocalDateTime onboardingCompletedAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     // getters & setters
 }

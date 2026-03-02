@@ -51,6 +51,12 @@ public class EmployeeService {
         response.setRole(user.getRole().name());
         response.setManagerId(user.getManagerId());
 
+        Employee employee = employeeRepository.findById(employeeId)
+                        .orElseThrow(()-> new RuntimeException("Employee Not found"));
+        Employee manager = employeeRepository.findById(employee.getManagerId())
+                        .orElseThrow(()-> new RuntimeException("Manager Not Found"));
+
+        response.setManagerName(manager.getName());
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
 
