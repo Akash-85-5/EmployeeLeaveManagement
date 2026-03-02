@@ -52,11 +52,16 @@ public class EmployeeService {
         response.setManagerId(user.getManagerId());
 
         Employee employee = employeeRepository.findById(employeeId)
-                        .orElseThrow(()-> new RuntimeException("Employee Not found"));
-        Employee manager = employeeRepository.findById(employee.getManagerId())
-                        .orElseThrow(()-> new RuntimeException("Manager Not Found"));
+                .orElseThrow(() -> new RuntimeException("Employee Not found"));
 
-        response.setManagerName(manager.getName());
+        if (employee.getManagerId() != null) {
+            Employee manager = employeeRepository.findById(employee.getManagerId())
+                    .orElseThrow(() -> new RuntimeException("Manager Not Found"));
+
+            response.setManagerName(manager.getName());
+        } else {
+            response.setManagerName(null);
+        }
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
 

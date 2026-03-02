@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.service.EmployeeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
