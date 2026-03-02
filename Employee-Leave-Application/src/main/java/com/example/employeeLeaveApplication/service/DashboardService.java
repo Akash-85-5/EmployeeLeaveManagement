@@ -296,51 +296,90 @@ public class DashboardService {
     /**
      * Get team leave calendar for next 7 days
      */
+//    public Map<String, List<TeamMemberBalance>> getTeamLeaveCalendar(Long managerId) {
+//
+//        log.info("📅 [DASHBOARD-MANAGER] Getting team leave calendar for manager: {}", managerId);
+//
+//        LocalDate today = LocalDate.now();
+//        LocalDate endDate = today.plusDays(7);
+//
+//        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
+//        Map<String, List<TeamMemberBalance>> calendar = new LinkedHashMap<>();
+//
+//        // Initialize dates
+//        for (LocalDate date = today; !date.isAfter(endDate); date = date.plusDays(1)) {
+//            calendar.put(date.toString(), new ArrayList<>());
+//        }
+//
+//        // Fill calendar
+//        for (Employee member : teamMembers) {
+//            List<LeaveApplication> approvedLeaves = applicationRepository
+//                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
+//                    .stream()
+//                    .filter(la -> !la.getEndDate().isBefore(today) &&
+//                            !la.getStartDate().isAfter(endDate))
+//                    .collect(Collectors.toList());
+//
+//            for (LeaveApplication leave : approvedLeaves) {
+//                LocalDate leaveDate = leave.getStartDate();
+//                while (!leaveDate.isAfter(leave.getEndDate()) && !leaveDate.isAfter(endDate)) {
+//                    if (!leaveDate.isBefore(today)) {
+//                        TeamMemberBalance balance = new TeamMemberBalance();
+//                        balance.setEmployeeId(member.getId());
+//                        balance.setEmployeeName(member.getName());
+//
+//
+//
+//                        String dateKey = leaveDate.toString();
+//                        calendar.get(dateKey).add(balance);
+//                    }
+//                    leaveDate = leaveDate.plusDays(1);
+//                }
+//            }
+//        }
+//
+//        log.info("✅ [DASHBOARD-MANAGER] Team leave calendar prepared for 7 days");
+//
+//        return calendar;
+//    }
     public Map<String, List<TeamMemberBalance>> getTeamLeaveCalendar(Long managerId) {
-
-        log.info("📅 [DASHBOARD-MANAGER] Getting team leave calendar for manager: {}", managerId);
+        log.info("📅 [DASHBOARD-MANAGER] Fetching calendar for manager: {}", managerId);
 
         LocalDate today = LocalDate.now();
-        LocalDate endDate = today.plusDays(7);
+        LocalDate endDate = today.plusDays(30); // Coverage for the full month view
+        int currentYear = today.getYear();
 
-        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
+        // 1. Reuse your existing logic to get full balances (No more nulls!)
+        List<TeamMemberBalance> teamBalances = getTeamBalances(managerId, currentYear);
+
         Map<String, List<TeamMemberBalance>> calendar = new LinkedHashMap<>();
 
-        // Initialize dates
+        // Initialize calendar dates
         for (LocalDate date = today; !date.isAfter(endDate); date = date.plusDays(1)) {
             calendar.put(date.toString(), new ArrayList<>());
         }
 
-        // Fill calendar
-        for (Employee member : teamMembers) {
-            List<LeaveApplication> approvedLeaves = applicationRepository
-                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
+        // 2. Map leaves to the calendar
+        for (TeamMemberBalance balance : teamBalances) {
+            applicationRepository.findByEmployeeIdAndStatus(balance.getEmployeeId(), LeaveStatus.APPROVED)
                     .stream()
-                    .filter(la -> !la.getEndDate().isBefore(today) &&
-                            !la.getStartDate().isAfter(endDate))
-                    .collect(Collectors.toList());
-
-            for (LeaveApplication leave : approvedLeaves) {
-                LocalDate leaveDate = leave.getStartDate();
-                while (!leaveDate.isAfter(leave.getEndDate()) && !leaveDate.isAfter(endDate)) {
-                    if (!leaveDate.isBefore(today)) {
-                        TeamMemberBalance balance = new TeamMemberBalance();
-                        balance.setEmployeeId(member.getId());
-                        balance.setEmployeeName(member.getName());
-
-                        String dateKey = leaveDate.toString();
-                        calendar.get(dateKey).add(balance);
-                    }
-                    leaveDate = leaveDate.plusDays(1);
-                }
-            }
+                    .filter(la -> !la.getEndDate().isBefore(today) && !la.getStartDate().isAfter(endDate))
+                    .forEach(leave -> {
+                        LocalDate leaveDate = leave.getStartDate();
+                        while (!leaveDate.isAfter(leave.getEndDate()) && !leaveDate.isAfter(endDate)) {
+                            if (!leaveDate.isBefore(today)) {
+                                String dateKey = leaveDate.toString();
+                                if (calendar.containsKey(dateKey)) {
+                                    calendar.get(dateKey).add(balance); // Adds the full populated DTO
+                                }
+                            }
+                            leaveDate = leaveDate.plusDays(1);
+                        }
+                    });
         }
-
-        log.info("✅ [DASHBOARD-MANAGER] Team leave calendar prepared for 7 days");
 
         return calendar;
     }
-
     /**
      * Get pending team leave requests count
      */
