@@ -75,7 +75,7 @@ public class NotificationService {
      */
     public Long getUnreadCount(Long userId) {
         return notificationRepository.countByUserIdAndNotificationStatus(
-                userId, NotificationStatus.PENDING);
+                userId, NotificationStatus.SENT);
     }
 
     /**

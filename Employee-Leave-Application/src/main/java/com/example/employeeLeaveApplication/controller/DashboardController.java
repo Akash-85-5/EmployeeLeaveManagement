@@ -12,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
-// ✅ REMOVED @CrossOrigin here — configure globally in CorsConfig.java instead
 public class DashboardController {
 
     private static final org.slf4j.Logger log =
@@ -72,7 +71,6 @@ public class DashboardController {
             return ResponseEntity.badRequest().build();
         }
     }
-
     @GetMapping("/admin/{adminId}")
     @PreAuthorize("hasRole('ADMIN') and #adminId == authentication.principal.user.id ")
     public ResponseEntity<AdminDashboardResponse> getAdminDashboard(

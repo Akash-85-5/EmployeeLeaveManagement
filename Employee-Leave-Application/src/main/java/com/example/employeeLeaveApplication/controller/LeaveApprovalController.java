@@ -52,7 +52,6 @@ public class LeaveApprovalController {
         return ResponseEntity.ok("Leave approved successfully");
     }
 
-    // ✅ FIXED: now returns ResponseEntity<String>
     @PatchMapping("/{leaveId}/reject")
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> rejectLeave(
@@ -100,7 +99,6 @@ public class LeaveApprovalController {
         return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, true));
     }
 
-    // ✅ ADDED: Missing endpoint — get escalated leaves for HR
     @GetMapping("/hr/escalated")
     public ResponseEntity<?> getEscalatedLeavesForHr() {
         return ResponseEntity.ok(leaveApprovalService.getEscalatedLeavesForHr());

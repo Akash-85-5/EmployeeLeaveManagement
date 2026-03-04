@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
-public class   EmployeeLeaveApplication {
+public class  EmployeeLeaveApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(EmployeeLeaveApplication.class, args);

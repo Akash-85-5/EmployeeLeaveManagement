@@ -9,6 +9,7 @@ import com.example.employeeLeaveApplication.entity.LeaveAttachment;
 import com.example.employeeLeaveApplication.enums.HalfDayType;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.service.LeaveAllocationService;
 import com.example.employeeLeaveApplication.service.LeaveApplicationService;
@@ -73,6 +74,13 @@ public class LeaveApplicationController {
 
         leave.setEmployeeName(employee.getName());
         leave.setLeaveType(type);
+        LocalDate startDate = request.getStartDate();
+        if (startDate == null) {
+            throw new BadRequestException("Start date is required");
+        }
+        if (startDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Leave cannot be applied for past dates");
+        }
         leave.setStartDate(request.getStartDate());
         leave.setEndDate(request.getEndDate());
         leave.setReason(request.getReason());
@@ -80,6 +88,10 @@ public class LeaveApplicationController {
         if (request.getHalfDayType() != null) {
             leave.setHalfDayType(HalfDayType.valueOf(request.getHalfDayType().toUpperCase()));
         }
+        LeaveResponse response = leaveApplicationService.applyLeave(leave, request.isConfirmLossOfPay());
+
+        return response;
+    }
 
 //        // File handling
 //        if (files != null && files.length > 0) {
@@ -97,18 +109,7 @@ public class LeaveApplicationController {
 //            }
 //            leave.setAttachments(attachments);
 //        }
-
-        LeaveResponse response = leaveApplicationService.applyLeave(leave, request.isConfirmLossOfPay());
-
-        // Clean up circular reference for JSON response
-//        if (response.getLeaveApplication() != null && response.getLeaveApplication().getAttachments() != null) {
-//            response.getLeaveApplication().getAttachments().forEach(a -> a.setLeaveApplication(null));
-//        }
-
-        return response;
-    }
-
-    // ==================== GET ALL LEAVES (WITH PAGINATION & FILTERS) - NEW ====================
+// ==================== GET ALL LEAVES (WITH PAGINATION & FILTERS) - NEW ====================
 //    @GetMapping
 //    public Page<LeaveApplication> getAllLeaves(
 //            @RequestParam(required = false) Long employeeId,

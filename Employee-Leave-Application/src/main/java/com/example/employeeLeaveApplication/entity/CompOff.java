@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comp_off")
@@ -60,12 +61,24 @@ public class CompOff {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @PrePersist
     @PreUpdate
     public void setYearFromWorkedDate() {
+        this.createdAt = LocalDateTime.now();
         if (this.workedDate != null) {
             this.year = this.workedDate.getYear();
         }
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Long getManagerId() {

@@ -2,9 +2,11 @@ package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.component.HolidayChecker;
 import com.example.employeeLeaveApplication.dto.CompOffBalanceDetailsDTO;
+import com.example.employeeLeaveApplication.dto.CompOffPendingDTO;
 import com.example.employeeLeaveApplication.dto.CompOffRequestDTO;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.entity.CompOffBalance;
+import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.enums.CompOffStatus;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.CompOffRepository;
@@ -63,12 +65,12 @@ public class CompOffService {
             compOff.setWorkedDate(entry.getWorkedDate());
             compOff.setPlannedLeaveDate(entry.getPlannedLeaveDate());
 
-            // Safety check for days: default to 1 if 0 or null
+            Employee employee = employeeRepository.findById(request.getEmployeeId())
+                    .orElseThrow(()-> new RuntimeException("Employee Not found"));
+            compOff.setManagerId(employee.getManagerId());
+
             BigDecimal daysCount = entry.getDays();
             compOff.setDays(daysCount);
-
-//            // ✅ LOGIC FIX: Admin entries go straight to EARNED, Employees stay PENDING
-//            compOff.setStatus(isAdmin ? CompOffStatus.EARNED : CompOffStatus.PENDING);
 
             compOffRepository.save(compOff);
         }
@@ -254,12 +256,24 @@ public class CompOffService {
         return compOffRepository.findByEmployeeId(employeeId, pageable);
     }
 
-    public Page<CompOff> getPendingCompOffApprovals(Long managerId,Pageable pageable) {
+    public Page<CompOffPendingDTO> getPendingCompOffApprovals(Long managerId, Pageable pageable) {
 
-        return compOffRepository.findByManagerIdAndStatus(
-                managerId,
-                CompOffStatus.PENDING,
-                pageable
-        );
+        return compOffRepository
+                .findByManagerIdAndStatus(managerId, CompOffStatus.PENDING, pageable)
+                .map(compOff -> {
+                    CompOffPendingDTO dto = new CompOffPendingDTO();
+
+                    dto.setCompoffId(compOff.getId());
+                    dto.setEmployeeId(compOff.getEmployeeId());
+                    Employee employee = employeeRepository.findById(compOff.getEmployeeId())
+                                    .orElseThrow(()-> new RuntimeException("Employee Not Found"));
+                    dto.setEmployeeName(employee.getName());
+                    dto.setWorkedDate(compOff.getWorkedDate());
+                    dto.setStatus(compOff.getStatus());
+                    dto.setDays(compOff.getDays());
+                    dto.setCreatedAt(compOff.getCreatedAt());
+
+                    return dto;
+                });
     }
 }

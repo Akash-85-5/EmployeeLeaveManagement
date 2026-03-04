@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.CompOffBalanceDetailsDTO;
+import com.example.employeeLeaveApplication.dto.CompOffPendingDTO;
 import com.example.employeeLeaveApplication.dto.CompOffRequestDTO;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
@@ -27,7 +28,7 @@ public class CompOffController {
     @PostMapping("/request")
     public ResponseEntity<String> employeeRequestCompOff(@RequestBody CompOffRequestDTO request) {
         validateRequest(request);
-        compOffService.    requestBulkCompOff(request);
+        compOffService.requestBulkCompOff(request);
         return ResponseEntity.ok("Comp-Off request submitted and is now PENDING.");
     }
 
@@ -50,7 +51,7 @@ public class CompOffController {
 
     @GetMapping("/pending/{managerId}/approvals")
     @PreAuthorize("#managerId == authentication.principal.user.id")
-    public Page<CompOff> getPendingCompOffApprovals(
+    public Page<CompOffPendingDTO> getPendingCompOffApprovals(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {

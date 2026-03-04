@@ -30,6 +30,7 @@ public class LeaveApprovalService {
     private final LeaveApprovalRepository leaveApprovalRepository;
     private final LeaveBalanceService leaveBalanceService;
     private final LossOfPayService lossOfPayService;
+    private final CompOffService compOffService;
 
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
@@ -37,13 +38,15 @@ public class LeaveApprovalService {
                                 NotificationService notificationService,
                                 LeaveApprovalRepository leaveApprovalRepository,
                                 LeaveBalanceService leaveBalanceService,
-                                LossOfPayService lossOfPayService) {
+                                LossOfPayService lossOfPayService,
+                                CompOffService compOffService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
         this.leaveApprovalRepository = leaveApprovalRepository;
         this.leaveBalanceService = leaveBalanceService;
         this.lossOfPayService = lossOfPayService;
+        this.compOffService=compOffService;
     }
 
 
@@ -203,6 +206,9 @@ public class LeaveApprovalService {
         if (leave.getStatus() != LeaveStatus.PENDING) {
             throw new RuntimeException("Leave already processed");
         }
+        if(leave.getLeaveType()==LeaveType.COMP_OFF){
+            compOffService.approveCompOff(leave.getId());
+        }
 
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
@@ -229,7 +235,6 @@ public class LeaveApprovalService {
                     leave.getStartDate().getMonthValue()
             );
 
-            // 🔥 Apply LOP if monthly limit exceeded (>2)
             if (approvedCount > 2) {
                 lossOfPayService.applyMonthlyLimitViolation(
                         leave.getEmployeeId(),
@@ -332,10 +337,7 @@ public class LeaveApprovalService {
     public List<LeaveApplication> getEscalatedLeavesForHr() {
         return leaveApplicationRepository
                 .findByEscalatedTrueAndStatus(LeaveStatus.PENDING);
-
     }
-
-
 }
 
 
