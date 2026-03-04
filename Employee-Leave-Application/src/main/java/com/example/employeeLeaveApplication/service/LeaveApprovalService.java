@@ -206,9 +206,6 @@ public class LeaveApprovalService {
         if (leave.getStatus() != LeaveStatus.PENDING) {
             throw new RuntimeException("Leave already processed");
         }
-        if(leave.getLeaveType()==LeaveType.COMP_OFF){
-            compOffService.approveCompOff(leave.getId());
-        }
 
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
