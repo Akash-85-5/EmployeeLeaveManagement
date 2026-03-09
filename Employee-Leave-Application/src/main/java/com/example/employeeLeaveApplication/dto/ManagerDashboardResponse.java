@@ -22,7 +22,7 @@ public class ManagerDashboardResponse {
     // MANAGER'S OWN STATS (Same as Employee Dashboard)
     // ═══════════════════════════════════════════════════════════════
 
-    private EmployeeDashboardResponse dashboardResponse;
+    private EmployeeDashboardResponse personalStats;
 
     // ═══════════════════════════════════════════════════════════════
     // TEAM METRICS

@@ -777,7 +777,7 @@ public class DashboardService {
         EmployeeDashboardResponse ownStats = getDashboard(managerId);
 
         ManagerDashboardResponse response = new ManagerDashboardResponse();
-        response.setDashboardResponse(ownStats); // Use composition here!
+        response.setPersonalStats(ownStats); // Use composition here!
 
         // 2. Fetch Team Members
         List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);

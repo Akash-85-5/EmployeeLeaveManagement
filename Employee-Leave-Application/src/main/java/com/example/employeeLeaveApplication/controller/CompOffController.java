@@ -93,7 +93,7 @@ public class CompOffController {
 
     @GetMapping("/balance/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<Double> getBalance(@PathVariable Long employeeId) {
+    public ResponseEntity<BigDecimal> getBalance(@PathVariable Long employeeId) {
         return ResponseEntity.ok(compOffService.getAvailableCompOffDays(employeeId));
     }
 
