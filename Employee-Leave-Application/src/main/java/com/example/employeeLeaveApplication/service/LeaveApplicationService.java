@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.component.HolidayChecker;
 import com.example.employeeLeaveApplication.dto.LeaveBalanceResponse;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
+import com.example.employeeLeaveApplication.dto.LeaveTypeBreakdown;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
@@ -372,18 +373,37 @@ public class LeaveApplicationService {
         leaveApplicationRepository.save(leave);
     }
 
-    private String  checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
+    private String checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
         if (leave.getLeaveType() == LeaveType.COMP_OFF) {
-            BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId().longValue());
+            BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId());
             if (available.compareTo(calculatedDays) < 0) {
-                return "Insufficient leave balance (Available: " + available + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
+                return "Insufficient Comp-Off balance (Available: " + available + ").";
             }
+            return null;
         }
-//        LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(),leave.getYear());
-//        BigDecimal totalAvaliableBalance = balance.getTotalRemaining();
-//        if(totalAvaliableBalance.compareTo(calculatedDays)<0){
-//            return "Insufficient leave balance (Avaliable: " + balance.getTotalRemaining() + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
-//        }
+        // 2. Get the full balance response
+        LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(), leave.getYear());
+
+        // 3. Find the breakdown for the SPECIFIC leave type requested
+        LeaveTypeBreakdown specificTypeBreakdown = balance.getBreakdown().stream()
+                .filter(b -> b.getLeaveType() == leave.getLeaveType())
+                .findFirst()
+                .orElse(null);
+
+        // 4. Validate based on that specific type's remaining days
+        if (specificTypeBreakdown != null) {
+            BigDecimal remainingForType = BigDecimal.valueOf(specificTypeBreakdown.getRemainingDays());
+
+            if (remainingForType.compareTo(calculatedDays) < 0) {
+                return "Insufficient " + leave.getLeaveType() + " balance. " +
+                        "(Available: " + remainingForType + ", Requested: " + calculatedDays + "). " +
+                        "The request will proceed as Loss of Pay.";
+            }
+        } else {
+            // This handles cases where the leave type might not be allocated to the user at all
+            return "No allocation found for leave type: " + leave.getLeaveType();
+        }
+
         return null;
     }
 

@@ -26,7 +26,7 @@ public class NotificationMessageBuilder {
 
             case MEETING_REQUIRED:
                 return new EmailMessage(
-                        "Meeting Required for Leave Request",
+                         "Meeting Required for Leave Request",
                         reason
                 );
 

@@ -22,29 +22,7 @@ public class ManagerDashboardResponse {
     // MANAGER'S OWN STATS (Same as Employee Dashboard)
     // ═══════════════════════════════════════════════════════════════
 
-    private Long managerId;
-    private String managerName;
-    private Integer currentYear;
-
-    // Yearly stats
-    private Double yearlyAllocated;
-    private Double yearlyUsed;
-    private Double yearlyBalance;
-
-    // Monthly stats
-    private Double monthlyAllocated;
-    private Double monthlyUsed;
-    private Double monthlyBalance;
-
-    // Carry forward & CompOff balances
-    private Double carryForwardBalance;
-    private Double compOffBalance;
-    private Double lossOfPayPercentage;
-
-    // Leave counts by status
-    private Integer approvedCount;
-    private Integer pendingCount;
-    private Integer rejectedCount;
+    private EmployeeDashboardResponse dashboardResponse;
 
     // ═══════════════════════════════════════════════════════════════
     // TEAM METRICS
