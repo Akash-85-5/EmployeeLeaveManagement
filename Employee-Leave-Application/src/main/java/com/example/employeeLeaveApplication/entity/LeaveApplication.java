@@ -126,7 +126,6 @@ public class LeaveApplication {
     @Column(name = "version")
     private Long version;
 
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -331,6 +330,5 @@ public class LeaveApplication {
     public void setVersion(Long version) {
         this.version = version;
     }
-
 
 }

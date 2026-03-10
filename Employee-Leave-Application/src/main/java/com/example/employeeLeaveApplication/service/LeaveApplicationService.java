@@ -68,6 +68,7 @@ public class LeaveApplicationService {
 
     @Transactional
     public LeaveResponse applyLeave(LeaveApplication leave, boolean confirmLossOfPay) {
+        leave.setYear(leave.getStartDate().getYear());
         checkLeaveOverlap(leave);
         if (leave.getEndDate().isBefore(leave.getStartDate())) {
             throw new BadRequestException("End date cannot be before start date");
@@ -85,7 +86,6 @@ public class LeaveApplicationService {
         leave.setManagerId(employee.getManagerId());
         leave.setDays(calculatedDays);
         leave.setStatus(LeaveStatus.PENDING);
-        leave.setYear(leave.getStartDate().getYear());
 
         LeaveApplication savedLeave = leaveApplicationRepository.save(leave);
 
@@ -386,7 +386,7 @@ public class LeaveApplicationService {
 
         // 3. Find the breakdown for the SPECIFIC leave type requested
         LeaveTypeBreakdown specificTypeBreakdown = balance.getBreakdown().stream()
-                .filter(b -> b.getLeaveType() == leave.getLeaveType())
+                .filter(b -> String.valueOf(b.getLeaveType()).equals(String.valueOf(leave.getLeaveType())))
                 .findFirst()
                 .orElse(null);
 
