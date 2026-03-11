@@ -1,10 +1,13 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.CreateUserRequest;
+import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
 import com.example.employeeLeaveApplication.dto.UserDropdownResponse;
+import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.service.AdminService;
 import com.example.employeeLeaveApplication.service.CarryForwardService;
+import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,11 +23,14 @@ public class AdminController {
 
     private final AdminService adminService;
     private final CarryForwardService carryForwardService;
+    private final EmployeeService employeeService;
 
     public AdminController(CarryForwardService carryForwardService,
-                           AdminService adminService){
+                           AdminService adminService,
+                           EmployeeService employeeService){
         this.carryForwardService=carryForwardService;
         this.adminService=adminService;
+        this.employeeService=employeeService;
     }
 
     @PostMapping("/carry-forward")
@@ -82,5 +88,23 @@ public class AdminController {
             @RequestParam Role role) {
 
         return adminService.getEligibleManagers(role);
+    }
+
+    @PostMapping("/employees/{employeeId}/personal-details")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
+    public ResponseEntity<EmployeePersonalDetails> addPersonalDetails(
+            @PathVariable Long employeeId,
+            @RequestBody PersonalDetailsRequest request) {
+        return ResponseEntity.ok(
+                employeeService.saveOrUpdatePersonalDetails(employeeId, request));
+    }
+
+    @PutMapping("/employees/{employeeId}/personal-details")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
+    public ResponseEntity<EmployeePersonalDetails> updatePersonalDetails(
+            @PathVariable Long employeeId,
+            @RequestBody PersonalDetailsRequest request) {
+        return ResponseEntity.ok(
+                employeeService.saveOrUpdatePersonalDetails(employeeId, request));
     }
 }

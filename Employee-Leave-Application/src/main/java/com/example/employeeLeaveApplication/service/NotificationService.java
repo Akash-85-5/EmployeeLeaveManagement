@@ -47,7 +47,7 @@ public class NotificationService {
         notification.setEventType(eventType);
         notification.setChannel(channel);
         notification.setMessage(emailMessage.getBody());
-        notification.setNotificationStatus(NotificationStatus.SENT);
+        notification.setNotificationStatus(NotificationStatus.UNREAD);
 
         Notification saved = notificationRepository.save(notification);
 
@@ -75,7 +75,7 @@ public class NotificationService {
      */
     public Long getUnreadCount(Long userId) {
         return notificationRepository.countByUserIdAndNotificationStatus(
-                userId, NotificationStatus.SENT);
+                userId, NotificationStatus.UNREAD);
     }
 
     /**
@@ -96,7 +96,7 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         List<Notification> unreadNotifications = notificationRepository
-                .findByUserIdAndNotificationStatus(userId, NotificationStatus.PENDING);
+                .findByUserIdAndNotificationStatus(userId, NotificationStatus.UNREAD);
 
         for (Notification notification : unreadNotifications) {
             notification.setNotificationStatus(NotificationStatus.READ);
@@ -122,7 +122,7 @@ public class NotificationService {
     @Transactional
     public void clearReadNotifications(Long userId) {
         List<Notification> readNotifications = notificationRepository
-                .findByUserIdAndNotificationStatus(userId, NotificationStatus.SENT);
+                .findByUserIdAndNotificationStatus(userId, NotificationStatus.UNREAD);
 
         notificationRepository.deleteAll(readNotifications);
     }

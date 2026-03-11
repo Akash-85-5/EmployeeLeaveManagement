@@ -33,9 +33,6 @@ public class LeaveAllocationService {
     }
 
 
-    /**
-     * Get employee allocations for a specific year (or current year)
-     */
     public List<LeaveAllocation> getEmployeeAllocations(Long employeeId, Integer year) {
         if (year == null) {
             year = Year.now().getValue();
@@ -44,9 +41,6 @@ public class LeaveAllocationService {
         return leaveAllocationRepository.findByEmployeeIdAndYear(employeeId, year);
     }
 
-    /**
-     * Update leave allocation
-     */
     @Transactional
     public LeaveAllocation updateAllocation(Long id, LeaveAllocation allocation) {
         LeaveAllocation existing = leaveAllocationRepository.findById(id)
@@ -108,7 +102,7 @@ public class LeaveAllocationService {
 
         // Standard categories with default allocations
         LeaveType[] categories = {SICK, CASUAL, EARNED_LEAVES, PERSONAL};
-        double[] allocations = {12.0, 6.0, 4.0, 2.0};  // Total = 24
+        double[] allocations = {12.0, 6.0, 4.0, 2.0};
 
         List<LeaveAllocation> created = new java.util.ArrayList<>();
 

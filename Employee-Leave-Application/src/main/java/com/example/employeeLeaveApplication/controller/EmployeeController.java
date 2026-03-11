@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
+import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -70,8 +71,16 @@ public class EmployeeController {
     // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
     @GetMapping("/profile/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
-        return employeeService.getProfile(employeeId);
+    public ResponseEntity<ProfileResponse> getProfile(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getProfile(employeeId));
+    }
+
+    // ── Admin/HR views any employee's full personal details ───────
+    @GetMapping("/personal-details/{employeeId}")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
     // ==================== UPDATE CURRENT EMPLOYEE (SELF)  ====================

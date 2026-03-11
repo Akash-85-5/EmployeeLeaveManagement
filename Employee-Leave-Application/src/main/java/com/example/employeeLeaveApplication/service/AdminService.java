@@ -33,7 +33,6 @@ public class AdminService {
 
     public void createUser(CreateUserRequest request) {
 
-        // 🔴 EMAIL DUPLICATE CHECK (MANDATORY)
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
@@ -49,7 +48,6 @@ public class AdminService {
 
         Role role = request.getRole();
 
-        // 🔐 MANAGER ASSIGNMENT RULES
         if (role == Role.EMPLOYEE) {
 
             if (request.getManagerId() == null) {
