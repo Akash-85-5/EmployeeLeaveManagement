@@ -1,14 +1,16 @@
+// src/main/java/com/example/employeeLeaveApplication/entity/LeaveApproval.java
 package com.example.employeeLeaveApplication.entity;
 
+import com.example.employeeLeaveApplication.enums.ApprovalLevel;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
+import com.example.employeeLeaveApplication.enums.Role;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "leave_approval")
-
-public class    LeaveApproval {
+public class LeaveApproval {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -17,61 +19,53 @@ public class    LeaveApproval {
     @Column(name = "leave_id", nullable = false)
     private Long leaveId;
 
-    @Column(name = "manager_id", nullable = false)
-    private Long managerId;
+    /** The approver's employee ID */
+    @Column(name = "approver_id", nullable = false)
+    private Long approverId;
+
+    /** Which level this approval record belongs to */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_level", nullable = false)
+    private ApprovalLevel approvalLevel;
+
+    /** Role of the approver */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approver_role")
+    private Role approverRole;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "decision")
     private LeaveStatus decision;
 
+    @Column(name = "comments")
     private String comments;
+
     @Column(name = "decided_at")
     private LocalDateTime decidedAt;
 
-    public LocalDateTime getDecidedAt() {
-        return decidedAt;
-    }
+    // Getters & Setters
 
-    public void setDecidedAt(LocalDateTime decidedAt) {
-        this.decidedAt = decidedAt;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getId() {
-        return id;
-    }
+    public Long getLeaveId() { return leaveId; }
+    public void setLeaveId(Long leaveId) { this.leaveId = leaveId; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Long getApproverId() { return approverId; }
+    public void setApproverId(Long approverId) { this.approverId = approverId; }
 
-    public Long getLeaveId() {
-        return leaveId;
-    }
+    public ApprovalLevel getApprovalLevel() { return approvalLevel; }
+    public void setApprovalLevel(ApprovalLevel approvalLevel) { this.approvalLevel = approvalLevel; }
 
-    public void setLeaveId(Long leaveId) {
-        this.leaveId = leaveId;
-    }
+    public Role getApproverRole() { return approverRole; }
+    public void setApproverRole(Role approverRole) { this.approverRole = approverRole; }
 
-    public Long getManagerId() {
-        return managerId;
-    }
+    public LeaveStatus getDecision() { return decision; }
+    public void setDecision(LeaveStatus decision) { this.decision = decision; }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
-    }
+    public String getComments() { return comments; }
+    public void setComments(String comments) { this.comments = comments; }
 
-    public LeaveStatus getDecision() {
-        return decision;
-    }
-
-    public void setDecision(LeaveStatus decision) {
-        this.decision = decision;
-    }
-
-    public String getComments() {
-        return comments;
-    }
-
-    public void setComments(String comments) {
-        this.comments = comments;
-    }
+    public LocalDateTime getDecidedAt() { return decidedAt; }
+    public void setDecidedAt(LocalDateTime decidedAt) { this.decidedAt = decidedAt; }
 }

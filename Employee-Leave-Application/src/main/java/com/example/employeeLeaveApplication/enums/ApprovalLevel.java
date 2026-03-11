@@ -1,9 +1,7 @@
 package com.example.employeeLeaveApplication.enums;
 
-public enum Role {
-    EMPLOYEE,
+public enum ApprovalLevel {
     TEAM_LEADER,
     MANAGER,
-    HR,
-    ADMIN
+    HR
 }

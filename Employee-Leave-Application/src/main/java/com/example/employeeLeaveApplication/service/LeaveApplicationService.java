@@ -83,7 +83,8 @@ public class LeaveApplicationService {
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        leave.setManagerId(employee.getManagerId());
+        setupApprovalChain(leave, employee, calculatedDays);
+//        leave.setManagerId(employee.getManagerId());
         leave.setDays(calculatedDays);
         leave.setStatus(LeaveStatus.PENDING);
 
@@ -98,6 +99,37 @@ public class LeaveApplicationService {
         }
         notifyManager(savedLeave);
         return new LeaveResponse(savedLeave, null);
+    }
+
+    private void setupApprovalChain(LeaveApplication leave, Employee employee, BigDecimal days) {
+        if (employee.getTeamLeaderId() == null) {
+            throw new BadRequestException(
+                    "No Team Leader assigned to employee. Please contact HR.");
+        }
+        leave.setTeamLeaderId(employee.getTeamLeaderId());
+        leave.setCurrentApprovalLevel(ApprovalLevel.TEAM_LEADER);
+
+        int daysInt = days.intValue();
+
+        if (days.compareTo(BigDecimal.ONE) <= 0) {
+            leave.setRequiredApprovalLevels(1);
+            leave.setManagerId(null);
+        } else if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
+            leave.setRequiredApprovalLevels(2);
+            if (employee.getManagerId() == null) {
+                throw new BadRequestException(
+                        "No Manager assigned to employee. Please contact HR.");
+            }
+            leave.setManagerId(employee.getManagerId());
+        } else {
+            leave.setRequiredApprovalLevels(3);
+            if (employee.getManagerId() == null) {
+                throw new BadRequestException(
+                        "No Manager assigned to employee. Please contact HR.");
+            }
+            leave.setManagerId(employee.getManagerId());
+
+        }
     }
 
     public List<LeaveApplication> getLeavesByEmployee(Long employeeId, Pageable pageable) {

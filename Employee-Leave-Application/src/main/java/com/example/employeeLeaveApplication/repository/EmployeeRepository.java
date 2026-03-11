@@ -1,3 +1,4 @@
+// src/main/java/com/example/employeeLeaveApplication/repository/EmployeeRepository.java
 package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.Employee;
@@ -11,16 +12,18 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
+
     Optional<Employee> findByEmail(String email);
 
     List<Employee> findByManagerId(Long managerId);
 
+    // NEW: find employees under a team leader
+    List<Employee> findByTeamLeaderId(Long teamLeaderId);
+
     List<Employee> findByRole(Role role);
 
-    // Search employees by name (case-insensitive, partial match)
     List<Employee> findByNameContainingIgnoreCase(String name);
 
-    // Count active/inactive employees
     Long countByActive(Boolean active);
 
     List<Employee> findByActiveTrue();
@@ -43,11 +46,12 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
     @Query("SELECT COUNT(e) FROM Employee e WHERE e.vpnStatus = 'PENDING' AND e.active = true")
     Integer countPendingVPN();
 
-    @Query("SELECT e FROM Employee e WHERE e.managerId = :managerId AND e.active = true " +
-            "ORDER BY e.name ASC")
+    @Query("SELECT e FROM Employee e WHERE e.managerId = :managerId AND e.active = true ORDER BY e.name ASC")
     List<Employee> findTeamMembersByManager(@Param("managerId") Long managerId);
 
     @Query("SELECT DISTINCT e FROM Employee e WHERE e.role = 'MANAGER' AND e.active = true")
     List<Employee> findAllManagers();
 
+    @Query("SELECT DISTINCT e FROM Employee e WHERE e.role = 'HR' AND e.active = true")
+    List<Employee> findAllHr();
 }

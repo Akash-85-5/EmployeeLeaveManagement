@@ -16,10 +16,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 
 import static com.example.employeeLeaveApplication.enums.BiometricVpnStatus.PENDING;
-
 
 @Entity
 @Table(name = "employee")
@@ -28,6 +26,12 @@ public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "team_id")
+    private Long teamId;
+
+    @Column(name = "team_leader_id")
+    private Long teamLeaderId;
 
     @Column(nullable = false)
     private String name;
@@ -45,27 +49,19 @@ public class Employee {
     @Column(name = "active")
     private boolean active = true;
 
-    // ═══════════════════════════════════════════════════════════════
-    // HR DASHBOARD FIELDS (Onboarding & Compliance)
-    // ═══════════════════════════════════════════════════════════════
-
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "biometric_status")
-    private BiometricVpnStatus biometricStatus = PENDING; // PENDING, COMPLETED, FAILED
+    private BiometricVpnStatus biometricStatus = PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "vpn_status")
-    private BiometricVpnStatus vpnStatus = PENDING; // PENDING, COMPLETED, FAILED
+    private BiometricVpnStatus vpnStatus = PENDING;
 
     @Column(name = "onboarding_completed_at")
     private LocalDateTime onboardingCompletedAt;
-
-    // ═══════════════════════════════════════════════════════════════
-    // AUDIT FIELDS
-    // ═══════════════════════════════════════════════════════════════
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -84,103 +80,52 @@ public class Employee {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // GETTERS & SETTERS
-    // ═══════════════════════════════════════════════════════════════
+    // Getters & Setters
 
-    public Long getId() {
-        return id;
+    public Long getTeamId() {
+        return teamId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
     }
 
-    public String getName() {
-        return name;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
 
-    public Role getRole() {
-        return role;
-    }
+    public Long getManagerId() { return managerId; }
+    public void setManagerId(Long managerId) { this.managerId = managerId; }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
+    public Long getTeamLeaderId() { return teamLeaderId; }
+    public void setTeamLeaderId(Long teamLeaderId) { this.teamLeaderId = teamLeaderId; }
 
-    public Long getManagerId() {
-        return managerId;
-    }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
-    }
+    public LocalDate getJoiningDate() { return joiningDate; }
+    public void setJoiningDate(LocalDate joiningDate) { this.joiningDate = joiningDate; }
 
-    public boolean isActive() {
-        return active;
-    }
+    public BiometricVpnStatus getBiometricStatus() { return biometricStatus; }
+    public void setBiometricStatus(BiometricVpnStatus biometricStatus) { this.biometricStatus = biometricStatus; }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
+    public BiometricVpnStatus getVpnStatus() { return vpnStatus; }
+    public void setVpnStatus(BiometricVpnStatus vpnStatus) { this.vpnStatus = vpnStatus; }
 
-    public LocalDate getJoiningDate() {
-        return joiningDate;
-    }
+    public LocalDateTime getOnboardingCompletedAt() { return onboardingCompletedAt; }
+    public void setOnboardingCompletedAt(LocalDateTime onboardingCompletedAt) { this.onboardingCompletedAt = onboardingCompletedAt; }
 
-    public BiometricVpnStatus getBiometricStatus() {
-        return biometricStatus;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    public void setBiometricStatus(BiometricVpnStatus biometricStatus) {
-        this.biometricStatus = biometricStatus;
-    }
-
-    public BiometricVpnStatus getVpnStatus() {
-        return vpnStatus;
-    }
-
-    public void setVpnStatus(BiometricVpnStatus vpnStatus) {
-        this.vpnStatus = vpnStatus;
-    }
-
-    public void setJoiningDate(LocalDate joiningDate) {
-        this.joiningDate = joiningDate;
-    }
-
-    public LocalDateTime getOnboardingCompletedAt() {
-        return onboardingCompletedAt;
-    }
-
-    public void setOnboardingCompletedAt(LocalDateTime onboardingCompletedAt) {
-        this.onboardingCompletedAt = onboardingCompletedAt;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
