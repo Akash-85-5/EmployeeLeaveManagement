@@ -48,6 +48,12 @@ public class NotificationMessageBuilder {
                         reason
                 );
 
+            case LEAVE_IN_PROGRESS:
+                return new EmailMessage(
+                        "Leave Application Progress",
+                        reason
+                );
+
             default:
                 return new EmailMessage(
                         "Notification",

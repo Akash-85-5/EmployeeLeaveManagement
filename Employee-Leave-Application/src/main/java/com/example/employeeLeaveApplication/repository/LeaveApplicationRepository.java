@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
+import com.example.employeeLeaveApplication.enums.ApprovalLevel;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import org.springframework.data.domain.Page;
@@ -248,4 +249,15 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("month") Integer month,
             @Param("status") LeaveStatus status
     );
+
+    List<LeaveApplication> findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
+            Long teamLeaderId, LeaveStatus status, ApprovalLevel currentApprovalLevel);
+
+    // Pending leaves at MANAGER level for a specific manager
+    List<LeaveApplication> findByManagerIdAndStatusAndCurrentApprovalLevel(
+            Long managerId, LeaveStatus status, ApprovalLevel currentApprovalLevel);
+
+    // Pending leaves at HR level (any HR can see these)
+    List<LeaveApplication> findByStatusAndCurrentApprovalLevel(
+            LeaveStatus status, ApprovalLevel currentApprovalLevel);
 }

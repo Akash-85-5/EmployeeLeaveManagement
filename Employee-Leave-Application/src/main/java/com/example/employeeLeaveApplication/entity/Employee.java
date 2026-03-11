@@ -17,11 +17,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
 
 import static com.example.employeeLeaveApplication.enums.BiometricVpnStatus.PENDING;
-
 
 @Entity
 @Table(name = "employee")

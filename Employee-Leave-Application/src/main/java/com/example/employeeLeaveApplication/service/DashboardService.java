@@ -924,7 +924,7 @@ public class DashboardService {
                 Employee approver = leave.getApprovedBy() != null ?
                         employeeRepository.findById(leave.getApprovedBy()).orElse(null) : null;
 
-                var dto = new com.example.employeeLeaveApplication.dto.HRDashboardResponse.EmployeeOnLeaveDTO(
+                var dto = new HRDashboardResponse.EmployeeOnLeaveDTO(
                         emp.getId(),
                         emp.getName(),
                         manager != null ? manager.getName() : "N/A",

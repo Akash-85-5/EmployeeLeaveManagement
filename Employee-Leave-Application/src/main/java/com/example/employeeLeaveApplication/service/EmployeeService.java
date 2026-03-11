@@ -1,11 +1,14 @@
 package com.example.employeeLeaveApplication.service;
 
+import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
+import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.entity.User;
 import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.enums.Status;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
+import com.example.employeeLeaveApplication.repository.EmployeePersonalDetailsRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -14,17 +17,24 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
+    private final EmployeePersonalDetailsRepository personalDetailsRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository,UserRepository userRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository,
+                           UserRepository userRepository,
+                           EmployeePersonalDetailsRepository personalDetailsRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository=userRepository;
+        this.personalDetailsRepository = personalDetailsRepository;
     }
 
     // ==================== EXISTING METHODS ====================
@@ -39,9 +49,11 @@ public class EmployeeService {
 
 
     public ProfileResponse getProfile(Long employeeId) {
-
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         ProfileResponse response = new ProfileResponse();
 
@@ -50,31 +62,100 @@ public class EmployeeService {
         response.setEmail(user.getEmail());
         response.setRole(user.getRole().name());
         response.setManagerId(user.getManagerId());
-
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee Not found"));
-
-        if (employee.getManagerId() != null) {
-            Employee manager = employeeRepository.findById(employee.getManagerId())
-                    .orElseThrow(() -> new RuntimeException("Manager Not Found"));
-
-            response.setManagerName(manager.getName());
-        } else {
-            response.setManagerName(null);
-        }
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
-
         response.setJoiningDate(user.getJoiningDate());
         response.setBiometricStatus(user.getBiometricStatus().name());
         response.setVpnStatus(user.getVpnStatus().name());
         response.setCreatedAt(user.getCreatedAt());
         response.setUpdatedAt(user.getUpdatedAt());
 
+        if (employee.getManagerId() != null) {
+            employeeRepository.findById(employee.getManagerId())
+                    .ifPresent(m -> response.setManagerName(m.getName()));
+        }
+
+        if (employee.getTeamLeaderId() != null) {
+            response.setTeamLeaderId(employee.getTeamLeaderId());
+            employeeRepository.findById(employee.getTeamLeaderId())
+                    .ifPresent(tl -> response.setTeamLeaderName(tl.getName()));
+        }
+
+        Optional<EmployeePersonalDetails> personalOpt =
+                personalDetailsRepository.findByEmployeeId(employeeId);
+
+        if (personalOpt.isPresent()) {
+            EmployeePersonalDetails pd = personalOpt.get();
+            response.setContactNumber(pd.getContactNumber());
+            response.setGender(pd.getGender());
+            response.setAadharNumber(pd.getAadharNumber());
+            response.setPersonalEmail(pd.getPersonalEmail());
+            response.setDateOfBirth(pd.getDateOfBirth());
+            response.setPresentAddress(pd.getPresentAddress());
+            response.setPermanentAddress(pd.getPermanentAddress());
+            response.setBloodGroup(pd.getBloodGroup());
+            response.setEmergencyContactNumber(pd.getEmergencyContactNumber());
+            response.setFatherName(pd.getFatherName());
+            response.setMotherName(pd.getMotherName());
+            response.setDesignation(pd.getDesignation());
+            response.setPersonalDetailsComplete(true);
+
+            if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
+                List<String> skills = Arrays.stream(pd.getSkillSet().split(","))
+                        .map(String::trim)
+                        .collect(Collectors.toList());
+                response.setSkillSet(skills);
+            }
+        } else {
+            response.setPersonalDetailsComplete(false);
+        }
+
         return response;
     }
 
-    // ==================== NEW METHODS ====================
+    @Transactional
+    public EmployeePersonalDetails saveOrUpdatePersonalDetails(
+            Long employeeId, PersonalDetailsRequest request) {
+
+        // Verify employee exists
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BadRequestException("Employee not found"));
+
+        // Create or update
+        EmployeePersonalDetails pd = personalDetailsRepository
+                .findByEmployeeId(employeeId)
+                .orElse(new EmployeePersonalDetails());
+
+        pd.setEmployeeId(employeeId);
+        pd.setContactNumber(request.getContactNumber());
+        pd.setGender(request.getGender());
+        pd.setAadharNumber(request.getAadharNumber());
+        pd.setPersonalEmail(request.getPersonalEmail());
+        pd.setDateOfBirth(request.getDateOfBirth());
+        pd.setPresentAddress(request.getPresentAddress());
+        pd.setPermanentAddress(request.getPermanentAddress());
+        pd.setBloodGroup(request.getBloodGroup());
+        pd.setMaritalStatus(request.getMaritalStatus());
+        pd.setEmergencyContactNumber(request.getEmergencyContactNumber());
+        pd.setDesignation(request.getDesignation());
+        pd.setSkillSet(request.getSkillSet());
+        pd.setFatherName(request.getFatherName());
+        pd.setFatherDateOfBirth(request.getFatherDateOfBirth());
+        pd.setFatherOccupation(request.getFatherOccupation());
+        pd.setFatherAlive(request.getFatherAlive());
+        pd.setMotherName(request.getMotherName());
+        pd.setMotherDateOfBirth(request.getMotherDateOfBirth());
+        pd.setMotherOccupation(request.getMotherOccupation());
+        pd.setMotherAlive(request.getMotherAlive());
+
+        return personalDetailsRepository.save(pd);
+    }
+
+    public EmployeePersonalDetails getPersonalDetails(Long employeeId) {
+        return personalDetailsRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Personal details not yet filled for employee: " + employeeId));
+    }
 
     /**
      * Get all employees with filters and pagination
