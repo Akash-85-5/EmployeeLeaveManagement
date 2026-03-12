@@ -42,8 +42,13 @@ public class ProfileResponse {
 
     private boolean personalDetailsComplete;
 
-    // Getters & Setters
+    private boolean personalDetailsLocked;
 
+    // Getters & Setters
+    public boolean isPersonalDetailsLocked() { return personalDetailsLocked; }
+    public void setPersonalDetailsLocked(boolean personalDetailsLocked) {
+        this.personalDetailsLocked = personalDetailsLocked;
+    }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

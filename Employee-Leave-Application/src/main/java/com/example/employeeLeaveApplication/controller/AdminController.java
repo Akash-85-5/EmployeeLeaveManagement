@@ -18,7 +18,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 @Slf4j
-
 public class AdminController {
 
     private final AdminService adminService;
@@ -27,25 +26,22 @@ public class AdminController {
 
     public AdminController(CarryForwardService carryForwardService,
                            AdminService adminService,
-                           EmployeeService employeeService){
-        this.carryForwardService=carryForwardService;
-        this.adminService=adminService;
-        this.employeeService=employeeService;
+                           EmployeeService employeeService) {
+        this.carryForwardService = carryForwardService;
+        this.adminService = adminService;
+        this.employeeService = employeeService;
     }
+
+    // ── Existing endpoints (unchanged) ───────────────────────────
 
     @PostMapping("/carry-forward")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> processCarryForward(
-            @RequestParam Integer fromYear) {
-
-        log.info("[API] POST carry-forward: fromYear={}", fromYear);
-
+    public ResponseEntity<String> processCarryForward(@RequestParam Integer fromYear) {
         try {
             carryForwardService.processYearEndCarryForward(fromYear);
             return ResponseEntity.ok(
                     "Carry forward processed successfully for year " + fromYear);
         } catch (Exception e) {
-            log.error("[API] Carry forward failed: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body("Carry forward failed: " + e.getMessage());
         }
@@ -56,15 +52,11 @@ public class AdminController {
     public ResponseEntity<String> processEmployeeCarryForward(
             @PathVariable Long employeeId,
             @RequestParam Integer fromYear) {
-
-        log.info("[API] POST carry-forward: employee={}, fromYear={}", employeeId, fromYear);
-
         try {
             carryForwardService.processEmployeeCarryForward(employeeId, fromYear);
             return ResponseEntity.ok(
                     "Carry forward processed for employee " + employeeId);
         } catch (Exception e) {
-            log.error("[API] Carry forward failed: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body("Carry forward failed: " + e.getMessage());
         }
@@ -72,31 +64,33 @@ public class AdminController {
 
     @PostMapping("/users/add")
     @PreAuthorize("hasRole('ADMIN')")
-    public void createUser(@RequestBody CreateUserRequest request) {
+    public ResponseEntity<String> createUser(@RequestBody CreateUserRequest request) {
         adminService.createUser(request);
+        return ResponseEntity.ok("User created successfully");
     }
 
     @PostMapping("/reset-password/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public void resetPassword(@PathVariable Long userId) {
+    public ResponseEntity<String> resetPassword(@PathVariable Long userId) {
         adminService.resetPassword(userId);
+        return ResponseEntity.ok("Password reset successfully");
     }
 
     @GetMapping("/eligible-managers")
     @PreAuthorize("hasRole('ADMIN')")
-    public List< UserDropdownResponse> getEligibleManagers(
-            @RequestParam Role role) {
-
+    public List<UserDropdownResponse> getEligibleManagers(@RequestParam Role role) {
         return adminService.getEligibleManagers(role);
     }
 
+    // ── Admin/HR edits personal details (NO LOCK CHECK) ──────────
+    // Uses adminUpdatePersonalDetails → bypasses lock
     @PostMapping("/employees/{employeeId}/personal-details")
     @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
     public ResponseEntity<EmployeePersonalDetails> addPersonalDetails(
             @PathVariable Long employeeId,
             @RequestBody PersonalDetailsRequest request) {
         return ResponseEntity.ok(
-                employeeService.saveOrUpdatePersonalDetails(employeeId, request));
+                employeeService.adminUpdatePersonalDetails(employeeId, request));
     }
 
     @PutMapping("/employees/{employeeId}/personal-details")
@@ -105,6 +99,6 @@ public class AdminController {
             @PathVariable Long employeeId,
             @RequestBody PersonalDetailsRequest request) {
         return ResponseEntity.ok(
-                employeeService.saveOrUpdatePersonalDetails(employeeId, request));
+                employeeService.adminUpdatePersonalDetails(employeeId, request));
     }
 }

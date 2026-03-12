@@ -18,6 +18,12 @@ public class EmployeePersonalDetails {
     @Column(name = "employee_id", nullable = false, unique = true)
     private Long employeeId;
 
+    @Column(name = "is_locked", nullable = false)
+    private boolean locked = false;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
     // ── Basic Personal Info ──────────────────────────────────────
     @Column(name = "contact_number", length = 15)
     private String contactNumber;
@@ -57,7 +63,7 @@ public class EmployeePersonalDetails {
     private String designation;
 
     @Column(name = "skill_set", length = 1000)
-    private String skillSet; // comma-separated: "Java,Spring,SQL"
+    private String skillSet;
 
     // ── Father's Details ─────────────────────────────────────────
     @Column(name = "father_name", length = 100)
@@ -111,6 +117,12 @@ public class EmployeePersonalDetails {
     public Long getEmployeeId() { return employeeId; }
     public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
 
+    public boolean isLocked() { return locked; }
+    public void setLocked(boolean locked) { this.locked = locked; }
+
+    public LocalDateTime getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
+
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
 
@@ -139,7 +151,7 @@ public class EmployeePersonalDetails {
     public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
     public String getEmergencyContactNumber() { return emergencyContactNumber; }
-    public void setEmergencyContactNumber(String emergencyContactNumber) { this.emergencyContactNumber = emergencyContactNumber; }
+    public void setEmergencyContactNumber(String s) { this.emergencyContactNumber = s; }
 
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
@@ -151,10 +163,10 @@ public class EmployeePersonalDetails {
     public void setFatherName(String fatherName) { this.fatherName = fatherName; }
 
     public LocalDate getFatherDateOfBirth() { return fatherDateOfBirth; }
-    public void setFatherDateOfBirth(LocalDate fatherDateOfBirth) { this.fatherDateOfBirth = fatherDateOfBirth; }
+    public void setFatherDateOfBirth(LocalDate d) { this.fatherDateOfBirth = d; }
 
     public String getFatherOccupation() { return fatherOccupation; }
-    public void setFatherOccupation(String fatherOccupation) { this.fatherOccupation = fatherOccupation; }
+    public void setFatherOccupation(String s) { this.fatherOccupation = s; }
 
     public Boolean getFatherAlive() { return fatherAlive; }
     public void setFatherAlive(Boolean fatherAlive) { this.fatherAlive = fatherAlive; }
@@ -163,10 +175,10 @@ public class EmployeePersonalDetails {
     public void setMotherName(String motherName) { this.motherName = motherName; }
 
     public LocalDate getMotherDateOfBirth() { return motherDateOfBirth; }
-    public void setMotherDateOfBirth(LocalDate motherDateOfBirth) { this.motherDateOfBirth = motherDateOfBirth; }
+    public void setMotherDateOfBirth(LocalDate d) { this.motherDateOfBirth = d; }
 
     public String getMotherOccupation() { return motherOccupation; }
-    public void setMotherOccupation(String motherOccupation) { this.motherOccupation = motherOccupation; }
+    public void setMotherOccupation(String s) { this.motherOccupation = s; }
 
     public Boolean getMotherAlive() { return motherAlive; }
     public void setMotherAlive(Boolean motherAlive) { this.motherAlive = motherAlive; }

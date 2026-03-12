@@ -11,12 +11,14 @@ import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeePersonalDetailsRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.UserRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -33,20 +35,11 @@ public class EmployeeService {
                            UserRepository userRepository,
                            EmployeePersonalDetailsRepository personalDetailsRepository) {
         this.employeeRepository = employeeRepository;
-        this.userRepository=userRepository;
+        this.userRepository = userRepository;
         this.personalDetailsRepository = personalDetailsRepository;
     }
 
-    // ==================== EXISTING METHODS ====================
-
-//    public Employee createEmployee(Employee employee) {
-//        return employeeRepository.save(employee);
-//    }
-//    public Employee getEmployee(Long id) {
-//        return employeeRepository.findById(id)
-//                .orElseThrow(() -> new BadRequestException("Employee not found"));
-//    }
-
+    // ─── Profile ──────────────────────────────────────────────────
 
     public ProfileResponse getProfile(Long employeeId) {
         User user = userRepository.findById(employeeId)
@@ -70,17 +63,20 @@ public class EmployeeService {
         response.setCreatedAt(user.getCreatedAt());
         response.setUpdatedAt(user.getUpdatedAt());
 
+        // Manager name
         if (employee.getManagerId() != null) {
             employeeRepository.findById(employee.getManagerId())
                     .ifPresent(m -> response.setManagerName(m.getName()));
         }
 
+        // Team leader name
         if (employee.getTeamLeaderId() != null) {
             response.setTeamLeaderId(employee.getTeamLeaderId());
             employeeRepository.findById(employee.getTeamLeaderId())
                     .ifPresent(tl -> response.setTeamLeaderName(tl.getName()));
         }
 
+        // Personal details
         Optional<EmployeePersonalDetails> personalOpt =
                 personalDetailsRepository.findByEmployeeId(employeeId);
 
@@ -99,6 +95,8 @@ public class EmployeeService {
             response.setMotherName(pd.getMotherName());
             response.setDesignation(pd.getDesignation());
             response.setPersonalDetailsComplete(true);
+            // NEW: tell frontend if locked so it hides the edit button
+            response.setPersonalDetailsLocked(pd.isLocked());
 
             if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
                 List<String> skills = Arrays.stream(pd.getSkillSet().split(","))
@@ -108,13 +106,46 @@ public class EmployeeService {
             }
         } else {
             response.setPersonalDetailsComplete(false);
+            response.setPersonalDetailsLocked(false);
         }
 
         return response;
     }
 
     @Transactional
-    public EmployeePersonalDetails saveOrUpdatePersonalDetails(
+    public EmployeePersonalDetails submitPersonalDetails(
+            Long employeeId, PersonalDetailsRequest request) {
+
+        // Verify employee exists
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BadRequestException("Employee not found"));
+
+        // Check if already submitted and locked
+        Optional<EmployeePersonalDetails> existing =
+                personalDetailsRepository.findByEmployeeId(employeeId);
+
+        if (existing.isPresent() && existing.get().isLocked()) {
+            throw new BadRequestException(
+                    "Personal details already submitted and cannot be changed. " +
+                            "Please contact Admin/HR for any updates.");
+        }
+
+        // If already exists but not locked (edge case) → still lock on submit
+        EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
+
+        fillDetails(pd, request);
+
+        pd.setEmployeeId(employeeId);
+        pd.setLocked(true);                          // lock after first submit
+        pd.setSubmittedAt(LocalDateTime.now());      // record when submitted
+
+        return personalDetailsRepository.save(pd);
+    }
+
+    // ─── ADMIN/HR edits personal details (ALWAYS ALLOWED) ────────
+
+    @Transactional
+    public EmployeePersonalDetails adminUpdatePersonalDetails(
             Long employeeId, PersonalDetailsRequest request) {
 
         // Verify employee exists
@@ -126,7 +157,26 @@ public class EmployeeService {
                 .findByEmployeeId(employeeId)
                 .orElse(new EmployeePersonalDetails());
 
+        fillDetails(pd, request);
+
         pd.setEmployeeId(employeeId);
+        pd.setLocked(true);
+        if (pd.getSubmittedAt() == null) {
+            pd.setSubmittedAt(LocalDateTime.now());
+        }
+
+        return personalDetailsRepository.save(pd);
+    }
+
+    // ─── Get full personal details ────────────────────────────────
+
+    public EmployeePersonalDetails getPersonalDetails(Long employeeId) {
+        return personalDetailsRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Personal details not yet filled for employee: " + employeeId));
+    }
+
+    private void fillDetails(EmployeePersonalDetails pd, PersonalDetailsRequest request) {
         pd.setContactNumber(request.getContactNumber());
         pd.setGender(request.getGender());
         pd.setAadharNumber(request.getAadharNumber());
@@ -147,123 +197,68 @@ public class EmployeeService {
         pd.setMotherDateOfBirth(request.getMotherDateOfBirth());
         pd.setMotherOccupation(request.getMotherOccupation());
         pd.setMotherAlive(request.getMotherAlive());
-
-        return personalDetailsRepository.save(pd);
     }
 
-    public EmployeePersonalDetails getPersonalDetails(Long employeeId) {
-        return personalDetailsRepository.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new BadRequestException(
-                        "Personal details not yet filled for employee: " + employeeId));
-    }
+    // ─── Existing methods (unchanged) ────────────────────────────
 
-    /**
-     * Get all employees with filters and pagination
-     */
-    public Page<Employee> getAllEmployees(
-            String name,
-            String email,
-            String role,
-            Long managerId,
-            Boolean active,
-            Pageable pageable
-    ) {
+    public Page<Employee> getAllEmployees(String name, String email, String role,
+                                          Long managerId, Boolean active, Pageable pageable) {
         return employeeRepository.findAll(
-                createSpecification(name, email, role, managerId, active),
-                pageable
-        );
+                createSpecification(name, email, role, managerId, active), pageable);
     }
 
-    /**
-     * Update employee
-     */
     @Transactional
     public Employee updateEmployee(Long id, Employee employee) {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
-
-        if (employee.getName() != null) {
-            existing.setName(employee.getName());
-        }
-        if (employee.getEmail() != null) {
-            existing.setEmail(employee.getEmail());
-        }
-        if (employee.getRole() != null) {
-            existing.setRole(employee.getRole());
-        }
-        if (employee.getManagerId() != null) {
-            existing.setManagerId(employee.getManagerId());
-        }
-
-
+        if (employee.getName() != null) existing.setName(employee.getName());
+        if (employee.getEmail() != null) existing.setEmail(employee.getEmail());
+        if (employee.getRole() != null) existing.setRole(employee.getRole());
+        if (employee.getManagerId() != null) existing.setManagerId(employee.getManagerId());
         return employeeRepository.save(existing);
     }
 
-    /**
-     * Delete/Deactivate employee
-     */
     @Transactional
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
-
         employee.setActive(false);
         employeeRepository.save(employee);
     }
 
-    /**
-     * Get team members for a manager
-     */
     public List<Employee> getTeamMembers(Long managerId) {
         return employeeRepository.findByManagerId(managerId);
     }
 
-    /**
-     * Search employees by name
-     */
     public List<Employee> searchEmployees(String query) {
         return employeeRepository.findByNameContainingIgnoreCase(query);
     }
 
-    /**
-     * Get active employees count
-     */
     public Long getActiveEmployeesCount() {
         return employeeRepository.countByActive(true);
     }
 
-    // ==================== HELPER METHODS ====================
-
-    /**
-     * Create JPA Specification for filtering
-     */
-    private Specification<Employee> createSpecification(
-            String name,
-            String email,
-            String role,
-            Long managerId,
-            Boolean active
-    ) {
+    private Specification<Employee> createSpecification(String name, String email,
+                                                        String role, Long managerId,
+                                                        Boolean active) {
         return (root, query, cb) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-
-            if (name != null && !name.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
-            }
-            if (email != null && !email.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%"));
-            }
-            if (role != null && !role.isEmpty()) {
-                predicates.add(cb.equal(root.get("role"), Role.valueOf(role.toUpperCase())));
-            }
-            if (managerId != null) {
+            var predicates = new java.util.ArrayList
+                    <Predicate>();
+            if (name != null && !name.isEmpty())
+                predicates.add(cb.like(cb.lower(root.get("name")),
+                        "%" + name.toLowerCase() + "%"));
+            if (email != null && !email.isEmpty())
+                predicates.add(cb.like(cb.lower(root.get("email")),
+                        "%" + email.toLowerCase() + "%"));
+            if (role != null && !role.isEmpty())
+                predicates.add(cb.equal(root.get("role"),
+                        Role.valueOf(role.toUpperCase())));
+            if (managerId != null)
                 predicates.add(cb.equal(root.get("managerId"), managerId));
-            }
-            if (active != null) {
+            if (active != null)
                 predicates.add(cb.equal(root.get("active"), active));
-            }
-
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return cb.and(predicates.toArray(
+                    new Predicate[0]));
         };
     }
 }

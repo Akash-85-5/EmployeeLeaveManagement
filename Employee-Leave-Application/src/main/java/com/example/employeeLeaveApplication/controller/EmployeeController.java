@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
@@ -25,13 +26,35 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ==================== CREATE EMPLOYEE ====================
-//    @PostMapping
-//    public Employee createEmployee(@RequestBody Employee employee) {
-//        return employeeService.createEmployee(employee);
-//    }
+    // ── View own profile (READ ONLY for employee) ─────────────────
+    @GetMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<ProfileResponse> getProfile(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getProfile(employeeId));
+    }
 
-    // ==================== GET ALL EMPLOYEES (WITH PAGINATION & FILTERS) - NEW ====================
+    // ── Employee submits personal details ONCE ────────────────────
+    // After submit → locked → this endpoint will throw error if called again
+    @PostMapping("/personal-details/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<EmployeePersonalDetails> submitPersonalDetails(
+            @PathVariable Long employeeId,
+            @RequestBody PersonalDetailsRequest request) {
+        return ResponseEntity.ok(
+                employeeService.submitPersonalDetails(employeeId, request));
+    }
+
+    // ── HR/Admin views full personal details ──────────────────────
+    @GetMapping("/personal-details/{employeeId}")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+    }
+
+    // ── Existing endpoints ────────────────────────────────────────
+
     @GetMapping("/all")
     @PreAuthorize("hasRole('HR')")
     public Page<Employee> getAllEmployees(
@@ -41,63 +64,27 @@ public class EmployeeController {
             @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
+        return employeeService.getAllEmployees(
+                name, email, role, managerId, active, pageable);
     }
 
-    // ==================== UPDATE EMPLOYEE  ====================
-    @PutMapping("/{id}")
-    public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
-        return employeeService.updateEmployee(id, employee);
-    }
-
-    // ==================== DELETE/DEACTIVATE EMPLOYEE  ====================
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
-        employeeService.deleteEmployee(id);
-        return ResponseEntity.ok("Employee deactivated successfully");
-    }
-
-    // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
     @GetMapping("/manager/{managerId}/team")
     @PreAuthorize("#managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
     }
 
-    // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
-    @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<ProfileResponse> getProfile(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(employeeService.getProfile(employeeId));
-    }
-
-    // ── Admin/HR views any employee's full personal details ───────
-    @GetMapping("/personal-details/{employeeId}")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
-    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
-            @PathVariable Long employeeId) {
-        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
-    }
-
-    // ==================== UPDATE CURRENT EMPLOYEE (SELF)  ====================
-    @PutMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public Employee updateCurrentEmployee(
-            @PathVariable Long employeeId,
-            @RequestBody Employee employee
-    ) {
-        return employeeService.updateEmployee(employeeId, employee);
-    }
-
-    // ==================== SEARCH EMPLOYEES BY NAME  ====================
     @GetMapping("/search")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }
 
-
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
+        employeeService.deleteEmployee(id);
+        return ResponseEntity.ok("Employee deactivated successfully");
+    }
 }
