@@ -1,6 +1,6 @@
 package com.example.employeeLeaveApplication.enums;
 
-public enum OvertimeStatus {
+public enum RequestStatus {
     PENDING_TL,        // Initial state for regular employees
     PENDING_MANAGER,   // Initial state for TLs OR second stage for employees
     PENDING_HR,        // Initial state for Managers OR final stage for others
