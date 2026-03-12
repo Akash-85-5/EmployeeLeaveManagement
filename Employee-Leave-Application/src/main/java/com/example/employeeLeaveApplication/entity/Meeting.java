@@ -34,6 +34,9 @@ public class Meeting {
     private Long createdBy;
     private Long teamId;
 
+    // ✅ NEW: Flag to track if the meeting requires HR's specific approval
+    private boolean hrApprovalRequired;
+
     @ManyToMany
     @JoinTable(
             name = "meeting_attendees",
