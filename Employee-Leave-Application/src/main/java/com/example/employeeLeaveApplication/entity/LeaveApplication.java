@@ -25,7 +25,8 @@ import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "leave_application")
-public class LeaveApplication {
+public class
+LeaveApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -120,6 +121,9 @@ public class LeaveApplication {
 
     @Column(name = "loss_of_pay_applied")
     private Double lossOfPayApplied = 0.0;
+
+    @Column(name = "pending_lop_days")
+    private Double pendingLopDays;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -238,6 +242,11 @@ public class LeaveApplication {
 
     public Double getLossOfPayApplied() { return lossOfPayApplied; }
     public void setLossOfPayApplied(Double lossOfPayApplied) { this.lossOfPayApplied = lossOfPayApplied; }
+
+    public Double getPendingLopDays() { return pendingLopDays; }
+    public void setPendingLopDays(Double pendingLopDays) {
+        this.pendingLopDays = pendingLopDays;
+    }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
