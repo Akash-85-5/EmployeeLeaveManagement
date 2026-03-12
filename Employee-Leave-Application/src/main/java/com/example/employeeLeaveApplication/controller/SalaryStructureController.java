@@ -29,6 +29,28 @@ public class SalaryStructureController {
             );
         }
 
+        if (structure.getHra() == null ||
+                structure.getConveyance() == null ||
+                structure.getMedical() == null ||
+                structure.getOtherAllowance() == null ||
+                structure.getPfPercent() == null ||
+                structure.getProfessionalTax() == null ||
+                structure.getEsiPercent() == null) {
+
+            throw new RuntimeException("Salary structure fields cannot be null");
+        }
+
+        if (structure.getHra().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getConveyance().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getMedical().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getOtherAllowance().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getPfPercent().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getProfessionalTax().compareTo(java.math.BigDecimal.ZERO) < 0 ||
+                structure.getEsiPercent().compareTo(java.math.BigDecimal.ZERO) < 0) {
+
+            throw new RuntimeException("Salary structure values cannot be negative");
+        }
+
         return repository.save(structure);
     }
 
@@ -49,11 +71,25 @@ public class SalaryStructureController {
         SalaryStructure existing = repository.findByRole(role)
                 .orElseThrow(() -> new RuntimeException("Structure not found"));
 
-        existing.setHraAmount(request.getHraAmount());
+        existing.setHra(request.getHra());
+        existing.setConveyance(request.getConveyance());
+        existing.setMedical(request.getMedical());
+        existing.setOtherAllowance(request.getOtherAllowance());
         existing.setPfPercent(request.getPfPercent());
-        existing.setTaxPercent(request.getTaxPercent());
-        existing.setTransportAllowance(request.getTransportAllowance());
+        existing.setProfessionalTax(request.getProfessionalTax());
+        existing.setEsiPercent(request.getEsiPercent());
+
 
         return repository.save(existing);
+    }
+    @DeleteMapping("/{role}")
+    public String deleteSalaryStructure(@PathVariable Role role) {
+
+        SalaryStructure structure = repository.findByRole(role)
+                .orElseThrow(() -> new RuntimeException("Salary structure not found"));
+
+        repository.delete(structure);
+
+        return "Salary structure deleted successfully";
     }
 }

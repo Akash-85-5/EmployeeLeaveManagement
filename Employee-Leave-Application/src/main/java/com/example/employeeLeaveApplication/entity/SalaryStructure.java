@@ -3,6 +3,8 @@ package com.example.employeeLeaveApplication.entity;
 import com.example.employeeLeaveApplication.enums.Role;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "salary_structure", uniqueConstraints = @UniqueConstraint(columnNames = "role"))
 public class SalaryStructure {
@@ -15,79 +17,60 @@ public class SalaryStructure {
     @Column(nullable = false, unique = true)
     private Role role;
 
-    @Column(nullable = false)
-    private Double hraAmount;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal hra;
 
-    @Column(nullable = false)
-    private Double pfPercent;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal conveyance;
 
-    @Column(nullable = false)
-    private Double taxPercent;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal medical;
 
-    @Column(nullable = false)
-    private Double transportAllowance;
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal otherAllowance;
 
-    public void setHraAmount(Double hraAmount) {
-        this.hraAmount = hraAmount;
-    }
+    @Column(nullable = false, precision = 5, scale = 2)
+    private BigDecimal pfPercent;
 
-    public void setPfPercent(Double pfPercent) {
-        this.pfPercent = pfPercent;
-    }
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal professionalTax;
 
-    public void setTaxPercent(Double taxPercent) {
-        this.taxPercent = taxPercent;
-    }
+    @Column(nullable = false, precision = 5, scale = 2)
+    private BigDecimal esiPercent;
 
-    public void setTransportAllowance(Double transportAllowance) {
-        this.transportAllowance = transportAllowance;
-    }
+    public Long getId() { return id; }
 
-    public Long getId() {
-        return id;
-    }
+    public Role getRole() { return role; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public BigDecimal getHra() { return hra; }
 
-    public Role getRole() {
-        return role;
-    }
+    public BigDecimal getConveyance() { return conveyance; }
 
-    public void setRole(Role role) {
-        this.role = role;
-    }
+    public BigDecimal getMedical() { return medical; }
 
-    public double getHraAmount() {
-        return hraAmount;
-    }
+    public BigDecimal getOtherAllowance() { return otherAllowance; }
 
-    public void setHraAmount(double hraAmount) {
-        this.hraAmount = hraAmount;
-    }
+    public BigDecimal getPfPercent() { return pfPercent; }
 
-    public double getTransportAllowance() {
-        return transportAllowance;
-    }
+    public BigDecimal getProfessionalTax() { return professionalTax; }
 
-    public void setTransportAllowance(double transportAllowance) {
-        this.transportAllowance = transportAllowance;
-    }
+    public BigDecimal getEsiPercent() { return esiPercent; }
 
-    public double getPfPercent() {
-        return pfPercent;
-    }
+    public void setId(Long id) { this.id = id; }
 
-    public void setPfPercent(double pfPercent) {
-        this.pfPercent = pfPercent;
-    }
+    public void setRole(Role role) { this.role = role; }
 
-    public double getTaxPercent() {
-        return taxPercent;
-    }
+    public void setHra(BigDecimal hra) { this.hra = hra; }
 
-    public void setTaxPercent(double taxPercent) {
-        this.taxPercent = taxPercent;
-    }
+    public void setConveyance(BigDecimal conveyance) { this.conveyance = conveyance; }
+
+    public void setMedical(BigDecimal medical) { this.medical = medical; }
+
+    public void setOtherAllowance(BigDecimal otherAllowance) { this.otherAllowance = otherAllowance; }
+
+    public void setPfPercent(BigDecimal pfPercent) { this.pfPercent = pfPercent; }
+
+    public void setProfessionalTax(BigDecimal professionalTax) { this.professionalTax = professionalTax; }
+
+    public void setEsiPercent(BigDecimal esiPercent) { this.esiPercent = esiPercent; }
 }

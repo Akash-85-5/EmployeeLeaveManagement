@@ -36,17 +36,6 @@ public class PayslipController {
         return payslipService.generatePayslip(request);
     }
 
-    // Get payslip by employeeId
-    @GetMapping("/{employeeId}/{year}/{month}")
-    public Payslip getPayslip(
-            @PathVariable Long employeeId,
-            @PathVariable Integer year,
-            @PathVariable Integer month) {
-
-        return payslipRepository
-                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
-                .orElseThrow(() -> new RuntimeException("Payslip not found"));
-    }
 
     // Get my payslip using JWT
     @GetMapping("/my/{year}/{month}")
@@ -86,10 +75,13 @@ public class PayslipController {
 
         payslip.setBasicSalary(updated.getBasicSalary());
         payslip.setHra(updated.getHra());
-        payslip.setTransportAllowance(updated.getTransportAllowance());
-        payslip.setPfDeduction(updated.getPfDeduction());
-        payslip.setTaxDeduction(updated.getTaxDeduction());
-        payslip.setLopDeduction(updated.getLopDeduction());
+        payslip.setConveyance(updated.getConveyance());
+        payslip.setMedical(updated.getMedical());
+        payslip.setOtherAllowance(updated.getOtherAllowance());
+        payslip.setPf(updated.getPf());
+        payslip.setProfessionalTax(updated.getProfessionalTax());
+        payslip.setEsi(updated.getEsi());
+        payslip.setLop(updated.getLop());
         payslip.setNetSalary(updated.getNetSalary());
 
         return payslipRepository.save(payslip);
@@ -128,7 +120,7 @@ public class PayslipController {
 
         StringBuilder csv = new StringBuilder();
 
-        csv.append("EmployeeId,Year,Month,Basic,HRA,Transport,PF,Tax,LOP,NetSalary\n");
+        csv.append("EmployeeId,Year,Month,Basic,HRA,Conveyance,PF,ProfessionalTax,LOP,NetSalary\n");
 
         for (Payslip p : payslips) {
             csv.append(p.getEmployeeId()).append(",")
@@ -136,10 +128,10 @@ public class PayslipController {
                     .append(p.getMonth()).append(",")
                     .append(p.getBasicSalary()).append(",")
                     .append(p.getHra()).append(",")
-                    .append(p.getTransportAllowance()).append(",")
-                    .append(p.getPfDeduction()).append(",")
-                    .append(p.getTaxDeduction()).append(",")
-                    .append(p.getLopDeduction()).append(",")
+                    .append(p.getConveyance()).append(",")
+                    .append(p.getPf()).append(",")
+                    .append(p.getProfessionalTax()).append(",")
+                    .append(p.getLop()).append(",")
                     .append(p.getNetSalary()).append("\n");
         }
 
@@ -148,6 +140,7 @@ public class PayslipController {
                         "attachment; filename=payroll_" + year + "_" + month + ".csv")
                 .body(csv.toString());
     }
+
     @GetMapping("/export/range")
     public List<Payslip> exportPayrollRange(
             @RequestParam Integer startYear,
@@ -161,5 +154,33 @@ public class PayslipController {
                 endYear,
                 endMonth
         );
+    }
+    @DeleteMapping("/payroll/{year}/{month}")
+    public String deletePayroll(
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+
+        List<Payslip> payslips = payslipRepository.findByYearAndMonth(year, month);
+
+        payslipRepository.deleteAll(payslips);
+
+        return "Payroll deleted successfully for " + month + "/" + year;
+    }
+    @GetMapping("/employee/{employeeId}/{year}/{month}")
+    public Payslip getEmployeePayslip(
+            @PathVariable Long employeeId,
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+
+        return payslipRepository
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new RuntimeException("Payslip not found"));
+    }
+    @GetMapping("/payroll/{year}/{month}")
+    public List<Payslip> getPayrollByMonth(
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+
+        return payslipRepository.findByYearAndMonth(year, month);
     }
 }

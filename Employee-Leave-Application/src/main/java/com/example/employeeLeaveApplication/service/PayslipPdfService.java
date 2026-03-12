@@ -1,7 +1,8 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.entity.Payslip;
-import com.lowagie.text.*;
+import com.lowagie.text.Document;
+import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,6 @@ public class PayslipPdfService {
     public ByteArrayInputStream generatePdf(Payslip payslip) {
 
         Document document = new Document();
-
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
@@ -29,11 +29,14 @@ public class PayslipPdfService {
 
             document.add(new Paragraph("Basic Salary: " + payslip.getBasicSalary()));
             document.add(new Paragraph("HRA: " + payslip.getHra()));
-            document.add(new Paragraph("Transport: " + payslip.getTransportAllowance()));
+            document.add(new Paragraph("Conveyance: " + payslip.getConveyance()));
+            document.add(new Paragraph("Medical: " + payslip.getMedical()));
+            document.add(new Paragraph("Other Allowance: " + payslip.getOtherAllowance()));
 
-            document.add(new Paragraph("PF Deduction: " + payslip.getPfDeduction()));
-            document.add(new Paragraph("Tax Deduction: " + payslip.getTaxDeduction()));
-            document.add(new Paragraph("LOP Deduction: " + payslip.getLopDeduction()));
+            document.add(new Paragraph("PF Deduction: " + payslip.getPf()));
+            document.add(new Paragraph("Professional Tax: " + payslip.getProfessionalTax()));
+            document.add(new Paragraph("ESI Deduction: " + payslip.getEsi()));
+            document.add(new Paragraph("LOP Deduction: " + payslip.getLop()));
 
             document.add(new Paragraph("Net Salary: " + payslip.getNetSalary()));
 

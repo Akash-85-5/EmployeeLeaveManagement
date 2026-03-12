@@ -1,6 +1,5 @@
 package com.example.employeeLeaveApplication.controller;
 
-import com.example.employeeLeaveApplication.entity.SalaryStructure;
 import com.example.employeeLeaveApplication.service.PayrollService;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +22,7 @@ public class PayrollController {
 
         return "Payroll generated successfully";
     }
+
     @PutMapping("/mark-paid")
     public String markPaid(
             @RequestParam Integer year,

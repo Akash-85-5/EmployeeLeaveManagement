@@ -6,6 +6,8 @@ import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.repository.*;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,78 +37,89 @@ public class PayrollService {
 
     public void generatePayroll(Integer year, Integer month) {
 
-        List<Employee> employees = employeeRepository.findAll();
-
         LocalDate payrollDate = LocalDate.of(year, month, 1);
+
+        List<Employee> employees = employeeRepository.findAll();
 
         List<Payslip> payslips = new ArrayList<>();
 
         for (Employee emp : employees) {
 
-            if (emp.getRole() == Role.HR) {
-                continue;
-            }
+            if (emp.getRole() == Role.HR) continue;
 
-            if(payslipRepository.existsByEmployeeIdAndYearAndMonth(
-                    emp.getId(), year, month)) {
-                continue;
-            }
+            if (payslipRepository.existsByEmployeeIdAndYearAndMonth(
+                    emp.getId(), year, month)) continue;
 
-            EmployeeSalary salary =
-                    salaryRepository
-                            .findEffectiveSalary(emp.getId(), payrollDate)
-                            .stream()
-                            .findFirst()
-                            .orElse(null);
+            EmployeeSalary salary = salaryRepository
+                    .findEffectiveSalary(emp.getId(), payrollDate)
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
 
-            if (salary == null) {
-                continue;
-            }
+            if (salary == null) continue;
 
             Role role = emp.getRole();
 
-            if(role == Role.TEAM_LEADER){
+            if (role == Role.TEAM_LEADER) {
                 role = Role.EMPLOYEE;
             }
 
             SalaryStructure structure =
-                    structureRepository
-                            .findByRole(role)
+                    structureRepository.findByRole(role)
                             .orElse(null);
 
-            if (structure == null) {
-                continue;
-            }
+            if (structure == null) continue;
 
-            double basic = salary.getBasicSalary();
+            BigDecimal basic = salary.getBasicSalary();
 
-            double hra = structure.getHraAmount();
+            BigDecimal hra = structure.getHra();
 
-            double transport = structure.getTransportAllowance();
+            BigDecimal conveyance = structure.getConveyance();
 
-            double pf = basic * structure.getPfPercent() / 100;
+            BigDecimal medical = structure.getMedical();
 
-            double tax = basic * structure.getTaxPercent() / 100;
+            BigDecimal other = structure.getOtherAllowance();
 
-            // Loss Of Pay calculation
+            BigDecimal pf = basic
+                    .multiply(structure.getPfPercent())
+                    .divide(BigDecimal.valueOf(100),2, RoundingMode.HALF_UP);
+
+            BigDecimal esi = basic
+                    .multiply(structure.getEsiPercent())
+                    .divide(BigDecimal.valueOf(100),2, RoundingMode.HALF_UP);
+
+            BigDecimal professionalTax = structure.getProfessionalTax();
+
             LossOfPayRecord lop =
                     lopRepository
                             .findByEmployeeIdAndYearAndMonth(
                                     emp.getId(), year, month)
                             .orElse(null);
 
-            double lopAmount = 0;
+            BigDecimal lopAmount = BigDecimal.ZERO;
 
             if (lop != null) {
 
-                double perDaySalary = basic / 30;
+                BigDecimal perDaySalary =
+                        basic.divide(BigDecimal.valueOf(30),2,RoundingMode.HALF_UP);
 
-                lopAmount = perDaySalary * lop.getExcessDays();
+                lopAmount =
+                        perDaySalary.multiply(
+                                BigDecimal.valueOf(lop.getExcessDays()));
             }
 
-            double gross = basic + hra + transport;
+            BigDecimal gross = basic
+                    .add(hra)
+                    .add(conveyance)
+                    .add(medical)
+                    .add(other);
 
-            double net = gross - (pf + tax + lopAmount);
+            BigDecimal deductions = pf
+                    .add(esi)
+                    .add(professionalTax)
+                    .add(lopAmount);
+
+            BigDecimal net = gross.subtract(deductions);
 
             Payslip payslip = new Payslip();
 
@@ -115,10 +128,13 @@ public class PayrollService {
             payslip.setMonth(month);
             payslip.setBasicSalary(basic);
             payslip.setHra(hra);
-            payslip.setTransportAllowance(transport);
-            payslip.setPfDeduction(pf);
-            payslip.setTaxDeduction(tax);
-            payslip.setLopDeduction(lopAmount);
+            payslip.setConveyance(conveyance);
+            payslip.setMedical(medical);
+            payslip.setOtherAllowance(other);
+            payslip.setPf(pf);
+            payslip.setEsi(esi);
+            payslip.setProfessionalTax(professionalTax);
+            payslip.setLop(lopAmount);
             payslip.setNetSalary(net);
             payslip.setGeneratedDate(LocalDate.now());
             payslip.setStatus(PayrollStatus.PENDING);
@@ -126,7 +142,6 @@ public class PayrollService {
             payslips.add(payslip);
         }
 
-        // Save all payslips at once (performance improvement)
         payslipRepository.saveAll(payslips);
     }
 

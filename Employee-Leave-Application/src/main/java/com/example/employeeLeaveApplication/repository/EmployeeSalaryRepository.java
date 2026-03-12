@@ -6,13 +6,12 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface EmployeeSalaryRepository extends JpaRepository<EmployeeSalary, Long> {
 
-    // salary history
     List<EmployeeSalary> findByEmployeeId(Long employeeId);
 
-    // salary used for payroll
     @Query("""
         SELECT e FROM EmployeeSalary e
         WHERE e.employeeId = :employeeId
@@ -21,4 +20,8 @@ public interface EmployeeSalaryRepository extends JpaRepository<EmployeeSalary, 
     """)
     List<EmployeeSalary> findEffectiveSalary(Long employeeId, LocalDate date);
 
+    Optional<EmployeeSalary> findByEmployeeIdAndEffectiveFrom(
+            Long employeeId,
+            LocalDate effectiveFrom
+    );
 }

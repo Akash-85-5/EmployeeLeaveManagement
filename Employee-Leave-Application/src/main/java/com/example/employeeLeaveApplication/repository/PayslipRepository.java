@@ -9,15 +9,6 @@ import java.util.Optional;
 
 public interface PayslipRepository extends JpaRepository<Payslip, Long> {
 
-    Optional<Payslip> findByEmployeeIdAndYearAndMonth(
-            Long employeeId,
-            Integer year,
-            Integer month
-    );
-
-    List<Payslip> findByEmployeeId(Long employeeId);
-    List<Payslip> findByYearAndMonth(Integer year, Integer month);
-
     @Query("""
 SELECT p FROM Payslip p
 WHERE (p.year > :startYear OR (p.year = :startYear AND p.month >= :startMonth))
@@ -29,6 +20,16 @@ AND (p.year < :endYear OR (p.year = :endYear AND p.month <= :endMonth))
             Integer endYear,
             Integer endMonth
     );
+    Optional<Payslip> findByEmployeeIdAndYearAndMonth(
+            Long employeeId,
+            Integer year,
+            Integer month
+    );
+
+    List<Payslip> findByEmployeeId(Long employeeId);
+
+    List<Payslip> findByYearAndMonth(Integer year, Integer month);
+
     boolean existsByEmployeeIdAndYearAndMonth(
             Long employeeId,
             Integer year,
