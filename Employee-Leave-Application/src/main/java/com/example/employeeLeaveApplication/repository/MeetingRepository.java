@@ -25,4 +25,5 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
             @Param("endTime") LocalDateTime endTime
     );
 
+//    List<Meeting> findByManagerId(Long managerId);
 }

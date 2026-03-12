@@ -130,4 +130,7 @@ public class MeetingService {
 
         return meetingRepository.save(meeting);
     }
+//    public List<Meeting> getPendingMeeting(Long managerId){
+//        return meetingRepository.findByManagerId(managerId);
+//    }
 }

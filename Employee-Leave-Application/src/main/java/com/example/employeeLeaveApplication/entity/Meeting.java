@@ -20,8 +20,8 @@ public class Meeting {
 
     private String title;
 
-    private LocalDateTime startTime;   // ✅ NEW
-    private LocalDateTime endTime;     // ✅ NEW
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
     private String type;
     private String locationOrLink;

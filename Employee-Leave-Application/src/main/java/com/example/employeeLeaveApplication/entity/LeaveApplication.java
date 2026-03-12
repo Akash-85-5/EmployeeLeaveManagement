@@ -1,4 +1,3 @@
-// src/main/java/com/example/employeeLeaveApplication/entity/LeaveApplication.java
 package com.example.employeeLeaveApplication.entity;
 
 import java.math.BigDecimal;

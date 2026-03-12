@@ -6,5 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface LeaveAttachmentRepository extends JpaRepository<LeaveAttachment, Long> {
-    List<LeaveAttachment> findByLeaveApplication_Id(Long leaveApplicationId);
+
+    List<LeaveAttachment> findByLeaveApplicationId(Long leaveApplicationId);
+
+    void deleteByLeaveApplicationId(Long leaveApplicationId);
 }

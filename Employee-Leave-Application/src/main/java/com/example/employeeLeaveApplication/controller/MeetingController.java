@@ -16,17 +16,18 @@ public class MeetingController {
         this.meetingService = meetingService;
     }
 
-    // ✅ Create Meeting (Supports HR selecting specific attendees)
     @PostMapping("/create/{employeeId}")
     public Meeting createMeeting(
             @PathVariable Long employeeId,
             @RequestBody Meeting meeting,
             @RequestParam(required = false) List<Long> attendeeIds) {
-        // Logic: Send attendeeIds as ?attendeeIds=111,112 in the URL
         return meetingService.createMeeting(employeeId, meeting, attendeeIds);
     }
 
-    // ✅ Approve Meeting (Manager Only)
+//    @GetMapping("/pending/{managerId}")
+//    public List<Meeting> pendingMeetingRequest(@PathVariable Long managerId){
+//        return meetingService.getPendingMeeting(managerId);
+//    }
     @PutMapping("/approve/{meetingId}/{managerId}")
     public Meeting approveMeeting(
             @PathVariable Long meetingId,
@@ -34,7 +35,6 @@ public class MeetingController {
         return meetingService.approveMeeting(meetingId, managerId);
     }
 
-    // ✅ Reject Meeting (Manager Only)
     @PutMapping("/reject/{meetingId}/{managerId}")
     public Meeting rejectMeeting(
             @PathVariable Long meetingId,
@@ -42,7 +42,6 @@ public class MeetingController {
         return meetingService.rejectMeeting(meetingId, managerId);
     }
 
-    // ✅ Cancel Meeting (Manager or HR)
     @DeleteMapping("/cancel/{meetingId}/{employeeId}")
     public Meeting cancelMeeting(
             @PathVariable Long meetingId,
