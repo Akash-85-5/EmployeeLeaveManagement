@@ -36,21 +36,6 @@ public class LeaveBalanceController {
             return ResponseEntity.badRequest().build();
         }
     }
-    @PostMapping("/initialize")
-    public ResponseEntity<String> initializeAllocations(
-            @RequestParam Long employeeId,
-            @RequestParam Integer year) {
-
-        log.info("🆕 [API] POST initialize: employee={}, year={}", employeeId, year);
-
-        try {
-            balanceService.initializeAllocations(employeeId, year);
-            return ResponseEntity.ok("Allocations initialized successfully for employee: " + employeeId);
-        } catch (Exception e) {
-            log.error("❌ [API] Error initializing: {}", e.getMessage());
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/lop/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")

@@ -4,7 +4,9 @@ import com.example.employeeLeaveApplication.dto.CompOffBalanceDetailsDTO;
 import com.example.employeeLeaveApplication.dto.CompOffPendingDTO;
 import com.example.employeeLeaveApplication.dto.CompOffRequestDTO;
 import com.example.employeeLeaveApplication.entity.CompOff;
+import com.example.employeeLeaveApplication.entity.CompOffBalance;         // ✅ NEW IMPORT
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
+import com.example.employeeLeaveApplication.service.CompOffBalanceService; // ✅ NEW IMPORT
 import com.example.employeeLeaveApplication.service.CompOffService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,31 +16,40 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List; // ✅ NEW IMPORT
+import java.util.Map;  // ✅ NEW IMPORT
 
+// ===================== EXISTING =====================
 @RestController
 @RequestMapping("/api/compoff")
 public class CompOffController {
 
+    // ===================== EXISTING =====================
     private final CompOffService compOffService;
 
-    public CompOffController(CompOffService compOffService) {
+    // ✅ NEW FIELD
+    // Reason: Needed to call balance methods for HR/Admin/Manager
+    private final CompOffBalanceService compOffBalanceService;
+
+    // ===================== EXISTING (UPDATED) =====================
+    // Added CompOffBalanceService to constructor
+    public CompOffController(CompOffService compOffService,
+                             CompOffBalanceService compOffBalanceService) {
         this.compOffService = compOffService;
+        this.compOffBalanceService = compOffBalanceService; // ✅ NEW LINE
     }
 
+    // ===================== EXISTING =====================
     @PostMapping("/request")
-    public ResponseEntity<String> employeeRequestCompOff(@RequestBody CompOffRequestDTO request) {
+    public ResponseEntity<String> employeeRequestCompOff(
+            @RequestBody CompOffRequestDTO request) {
         validateRequest(request);
         compOffService.requestBulkCompOff(request);
-        return ResponseEntity.ok("Comp-Off request submitted and is now PENDING.");
+        return ResponseEntity.ok(
+                "Comp-Off request submitted and is now PENDING.");
     }
 
-//    @PostMapping("/admin/request")
-//    public ResponseEntity<String> adminRequestCompOff(@RequestBody CompOffRequestDTO request) {
-//        validateRequest(request);
-//        compOffService.requestBulkCompOff(request);
-//        return ResponseEntity.ok("Comp-Off recorded and APPROVED by Admin successfully.");
-//    }
-
+    // ===================== EXISTING =====================
     @GetMapping("/requests/{employeeId}")
     public Page<CompOff> getEmployeeCompOffRequests(
             @PathVariable Long employeeId,
@@ -46,9 +57,11 @@ public class CompOffController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return compOffService.getEmployeeCompOffRequests(employeeId, status, pageable);
+        return compOffService.getEmployeeCompOffRequests(
+                employeeId, status, pageable);
     }
 
+    // ===================== EXISTING =====================
     @GetMapping("/pending/{managerId}/approvals")
     @PreAuthorize("#managerId == authentication.principal.user.id")
     public Page<CompOffPendingDTO> getPendingCompOffApprovals(
@@ -56,16 +69,18 @@ public class CompOffController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return compOffService.getPendingCompOffApprovals(managerId,pageable);
+        return compOffService.getPendingCompOffApprovals(
+                managerId, pageable);
     }
 
-
-    // ✅ FIXED: renamed from /{id} to /record/{id} to avoid conflict with /balance/{id}
+    // ===================== EXISTING =====================
     @GetMapping("/record/{id}")
     public CompOff getCompOffRequest(@PathVariable Long id) {
         return compOffService.getCompOffRequest(id);
     }
 
+
+    // ===================== EXISTING (UPDATED) =====================
     @PatchMapping("/approve/{id}")
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveCompOff(@PathVariable Long id) {
@@ -81,7 +96,7 @@ public class CompOffController {
         compOffService.rejectCompOff(id, reason);
         return ResponseEntity.ok("Comp-Off request rejected.");
     }
-
+    // ===================== EXISTING =====================
     @DeleteMapping("/{id}/cancel")
     @PreAuthorize("#id == authentication.principal.user.id")
     public ResponseEntity<String> deleteCompOffRequest(
@@ -91,22 +106,38 @@ public class CompOffController {
         return ResponseEntity.ok("Comp-Off request deleted successfully.");
     }
 
+    // ===================== EXISTING (UPDATED) =====================
+    // Was: #employeeId == authentication.principal.user.id (employee only)
+    // Now: Employee(own) + HR + ADMIN + MANAGER can all view balance
     @GetMapping("/balance/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<BigDecimal> getBalance(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(compOffService.getAvailableCompOffDays(employeeId));
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<BigDecimal> getBalance(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(
+                compOffService.getAvailableCompOffDays(employeeId));
     }
 
+    // ===================== EXISTING (UPDATED) =====================
+    // Was: #employeeId == authentication.principal.user.id (employee only)
+    // Now: Employee(own) + HR + ADMIN + MANAGER can all view details
+    // Also: Now returns usedDays in response too
     @GetMapping("/balance/{employeeId}/details")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     public ResponseEntity<CompOffBalanceDetailsDTO> getBalanceDetails(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
-        return ResponseEntity.ok(compOffService.getCompOffBalanceDetails(employeeId, year));
+        return ResponseEntity.ok(
+                compOffService.getCompOffBalanceDetails(employeeId, year));
     }
 
+    // ===================== EXISTING (UPDATED) =====================
+    // Was: #employeeId == authentication.principal.user.id (employee only)
+    // Now: Employee(own) + HR + ADMIN + MANAGER can all view history
     @GetMapping("/history/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     public Page<CompOff> getCompOffHistory(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year,
@@ -116,9 +147,12 @@ public class CompOffController {
         return compOffService.getCompOffHistory(employeeId, year, pageable);
     }
 
+    // ===================== EXISTING =====================
     private void validateRequest(CompOffRequestDTO request) {
-        if (request.getEntries() == null || request.getEntries().isEmpty()) {
-            throw new BadRequestException("Error: JSON must include an 'entries' array.");
+        if (request.getEntries() == null
+                || request.getEntries().isEmpty()) {
+            throw new BadRequestException(
+                    "Error: JSON must include an 'entries' array.");
         }
     }
 }
