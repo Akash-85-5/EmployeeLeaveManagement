@@ -289,29 +289,35 @@ public class LeaveApprovalService {
     // PRIVATE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    private void validateApproverForLevel(LeaveApplication leave, Employee approver, ApprovalLevel level) {
+    private void validateApproverForLevel(LeaveApplication leave,
+                                          Employee approver, ApprovalLevel level) {
         switch (level) {
             case TEAM_LEADER -> {
-                if (!approver.getId().equals(leave.getTeamLeaderId())) {
+                if (leave.getTeamLeaderId() == null ||
+                        !approver.getId().equals(leave.getTeamLeaderId())) {
                     throw new BadRequestException(
-                            "Unauthorized: Only the assigned Team Leader can approve at this stage.");
+                            "Unauthorized: Only the assigned Team Leader can approve.");
                 }
                 if (approver.getRole() != Role.TEAM_LEADER) {
-                    throw new BadRequestException("Approver does not have TEAM_LEADER role.");
+                    throw new BadRequestException(
+                            "Approver does not have TEAM_LEADER role.");
                 }
             }
             case MANAGER -> {
-                if (!approver.getId().equals(leave.getManagerId())) {
+                if (leave.getManagerId() == null ||
+                        !approver.getId().equals(leave.getManagerId())) {
                     throw new BadRequestException(
-                            "Unauthorized: Only the assigned Manager can approve at this stage.");
+                            "Unauthorized: Only the assigned Manager can approve.");
                 }
                 if (approver.getRole() != Role.MANAGER) {
-                    throw new BadRequestException("Approver does not have MANAGER role.");
+                    throw new BadRequestException(
+                            "Approver does not have MANAGER role.");
                 }
             }
             case HR -> {
                 if (approver.getRole() != Role.HR) {
-                    throw new BadRequestException("Only HR can approve at this stage.");
+                    throw new BadRequestException(
+                            "Only HR can approve at this stage.");
                 }
             }
         }
@@ -337,41 +343,44 @@ public class LeaveApprovalService {
     }
 
     private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
-        int required     = leave.getRequiredApprovalLevels();
+        int required = leave.getRequiredApprovalLevels();
         ApprovalLevel current = leave.getCurrentApprovalLevel();
 
-        boolean needsManager = required >= 2;
-        boolean needsHr      = required >= 3;
-
         if (current == ApprovalLevel.TEAM_LEADER) {
-            if (needsManager) {
+            if (required >= 2) {
+                // Advance to Manager
                 leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
                 leaveApplicationRepository.save(leave);
                 notifyManager(leave, currentApprover);
                 notifyEmployeeProgress(leave, currentApprover,
-                        "Your leave request has been approved by your Team Leader. " +
-                                "It is now pending Manager approval.");
+                        "Your leave has been approved by Team Leader. " +
+                                "Pending Manager approval.");
             } else {
+                // TL only → done
                 finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
             }
+
         } else if (current == ApprovalLevel.MANAGER) {
-            if (needsHr) {
+            if (required >= 3) {
+                // Advance to HR
                 leave.setCurrentApprovalLevel(ApprovalLevel.HR);
                 leave.setEscalated(true);
                 leave.setEscalatedAt(LocalDateTime.now());
                 leaveApplicationRepository.save(leave);
                 notifyHr(leave, currentApprover);
                 notifyEmployeeProgress(leave, currentApprover,
-                        "Your leave request has been approved by your Manager. " +
-                                "It is now pending HR approval.");
+                        "Your leave has been approved by Manager. " +
+                                "Pending HR approval.");
             } else {
+                // Manager is final approver (Employee 2-6 days OR Team Leader < 7 days)
                 finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
             }
-        } else {
+
+        } else if (current == ApprovalLevel.HR) {
+            // HR approved → fully done
             finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
         }
     }
-
     /**
      * Called ONLY when the LAST required approver signs off.
      *
