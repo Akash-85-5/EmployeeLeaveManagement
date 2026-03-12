@@ -38,8 +38,9 @@ public class ODRequestController {
     // PUT /api/od/reject/5?approverId=2
     @PutMapping("/reject/{odId}")
     public ResponseEntity<ODRequest> rejectOD(@PathVariable Long odId,
-                                              @RequestParam Long approverId) {
-        return ResponseEntity.ok(odService.rejectOD(odId, approverId));
+                                              @RequestParam Long approverId,
+                                              @RequestParam String reason) {
+        return ResponseEntity.ok(odService.rejectOD(odId, approverId, reason));
     }
 
     // 4. Cancel an OD Request (by User or Approver)

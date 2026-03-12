@@ -2,6 +2,8 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.entity.Meeting;
 import com.example.employeeLeaveApplication.service.MeetingService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -45,11 +47,14 @@ public class MeetingController {
     }
 
     // ✅ Reject Meeting (Supports rejection by Manager or HR based on current state)
-    @PutMapping("/reject/{meetingId}/{reviewerId}")
-    public Meeting rejectMeeting(
+    // In MeetingController
+    @PatchMapping("/{meetingId}/reject")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR')")
+    public ResponseEntity<Meeting> rejectMeeting(
             @PathVariable Long meetingId,
-            @PathVariable Long reviewerId) {
-        return meetingService.rejectMeeting(meetingId, reviewerId);
+            @RequestParam Long reviewerId,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(meetingService.rejectMeeting(meetingId, reviewerId, reason));
     }
 
     // ✅ Cancel Meeting (Manager or HR)
