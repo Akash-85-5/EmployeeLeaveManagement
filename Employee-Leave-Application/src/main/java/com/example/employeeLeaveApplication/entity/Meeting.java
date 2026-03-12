@@ -20,8 +20,8 @@ public class Meeting {
 
     private String title;
 
-    private LocalDateTime startTime;   // ✅ NEW
-    private LocalDateTime endTime;     // ✅ NEW
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
     private String type;
     private String locationOrLink;
@@ -33,6 +33,9 @@ public class Meeting {
 
     private Long createdBy;
     private Long teamId;
+
+    // ✅ NEW: Flag to track if the meeting requires HR's specific approval
+    private boolean hrApprovalRequired;
 
     @ManyToMany
     @JoinTable(

@@ -16,33 +16,40 @@ public class MeetingController {
         this.meetingService = meetingService;
     }
 
-    // ✅ Create Meeting (Supports HR selecting specific attendees)
+    // ✅ Create Meeting (Checks team and HR availability)
     @PostMapping("/create/{employeeId}")
     public Meeting createMeeting(
             @PathVariable Long employeeId,
             @RequestBody Meeting meeting,
             @RequestParam(required = false) List<Long> attendeeIds) {
-        // Logic: Send attendeeIds as ?attendeeIds=111,112 in the URL
         return meetingService.createMeeting(employeeId, meeting, attendeeIds);
     }
 
-    // ✅ Approve Meeting (Manager Only)
-    @PutMapping("/approve/{meetingId}/{managerId}")
-    public Meeting approveMeeting(
+    // ✅ Manager Approval (First level of approval)
+    @PutMapping("/approve/manager/{meetingId}/{managerId}")
+    public Meeting approveByManager(
             @PathVariable Long meetingId,
             @PathVariable Long managerId) {
-        return meetingService.approveMeeting(meetingId, managerId);
+        return meetingService.approveByManager(meetingId, managerId);
     }
 
-    // ✅ Reject Meeting (Manager Only)
-    @PutMapping("/reject/{meetingId}/{managerId}")
+    // ✅ NEW: HR Approval (Second level of approval, if HR is invited)
+    @PutMapping("/approve/hr/{meetingId}/{hrId}")
+    public Meeting approveByHr(
+            @PathVariable Long meetingId,
+            @PathVariable Long hrId) {
+        return meetingService.approveByHr(meetingId, hrId);
+    }
+
+    // ✅ Reject Meeting (Supports rejection by Manager or HR based on current state)
+    @PutMapping("/reject/{meetingId}/{reviewerId}")
     public Meeting rejectMeeting(
             @PathVariable Long meetingId,
-            @PathVariable Long managerId) {
-        return meetingService.rejectMeeting(meetingId, managerId);
+            @PathVariable Long reviewerId) {
+        return meetingService.rejectMeeting(meetingId, reviewerId);
     }
 
-    // ✅ Cancel Meeting (Manager or HR)
+    // ✅ Cancel Meeting (Manager, HR, or Creator)
     @DeleteMapping("/cancel/{meetingId}/{employeeId}")
     public Meeting cancelMeeting(
             @PathVariable Long meetingId,

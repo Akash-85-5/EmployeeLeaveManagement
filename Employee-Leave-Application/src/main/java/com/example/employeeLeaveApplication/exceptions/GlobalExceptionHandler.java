@@ -12,70 +12,57 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ✅ Handle Specific Logic Errors (Like Insufficient Balance)
+    // 1. ✅ Handle Meeting Overlaps & Generic Bad Requests
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("error", "Bad Request");
-        response.put("message", ex.getMessage()); // This will show your custom error messages
-
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
     }
 
+    // 2. ✅ Handle Permissions (HR/Manager access issues)
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.FORBIDDEN.value());
-        response.put("error", "Unauthorized Access");
-        response.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+        return buildResponse(HttpStatus.FORBIDDEN, "Unauthorized Access", ex.getMessage());
     }
 
-    // ✅ Handle Validation & Runtime Errors (The fix for your 500 error)
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        response.put("error", "Internal Server Error");
-
-        // 🔥 CRITICAL CHANGE: Show the actual cause of the 500 error
-        response.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
-
-        // Optional: Helpful for development to see which class crashed
-        response.put("exceptionType", ex.getClass().getSimpleName());
-
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    // 3. ✅ Handle Leave Balance Logic (Keeping your old concept)
     @ExceptionHandler(InsufficientLeaveBalanceException.class)
-    public ResponseEntity<Map<String, Object>> handleInsufficientBalance(
-            InsufficientLeaveBalanceException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("error", "Insufficient Leave Balance");
-        response.put("message", ex.getMessage());
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleInsufficientBalance(InsufficientLeaveBalanceException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Insufficient Leave Balance", ex.getMessage());
     }
+
+    // 4. ✅ Handle Missing Employees or Meetings
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.NOT_FOUND.value());
-        response.put("error", "Not Found");
-        response.put("message", ex.getMessage());
-        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+        return buildResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage());
     }
 
+    // 5. ✅ Handle Runtime Errors (Keeping your old map-style body)
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", ex.getMessage()));
     }
-}
 
+    // 6. ✅ Final Safety Net: Handle Unexpected 500 Errors
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        response.put("error", "Internal Server Error");
+        response.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
+        response.put("exceptionType", ex.getClass().getSimpleName());
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // Helper method to keep your code DRY (Don't Repeat Yourself)
+    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String error, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("timestamp", LocalDateTime.now());
+        response.put("status", status.value());
+        response.put("error", error);
+        response.put("message", message);
+        return new ResponseEntity<>(response, status);
+    }
+}
