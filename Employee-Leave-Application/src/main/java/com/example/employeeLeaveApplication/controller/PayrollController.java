@@ -1,10 +1,8 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.entity.SalaryStructure;
 import com.example.employeeLeaveApplication.service.PayrollService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/payroll")
@@ -24,5 +22,14 @@ public class PayrollController {
         payrollService.generatePayroll(year, month);
 
         return "Payroll generated successfully";
+    }
+    @PutMapping("/mark-paid")
+    public String markPaid(
+            @RequestParam Integer year,
+            @RequestParam Integer month) {
+
+        payrollService.markPayrollPaid(year, month);
+
+        return "Payroll marked as PAID";
     }
 }

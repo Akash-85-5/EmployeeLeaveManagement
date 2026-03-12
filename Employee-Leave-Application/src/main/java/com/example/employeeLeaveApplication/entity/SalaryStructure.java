@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.enums.Role;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "salary_structure", uniqueConstraints = @UniqueConstraint(columnNames = "role"))
 public class SalaryStructure {
 
     @Id
@@ -11,15 +12,36 @@ public class SalaryStructure {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, unique = true)
     private Role role;
 
-    private double hraAmount;
+    @Column(nullable = false)
+    private Double hraAmount;
 
-    private double transportAllowance;
+    @Column(nullable = false)
+    private Double pfPercent;
 
-    private double pfPercent;
+    @Column(nullable = false)
+    private Double taxPercent;
 
-    private double taxPercent;
+    @Column(nullable = false)
+    private Double transportAllowance;
+
+    public void setHraAmount(Double hraAmount) {
+        this.hraAmount = hraAmount;
+    }
+
+    public void setPfPercent(Double pfPercent) {
+        this.pfPercent = pfPercent;
+    }
+
+    public void setTaxPercent(Double taxPercent) {
+        this.taxPercent = taxPercent;
+    }
+
+    public void setTransportAllowance(Double transportAllowance) {
+        this.transportAllowance = transportAllowance;
+    }
 
     public Long getId() {
         return id;

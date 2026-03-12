@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.dto.GeneratePayslipRequest;
 import com.example.employeeLeaveApplication.entity.*;
+import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -10,18 +11,15 @@ import java.time.LocalDate;
 @Service
 public class PayslipService {
 
-    private final SalaryRepository salaryRepository;
     private final PayrollSettingsRepository payrollSettingsRepository;
     private final PayslipRepository payslipRepository;
     private final LossOfPayRecordRepository lossOfPayRecordRepository;
 
     public PayslipService(
-            SalaryRepository salaryRepository,
             PayrollSettingsRepository payrollSettingsRepository,
             PayslipRepository payslipRepository,
             LossOfPayRecordRepository lossOfPayRecordRepository) {
 
-        this.salaryRepository = salaryRepository;
         this.payrollSettingsRepository = payrollSettingsRepository;
         this.payslipRepository = payslipRepository;
         this.lossOfPayRecordRepository = lossOfPayRecordRepository;
@@ -83,6 +81,21 @@ public class PayslipService {
         payslip.setLopDeduction(lop);
         payslip.setNetSalary(net);
         payslip.setGeneratedDate(java.time.LocalDate.now());
+        payslip.setStatus(PayrollStatus.PENDING);
+
+        return payslipRepository.save(payslip);
+    }
+    public Payslip updatePayslip(Long id, GeneratePayslipRequest request){
+
+        Payslip payslip = payslipRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payslip not found"));
+
+        if(payslip.getStatus() == PayrollStatus.PAID){
+            throw new RuntimeException("Cannot modify payroll after it is paid");
+        }
+
+        // update fields
+        payslip.setBasicSalary(request.getBasicSalary());
 
         return payslipRepository.save(payslip);
     }

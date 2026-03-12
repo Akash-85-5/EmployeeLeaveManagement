@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.entity;
 
+import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import jakarta.persistence.*;
 import jakarta.persistence.criteria.CriteriaBuilder;
 
@@ -39,6 +40,9 @@ public class Payslip {
     private double netSalary;
 
     private LocalDate generatedDate;
+
+    @Enumerated(EnumType.STRING)
+    private PayrollStatus status;
 
     // getters & setters
 
@@ -136,5 +140,13 @@ public class Payslip {
 
     public void setGeneratedDate(LocalDate generatedDate) {
         this.generatedDate = generatedDate;
+    }
+
+    public PayrollStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(PayrollStatus status) {
+        this.status = status;
     }
 }
