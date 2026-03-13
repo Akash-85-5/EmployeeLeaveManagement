@@ -3,7 +3,10 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.entity.SalaryStructure;
 import com.example.employeeLeaveApplication.repository.SalaryStructureRepository;
 import com.example.employeeLeaveApplication.enums.Role;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/salary-structure")
@@ -91,5 +94,10 @@ public class SalaryStructureController {
         repository.delete(structure);
 
         return "Salary structure deleted successfully";
+    }
+    @PreAuthorize("hasAnyRole('HR','ADMIN')")
+    @GetMapping("/all")
+    public List<SalaryStructure> getAllSalaryStructures() {
+        return repository.findAll();
     }
 }

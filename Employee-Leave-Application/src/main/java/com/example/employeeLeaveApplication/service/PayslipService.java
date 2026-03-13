@@ -12,16 +12,13 @@ import java.time.LocalDate;
 @Service
 public class PayslipService {
 
-    private final PayrollSettingsRepository payrollSettingsRepository;
     private final PayslipRepository payslipRepository;
     private final LossOfPayRecordRepository lossOfPayRecordRepository;
 
     public PayslipService(
-            PayrollSettingsRepository payrollSettingsRepository,
             PayslipRepository payslipRepository,
             LossOfPayRecordRepository lossOfPayRecordRepository) {
 
-        this.payrollSettingsRepository = payrollSettingsRepository;
         this.payslipRepository = payslipRepository;
         this.lossOfPayRecordRepository = lossOfPayRecordRepository;
     }

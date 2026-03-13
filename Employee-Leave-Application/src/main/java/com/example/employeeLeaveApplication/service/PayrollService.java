@@ -37,7 +37,16 @@ public class PayrollService {
 
     public void generatePayroll(Integer year, Integer month) {
 
-        LocalDate payrollDate = LocalDate.of(year, month, 1);
+        if(!payslipRepository.findByYearAndMonth(year, month).isEmpty()){
+            throw new RuntimeException(
+                    "Payroll already generated for " + month + "/" + year +
+                            ". Delete existing payroll to regenerate."
+            );
+        }
+
+        LocalDate payrollDate = LocalDate.of(year, month, 1).withDayOfMonth(
+                LocalDate.of(year, month, 1).lengthOfMonth()
+        );
 
         List<Employee> employees = employeeRepository.findAll();
 
