@@ -64,4 +64,19 @@ public class MeetingController {
             @PathVariable Long employeeId) {
         return meetingService.cancelMeeting(meetingId, employeeId);
     }
+
+    @GetMapping("/my/{employeeId}")
+    public List<Meeting> getMyMeetings(@PathVariable Long employeeId) {
+        return meetingService.getMeetingsCreatedBy(employeeId);
+    }
+
+    @GetMapping("/pending/manager/{managerId}")
+    public List<Meeting> getPendingForManager(@PathVariable Long managerId) {
+        return meetingService.getPendingForManager(managerId);
+    }
+
+    @GetMapping("/pending/hr")
+    public List<Meeting> getPendingForHr() {
+        return meetingService.getPendingForHr();
+    }
 }

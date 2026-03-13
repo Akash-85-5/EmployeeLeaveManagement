@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.Meeting;
+import com.example.employeeLeaveApplication.enums.MeetingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -39,4 +40,16 @@ public interface MeetingRepository extends JpaRepository<Meeting, Long> {
             @Param("endTime") LocalDateTime endTime
     );
 //    List<Meeting> findByManagerId(Long managerId);
+
+    List<Meeting> findByCreatedBy(Long employeeId);
+
+    List<Meeting> findByStatus(MeetingStatus status);
+
+    @Query("""
+SELECT m FROM Meeting m
+JOIN Employee e ON m.createdBy = e.id
+WHERE e.managerId = :managerId
+AND m.status = com.example.employeeLeaveApplication.enums.MeetingStatus.PENDING
+""")
+    List<Meeting> findPendingForManager(Long managerId);
 }

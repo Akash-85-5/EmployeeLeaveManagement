@@ -50,4 +50,24 @@ public class ODRequestController {
                                               @RequestParam Long userId) {
         return ResponseEntity.ok(odService.cancelOD(odId, userId));
     }
+
+    @GetMapping("/my/{employeeId}")
+    public ResponseEntity<List<ODRequest>> getMyODRequests(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(odService.getMyODRequests(employeeId));
+    }
+
+    @GetMapping("/pending/teamleader/{tlId}")
+    public ResponseEntity<List<ODRequest>> getPendingForTL(@PathVariable Long tlId) {
+        return ResponseEntity.ok(odService.getPendingForTeamLeader(tlId));
+    }
+
+    @GetMapping("/pending/manager/{managerId}")
+    public ResponseEntity<List<ODRequest>> getPendingForManager(@PathVariable Long managerId) {
+        return ResponseEntity.ok(odService.getPendingForManager(managerId));
+    }
+
+    @GetMapping("/pending/hr")
+    public ResponseEntity<List<ODRequest>> getPendingForHR() {
+        return ResponseEntity.ok(odService.getPendingForHR());
+    }
 }
