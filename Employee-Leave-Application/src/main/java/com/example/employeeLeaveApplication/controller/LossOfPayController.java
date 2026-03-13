@@ -2,12 +2,11 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
-import com.example.employeeLeaveApplication.enums.Role;
-import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.service.LossOfPayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Month;
@@ -25,41 +24,31 @@ public class LossOfPayController {
     private final LossOfPayService lossOfPayService;
     private final EmployeeRepository employeeRepository;
 
-    // ═══════════════════════════════════════════════════════════════
-    // EMPLOYEE — view only their own LOP
-    // GET /api/lop/my-lop?empId=1&year=2025
-    // ═══════════════════════════════════════════════════════════════
+    // ✅ Employee views own LOP summary
     @GetMapping("/my-lop")
+    @PreAuthorize("#empId == authentication.principal.user.id")
     public ResponseEntity<Map<String, Object>> getMyLop(
             @RequestParam Long empId,
-            @RequestParam Long requesterId,  // ✅ added
-            @RequestParam Integer year) {    // ✅ already existed, just keep it
-
-        // ✅ Ensure caller can only view their own LOP
-        if (!requesterId.equals(empId)) {
-            throw new BadRequestException("You can only view your own LOP records");
-        }
-
+            @RequestParam Integer year) {
         getEmployee(empId);
-
-        return ResponseEntity.ok(lossOfPayService.getLopSummary(empId, year));
+        return ResponseEntity.ok(
+                lossOfPayService.getLopSummary(empId, year));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // MONTHLY — view specific month LOP
-    // GET /api/lop/employee/{empId}/year/{year}/month/{month}
-    // ═══════════════════════════════════════════════════════════════
-
+    // ✅ Self, HR, ADMIN, MANAGER, TL — monthly LOP for a specific month
     @GetMapping("/employee/{empId}/year/{year}/month/{month}")
+    @PreAuthorize("#empId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<Map<String, Object>> getMonthlyLop(
             @PathVariable Long empId,
             @PathVariable Integer year,
-            @PathVariable Integer month,
-            @RequestParam Long requesterId) {
+            @PathVariable Integer month) {
 
-        validateAccess(requesterId, empId);
+        getEmployee(empId);
 
-        String lopPercent = lossOfPayService.getMonthlyLossOfPay(empId, year, month);
+        String lopPercent = lossOfPayService
+                .getMonthlyLossOfPay(empId, year, month);
 
         String monthName = Month.of(month)
                 .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
@@ -74,20 +63,19 @@ public class LossOfPayController {
         return ResponseEntity.ok(response);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // YEARLY TOTAL — total LOP% for the year
-    // GET /api/lop/employee/{empId}/year/{year}/total
-    // ═══════════════════════════════════════════════════════════════
-
+    // ✅ Self, HR, ADMIN, MANAGER, TL — yearly LOP total
     @GetMapping("/employee/{empId}/year/{year}/total")
+    @PreAuthorize("#empId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<Map<String, Object>> getYearlyLop(
             @PathVariable Long empId,
-            @PathVariable Integer year,
-            @RequestParam Long requesterId) {
+            @PathVariable Integer year) {
 
-        validateAccess(requesterId, empId);
+        getEmployee(empId);
 
-        String yearlyTotal = lossOfPayService.getYearlyLossOfPay(empId, year);
+        String yearlyTotal = lossOfPayService
+                .getYearlyLossOfPay(empId, year);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("employeeId",  empId);
@@ -97,37 +85,59 @@ public class LossOfPayController {
         return ResponseEntity.ok(response);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // FULL SUMMARY — month by month breakdown for a year
-    // GET /api/lop/employee/{empId}/year/{year}/summary
-    // ═══════════════════════════════════════════════════════════════
-
+    // ✅ Self, HR, ADMIN, MANAGER, TL — full month-by-month summary for a year
     @GetMapping("/employee/{empId}/year/{year}/summary")
+    @PreAuthorize("#empId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<Map<String, Object>> getLopSummary(
             @PathVariable Long empId,
-            @PathVariable Integer year,
-            @RequestParam Long requesterId) {
+            @PathVariable Integer year) {
 
-        validateAccess(requesterId, empId);
+        getEmployee(empId);
 
-        return ResponseEntity.ok(lossOfPayService.getLopSummary(empId, year));
+        return ResponseEntity.ok(
+                lossOfPayService.getLopSummary(empId, year));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // TEAM LEADER — view their team members LOP
-    // GET /api/lop/team?teamLeaderId=2&year=2025
-    // ═══════════════════════════════════════════════════════════════
+    // ✅ Self, HR, ADMIN, MANAGER, TL — all raw LOP records across all years
+    @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
+    public ResponseEntity<List<LossOfPayRecord>> listByEmployee(
+            @PathVariable Long employeeId) {
 
+        getEmployee(employeeId);
+
+        return ResponseEntity.ok(
+                lossOfPayService.getAllForEmployee(employeeId));
+    }
+
+    // ✅ Self, HR, ADMIN, MANAGER, TL — raw LOP records filtered by year
+    @GetMapping("/employee/{empId}/year/{year}/records")
+    @PreAuthorize("#empId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
+    public ResponseEntity<List<LossOfPayRecord>> listByEmployeeAndYear(
+            @PathVariable Long empId,
+            @PathVariable Integer year) {
+
+        getEmployee(empId);
+
+        return ResponseEntity.ok(
+                lossOfPayService.getForEmployeeAndYear(empId, year));
+    }
+
+    // ✅ TEAM_LEADER only — LOP summary for all team members
     @GetMapping("/team")
+    @PreAuthorize("hasRole('TEAM_LEADER') and " +
+            "#teamLeaderId == authentication.principal.user.id")
     public ResponseEntity<Map<String, Object>> getTeamLop(
             @RequestParam Long teamLeaderId,
             @RequestParam Integer year) {
 
-        Employee tl = getEmployee(teamLeaderId);
-
-        if (tl.getRole() != Role.TEAM_LEADER) {
-            throw new BadRequestException("Only Team Leader can access this");
-        }
+        getEmployee(teamLeaderId);
 
         List<Employee> teamMembers = employeeRepository
                 .findByTeamLeaderId(teamLeaderId);
@@ -136,28 +146,22 @@ public class LossOfPayController {
         for (Employee member : teamMembers) {
             teamLop.put(
                     member.getName(),
-                    lossOfPayService.getLopSummary(member.getId(), year)
-            );
+                    lossOfPayService.getLopSummary(
+                            member.getId(), year));
         }
 
         return ResponseEntity.ok(teamLop);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // MANAGER — view their department employees LOP
-    // GET /api/lop/department?managerId=3&year=2025
-    // ═══════════════════════════════════════════════════════════════
-
+    // ✅ MANAGER only — LOP summary for all department members
     @GetMapping("/department")
+    @PreAuthorize("hasRole('MANAGER') and " +
+            "#managerId == authentication.principal.user.id")
     public ResponseEntity<Map<String, Object>> getDepartmentLop(
             @RequestParam Long managerId,
             @RequestParam Integer year) {
 
-        Employee manager = getEmployee(managerId);
-
-        if (manager.getRole() != Role.MANAGER) {
-            throw new BadRequestException("Only Manager can access this");
-        }
+        getEmployee(managerId);
 
         List<Employee> deptMembers = employeeRepository
                 .findByManagerId(managerId);
@@ -166,29 +170,18 @@ public class LossOfPayController {
         for (Employee member : deptMembers) {
             deptLop.put(
                     member.getName(),
-                    lossOfPayService.getLopSummary(member.getId(), year)
-            );
+                    lossOfPayService.getLopSummary(
+                            member.getId(), year));
         }
 
         return ResponseEntity.ok(deptLop);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // HR & ADMIN — view ALL employees LOP
-    // GET /api/lop/all?requesterId=4&year=2025
-    // ═══════════════════════════════════════════════════════════════
-
+    // ✅ HR and ADMIN only — LOP summary for all employees
     @GetMapping("/all")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getAllEmployeesLop(
-            @RequestParam Long requesterId,
             @RequestParam Integer year) {
-
-        Employee requester = getEmployee(requesterId);
-
-        if (requester.getRole() != Role.HR &&
-                requester.getRole() != Role.ADMIN) {
-            throw new BadRequestException("Only HR or Admin can access this");
-        }
 
         List<Employee> allEmployees = employeeRepository.findAll();
 
@@ -196,82 +189,19 @@ public class LossOfPayController {
         for (Employee emp : allEmployees) {
             allLop.put(
                     emp.getName(),
-                    lossOfPayService.getLopSummary(emp.getId(), year)
-            );
+                    lossOfPayService.getLopSummary(
+                            emp.getId(), year));
         }
 
         return ResponseEntity.ok(allLop);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // ALL RECORDS — get all LOP records for an employee (all years)
-    // GET /api/lop/employee/{employeeId}
-    // ═══════════════════════════════════════════════════════════════
-
-    @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<LossOfPayRecord>> listByEmployee(
-            @PathVariable Long employeeId,
-            @RequestParam Long requesterId) {
-
-        validateAccess(requesterId, employeeId);
-
-        return ResponseEntity.ok(lossOfPayService.getAllForEmployee(employeeId));
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // NOTE: DELETE endpoint has been REMOVED intentionally
-    // LOP records are PERMANENT — they can only be reversed
-    // internally by the leave cancellation flow
-    // No one (including Admin) can manually delete a LOP record
-    // ═══════════════════════════════════════════════════════════════
-
-    // ═══════════════════════════════════════════════════════════════
-    // PRIVATE HELPERS
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * Validates that requester has permission to view the employee's LOP.
-     * Rules:
-     * - Employee can only view their own
-     * - Team Leader can view their own team
-     * - Manager can view their own department
-     * - HR and Admin can view everyone
-     */
-    private void validateAccess(Long requesterId, Long targetEmpId) {
-
-        Employee requester = getEmployee(requesterId);
-
-        // Same person — always allowed
-        if (requesterId.equals(targetEmpId)) return;
-
-        switch (requester.getRole()) {
-            case HR, ADMIN -> {
-                // HR and Admin can view anyone
-            }
-            case MANAGER -> {
-                // Manager can only view their own department
-                Employee target = getEmployee(targetEmpId);
-                if (!requesterId.equals(target.getManagerId())) {
-                    throw new BadRequestException(
-                            "Manager can only view their department employees' LOP");
-                }
-            }
-            case TEAM_LEADER -> {
-                // TL can only view their own team
-                Employee target = getEmployee(targetEmpId);
-                if (!requesterId.equals(target.getTeamLeaderId())) {
-                    throw new BadRequestException(
-                            "Team Leader can only view their team members' LOP");
-                }
-            }
-            default -> throw new BadRequestException(
-                    "Unauthorized: You can only view your own LOP records");
-        }
-    }
+    // ─── Private Helpers ────────────────────────────────────────────
 
     private Employee getEmployee(Long empId) {
         return employeeRepository.findById(empId)
                 .orElseThrow(() ->
-                        new RuntimeException("Employee not found: " + empId));
+                        new RuntimeException(
+                                "Employee not found: " + empId));
     }
 }

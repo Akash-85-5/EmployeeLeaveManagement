@@ -37,7 +37,6 @@ public class LeaveApprovalService {
     private final LossOfPayService lossOfPayService;
     private final CompOffService compOffService;
     private final CarryForwardBalanceRepository carryForwardBalanceRepository;
-
     // ═══════════════════════════════════════════════════════════════
     // CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════════
@@ -304,20 +303,17 @@ public class LeaveApprovalService {
                 }
             }
             case MANAGER -> {
-                if (leave.getManagerId() == null ||
-                        !approver.getId().equals(leave.getManagerId())) {
+                if (!approver.getId().equals(leave.getManagerId())) {
                     throw new BadRequestException(
-                            "Unauthorized: Only the assigned Manager can approve.");
+                            "Unauthorized: Only the assigned Manager can approve at this stage.");
                 }
                 if (approver.getRole() != Role.MANAGER) {
-                    throw new BadRequestException(
-                            "Approver does not have MANAGER role.");
+                    throw new BadRequestException("Approver does not have MANAGER role.");
                 }
             }
             case HR -> {
                 if (approver.getRole() != Role.HR) {
-                    throw new BadRequestException(
-                            "Only HR can approve at this stage.");
+                    throw new BadRequestException("Only HR can approve at this stage.");
                 }
             }
         }
@@ -356,7 +352,6 @@ public class LeaveApprovalService {
                         "Your leave has been approved by Team Leader. " +
                                 "Pending Manager approval.");
             } else {
-                // TL only → done
                 finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
             }
 
@@ -372,7 +367,6 @@ public class LeaveApprovalService {
                         "Your leave has been approved by Manager. " +
                                 "Pending HR approval.");
             } else {
-                // Manager is final approver (Employee 2-6 days OR Team Leader < 7 days)
                 finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
             }
 
@@ -381,6 +375,7 @@ public class LeaveApprovalService {
             finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
         }
     }
+
     /**
      * Called ONLY when the LAST required approver signs off.
      *

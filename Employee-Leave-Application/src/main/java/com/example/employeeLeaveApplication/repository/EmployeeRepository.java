@@ -54,4 +54,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     @Query("SELECT DISTINCT e FROM Employee e WHERE e.role = 'HR' AND e.active = true")
     List<Employee> findAllHr();
+    @Query("SELECT e FROM Employee e WHERE e.teamLeaderId = :teamLeaderId AND e.active = true")
+    List<Employee> findActiveTeamMembersByTeamLeader(@Param("teamLeaderId") Long teamLeaderId);
 }
