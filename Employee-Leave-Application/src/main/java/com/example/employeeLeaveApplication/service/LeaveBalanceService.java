@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,44 +47,55 @@ public class LeaveBalanceService {
     public LeaveBalanceResponse getBalance(Long employeeId, Integer year) {
 
         log.info("Getting balance for employee: {}, year: {}", employeeId, year);
-
+        int currentYear  = LocalDate.now().getYear();
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
 
         // ✅ FIXED: findByEmployeeIdAndYear returns List, use stream().findFirst() before orElse()
-        LeaveAllocation allocation = allocationRepository
+        LeaveAllocation allocationn = allocationRepository
                 .findByEmployeeIdAndYear(employeeId, year)
                 .stream().findFirst().orElse(null);
-        double totalAllocated = allocation != null ? allocation.getAllocatedDays() : 0.0;
+        double totalAllocated = allocationn != null ? allocationn.getAllocatedDays() : 0.0;
 
-        List<LeaveApplication> approvedLeaves =
-                leaveApplicationRepository.findByEmployeeIdAndStatusAndYear(
-                        employeeId, LeaveStatus.APPROVED, year);
+        List<LeaveApplication> approvedLeaves = leaveApplicationRepository
+                .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.APPROVED, currentYear);
 
+        List<LeaveAllocation> allocations = allocationRepository
+                .findByEmployeeIdAndYear(employeeId, currentYear);
+
+        // Group approved leaves by LeaveType for O(1) lookup inside the loop
         Map<LeaveType, List<LeaveApplication>> byType = approvedLeaves.stream()
                 .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
+
+        List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
+
+        for (LeaveAllocation allocation : allocations) {
+            LeaveType type = allocation.getLeaveCategory();
+            double allocated = allocation.getAllocatedDays();
+
+            List<LeaveApplication> typeLeaves = byType.getOrDefault(type, List.of());
+
+            double used = typeLeaves.stream()
+                    .mapToDouble(l -> l.getDays().doubleValue())
+                    .sum();
+
+            int halfDays = (int) typeLeaves.stream()
+                    .filter(l -> l.getDays().compareTo(new BigDecimal("0.5")) == 0)
+                    .count();
+
+            breakdown.add(new LeaveTypeBreakdown(
+                    type,
+                    allocated,
+                    used,
+                    allocated - used,   // per-type remaining, not grand-total
+                    halfDays
+            ));
+        }
 
         double totalUsed = approvedLeaves.stream()
                 .filter(l -> l.getLeaveType() != LeaveType.COMP_OFF)
                 .mapToDouble(l -> l.getDays().doubleValue())
                 .sum();
-
-        List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
-
-        for (LeaveType type : LeaveType.values()) {
-            if (type == LeaveType.COMP_OFF) continue;
-
-            List<LeaveApplication> forType = byType.getOrDefault(type, List.of());
-            if (forType.isEmpty()) continue;
-
-            double used = forType.stream()
-                    .mapToDouble(l -> l.getDays().doubleValue()).sum();
-
-            int halfDayCount = (int) forType.stream()
-                    .filter(l -> l.getHalfDayType() != null).count();
-
-            breakdown.add(new LeaveTypeBreakdown(type, used, halfDayCount));
-        }
 
         CompOffBalance compOffBalance = compOffBalanceRepository
                 .findByEmployeeIdAndYear(employeeId, year).orElse(null);
