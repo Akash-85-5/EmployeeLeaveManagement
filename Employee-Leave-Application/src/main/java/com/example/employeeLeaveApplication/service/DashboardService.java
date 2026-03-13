@@ -61,7 +61,7 @@ public class DashboardService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
 
-        int currentYear = LocalDate.now().getYear();
+        int currentYear  = LocalDate.now().getYear();
         int currentMonth = LocalDate.now().getMonthValue();
 
         EmployeeDashboardResponse response = new EmployeeDashboardResponse();
@@ -70,18 +70,12 @@ public class DashboardService {
         response.setCurrentYear(currentYear);
         response.setLastUpdated(LocalDateTime.now());
 
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
         // 1. YEARLY STATS
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
 
         List<LeaveAllocation> allocations = allocationRepository
                 .findByEmployeeIdAndYear(employeeId, currentYear);
-        List<LeaveApplication> approvedLeaves = applicationRepository
-                .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.APPROVED, currentYear);
-
-        // Grouping by LeaveType to calculate breakdown logic
-        Map<LeaveType, List<LeaveApplication>> byType = approvedLeaves.stream()
-                .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
 
         double yearlyAllocated = allocations.stream()
                 .mapToDouble(LeaveAllocation::getAllocatedDays)
@@ -91,18 +85,16 @@ public class DashboardService {
                 .getTotalUsedDays(employeeId, LeaveStatus.APPROVED, currentYear);
         if (yearlyUsed == null) yearlyUsed = 0.0;
 
-        double yearlyBalance = yearlyAllocated - yearlyUsed;
-
         response.setYearlyAllocated(yearlyAllocated);
         response.setYearlyUsed(yearlyUsed);
-        response.setYearlyBalance(yearlyBalance);
+        response.setYearlyBalance(yearlyAllocated - yearlyUsed);
 
         log.info("   Yearly: Allocated={}, Used={}, Balance={}",
-                yearlyAllocated, yearlyUsed, yearlyBalance);
+                yearlyAllocated, yearlyUsed, yearlyAllocated - yearlyUsed);
 
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
         // 2. MONTHLY STATS
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
 
         response.setMonthlyAllocated(PolicyConstants.MONTHLY_LIMIT);
 
@@ -113,42 +105,33 @@ public class DashboardService {
         response.setMonthlyUsed(monthlyUsed);
         response.setMonthlyBalance(PolicyConstants.MONTHLY_LIMIT - monthlyUsed);
 
-        log.info("   Monthly: Allocated={}, Used={}, Balance={}",
-                PolicyConstants.MONTHLY_LIMIT, monthlyUsed,
-                PolicyConstants.MONTHLY_LIMIT - monthlyUsed);
-
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
         // 3. CARRY FORWARD
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
 
         CarryForwardBalance cfBalance = carryForwardRepository
                 .findByEmployeeIdAndYear(employeeId, currentYear)
                 .orElse(null);
 
-        if (cfBalance != null) {
-            response.setCarryForwardTotal(cfBalance.getTotalCarriedForward());
-            response.setCarryForwardUsed(cfBalance.getTotalUsed());
-            response.setCarryForwardRemaining(cfBalance.getRemaining());
-        } else {
-            response.setCarryForwardTotal(0.0);
-            response.setCarryForwardUsed(0.0);
-            response.setCarryForwardRemaining(0.0);
-        }
+        response.setCarryForwardTotal(cfBalance != null ? cfBalance.getTotalCarriedForward() : 0.0);
+        response.setCarryForwardUsed(cfBalance != null ? cfBalance.getTotalUsed() : 0.0);
+        response.setCarryForwardRemaining(cfBalance != null ? cfBalance.getRemaining() : 0.0);
 
 
-        // ═══════════════════════════════════════════════════════════
-        // 4. LEAVE TYPE BREAKDOWN (For Donut Chart)
-        // ═══════════════════════════════════════════════════════════
+        List<LeaveApplication> approvedLeaves = applicationRepository
+                .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.APPROVED, currentYear);
+
+        // Group approved leaves by LeaveType for O(1) lookup inside the loop
+        Map<LeaveType, List<LeaveApplication>> byType = approvedLeaves.stream()
+                .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
 
         List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
 
-        Double totalAllocated = allocationRepository
-                .getTotalAllocatedDays(employeeId, currentYear);
-        if (totalAllocated == null) totalAllocated = 0.0;
+        for (LeaveAllocation allocation : allocations) {
+            LeaveType type = allocation.getLeaveCategory();
+            double allocated = allocation.getAllocatedDays();
 
-        for (Map.Entry<LeaveType, List<LeaveApplication>> entry : byType.entrySet()) {
-            LeaveType type = entry.getKey();
-            List<LeaveApplication> typeLeaves = entry.getValue();
+            List<LeaveApplication> typeLeaves = byType.getOrDefault(type, List.of());
 
             double used = typeLeaves.stream()
                     .mapToDouble(l -> l.getDays().doubleValue())
@@ -160,46 +143,48 @@ public class DashboardService {
 
             breakdown.add(new LeaveTypeBreakdown(
                     type,
-                    totalAllocated,
+                    allocated,
                     used,
-                    totalAllocated - used,
+                    allocated - used,   // per-type remaining, not grand-total
                     halfDays
             ));
         }
 
-        // Include Comp-Off in Breakdown
+        // ─── Comp-Off in breakdown ────────────────────────────────────
         CompOffBalance compOff = compOffRepository
                 .findByEmployeeIdAndYear(employeeId, currentYear).orElse(null);
 
-        double coEarned = (compOff != null) ? compOff.getEarned() : 0.0;
-        double coUsed = (compOff != null) ? compOff.getUsed() : 0.0;
-        double coBal = (compOff != null) ? compOff.getBalance() : 0.0;
+        double coEarned = compOff != null ? compOff.getEarned()   : 0.0;
+        double coUsed   = compOff != null ? compOff.getUsed()     : 0.0;
+        double coBal    = compOff != null ? compOff.getBalance()  : 0.0;
 
         breakdown.add(new LeaveTypeBreakdown(LeaveType.COMP_OFF, coEarned, coUsed, coBal, 0));
+
         response.setBreakdown(breakdown);
         response.setCompoffBalance(coBal);
 
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
         // 5. LOSS OF PAY
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
 
         Double totalLOP = lopRepository
                 .getTotalLossPercentageByEmployeeIdAndYear(employeeId, currentYear);
         response.setLossOfPayPercentage(totalLOP != null ? totalLOP : 0.0);
 
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
         // 6. LEAVE STATUS COUNTS
-        // ═══════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════
 
-        Integer approvedCountVal = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.APPROVED);
-        Integer rejectedCountVal = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.REJECTED);
-        Integer pendingCountVal = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.PENDING);
+        Integer approvedCount = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.APPROVED);
+        Integer rejectedCount = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.REJECTED);
+        Integer pendingCount  = applicationRepository.countByStatus(employeeId, currentYear, LeaveStatus.PENDING);
 
-        response.setApprovedCount(approvedCountVal != null ? approvedCountVal : 0);
-        response.setRejectedCount(rejectedCountVal != null ? rejectedCountVal : 0);
-        response.setPendingCount(pendingCountVal != null ? pendingCountVal : 0);
+        response.setApprovedCount(approvedCount != null ? approvedCount : 0);
+        response.setRejectedCount(rejectedCount != null ? rejectedCount : 0);
+        response.setPendingCount(pendingCount   != null ? pendingCount  : 0);
 
-        log.info("✅ [DASHBOARD] Employee dashboard complete");
+        log.info("✅ [DASHBOARD] Employee dashboard complete: allocated={}, used={}, breakdown={}",
+                yearlyAllocated, yearlyUsed, breakdown.size());
 
         return response;
     }

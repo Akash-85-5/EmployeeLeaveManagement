@@ -1,7 +1,9 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
+import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,7 +26,34 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ==================== GET ALL EMPLOYEES (HR & ADMIN) ====================
+    // ── View own profile (READ ONLY for employee) ─────────────────
+    @GetMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<ProfileResponse> getProfile(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getProfile(employeeId));
+    }
+
+    // ── Employee submits personal details ONCE ────────────────────
+    // After submit → locked → this endpoint will throw error if called again
+    @PostMapping("/personal-details/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<EmployeePersonalDetails> submitPersonalDetails(
+            @PathVariable Long employeeId,
+            @RequestBody PersonalDetailsRequest request) {
+        return ResponseEntity.ok(
+                employeeService.submitPersonalDetails(employeeId, request));
+    }
+
+    // ── HR/Admin views full personal details ──────────────────────
+    @GetMapping("/personal-details/{employeeId}")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+    }
+
+    // ── Existing endpoints ────────────────────────────────────────
 
     @GetMapping("/all")
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
@@ -38,38 +67,11 @@ public class EmployeeController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
+        return employeeService.getAllEmployees(
+                name, email, role, managerId, active, pageable);
     }
 
-    // ==================== GET PROFILE (EMPLOYEE SELF / ADMIN / HR) ====================
-
-    // ✅ FIXED: Employee sees own, ADMIN and HR see any
-    @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id " +
-            "or hasRole('ADMIN') or hasRole('HR')")
-    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
-        return employeeService.getProfile(employeeId);
-    }
-
-    // ==================== UPDATE EMPLOYEE (ADMIN ONLY) ====================
-
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
-        return employeeService.updateEmployee(id, employee);
-    }
-
-    // ==================== DELETE/DEACTIVATE EMPLOYEE (ADMIN ONLY) ====================
-
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
-        employeeService.deleteEmployee(id);
-        return ResponseEntity.ok("Employee deactivated successfully");
-    }
-
-    // ==================== GET TEAM MEMBERS — MANAGER ====================
-
+    // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
     @GetMapping("/manager/{managerId}/team")
     @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
@@ -90,5 +92,12 @@ public class EmployeeController {
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') ")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
+        employeeService.deleteEmployee(id);
+        return ResponseEntity.ok("Employee deactivated successfully");
     }
 }

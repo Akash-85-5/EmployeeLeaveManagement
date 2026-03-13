@@ -80,7 +80,7 @@ public class FileController {
 
     @GetMapping("/leave/{leaveId}")
     public List<String> getFilesByLeaveId(@PathVariable Long leaveId) {
-        return attachmentRepository.findByLeaveApplication_Id(leaveId)
+        return attachmentRepository.findByLeaveApplicationId(leaveId)
                 .stream()
                 .map(LeaveAttachment::getFileUrl)
                 .collect(Collectors.toList());

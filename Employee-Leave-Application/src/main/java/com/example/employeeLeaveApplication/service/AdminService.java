@@ -75,6 +75,8 @@ public class AdminService {
         emp.setName(request.getName());
         emp.setEmail(request.getEmail());
         emp.setRole(request.getRole());
+        emp.setTeamId(request.getTeamId());
+        emp.setTeamLeaderId(request.getTeamLeaderId());
         emp.setJoiningDate(request.getJoiningDate());
         emp.setManagerId(request.getManagerId());
 

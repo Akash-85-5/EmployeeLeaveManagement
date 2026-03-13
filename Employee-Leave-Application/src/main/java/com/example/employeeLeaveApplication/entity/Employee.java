@@ -16,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 
 import static com.example.employeeLeaveApplication.enums.BiometricVpnStatus.PENDING;
 
@@ -49,19 +50,27 @@ public class Employee {
     @Column(name = "active")
     private boolean active = true;
 
+    // ═══════════════════════════════════════════════════════════════
+    // HR DASHBOARD FIELDS (Onboarding & Compliance)
+    // ═══════════════════════════════════════════════════════════════
+
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "biometric_status")
-    private BiometricVpnStatus biometricStatus = PENDING;
+    private BiometricVpnStatus biometricStatus = PENDING; // PENDING, COMPLETED, FAILED
 
     @Enumerated(EnumType.STRING)
     @Column(name = "vpn_status")
-    private BiometricVpnStatus vpnStatus = PENDING;
+    private BiometricVpnStatus vpnStatus = PENDING; // PENDING, COMPLETED, FAILED
 
     @Column(name = "onboarding_completed_at")
     private LocalDateTime onboardingCompletedAt;
+
+    // ═══════════════════════════════════════════════════════════════
+    // AUDIT FIELDS
+    // ═══════════════════════════════════════════════════════════════
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -80,7 +89,9 @@ public class Employee {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // Getters & Setters
+    // ═══════════════════════════════════════════════════════════════
+    // GETTERS & SETTERS
+    // ═══════════════════════════════════════════════════════════════
 
     public Long getTeamId() {
         return teamId;
@@ -90,42 +101,107 @@ public class Employee {
         this.teamId = teamId;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getTeamLeaderId() {
+        return teamLeaderId;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setTeamLeaderId(Long teamLeaderId) {
+        this.teamLeaderId = teamLeaderId;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public Long getId() {
+        return id;
+    }
 
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getManagerId() { return managerId; }
-    public void setManagerId(Long managerId) { this.managerId = managerId; }
+    public String getName() {
+        return name;
+    }
 
-    public Long getTeamLeaderId() { return teamLeaderId; }
-    public void setTeamLeaderId(Long teamLeaderId) { this.teamLeaderId = teamLeaderId; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
+    public String getEmail() {
+        return email;
+    }
 
-    public LocalDate getJoiningDate() { return joiningDate; }
-    public void setJoiningDate(LocalDate joiningDate) { this.joiningDate = joiningDate; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public BiometricVpnStatus getBiometricStatus() { return biometricStatus; }
-    public void setBiometricStatus(BiometricVpnStatus biometricStatus) { this.biometricStatus = biometricStatus; }
+    public Role getRole() {
+        return role;
+    }
 
-    public BiometricVpnStatus getVpnStatus() { return vpnStatus; }
-    public void setVpnStatus(BiometricVpnStatus vpnStatus) { this.vpnStatus = vpnStatus; }
+    public void setRole(Role role) {
+        this.role = role;
+    }
 
-    public LocalDateTime getOnboardingCompletedAt() { return onboardingCompletedAt; }
-    public void setOnboardingCompletedAt(LocalDateTime onboardingCompletedAt) { this.onboardingCompletedAt = onboardingCompletedAt; }
+    public Long getManagerId() {
+        return managerId;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setManagerId(Long managerId) {
+        this.managerId = managerId;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public LocalDate getJoiningDate() {
+        return joiningDate;
+    }
+
+    public BiometricVpnStatus getBiometricStatus() {
+        return biometricStatus;
+    }
+
+    public void setBiometricStatus(BiometricVpnStatus biometricStatus) {
+        this.biometricStatus = biometricStatus;
+    }
+
+    public BiometricVpnStatus getVpnStatus() {
+        return vpnStatus;
+    }
+
+    public void setVpnStatus(BiometricVpnStatus vpnStatus) {
+        this.vpnStatus = vpnStatus;
+    }
+
+    public void setJoiningDate(LocalDate joiningDate) {
+        this.joiningDate = joiningDate;
+    }
+
+    public LocalDateTime getOnboardingCompletedAt() {
+        return onboardingCompletedAt;
+    }
+
+    public void setOnboardingCompletedAt(LocalDateTime onboardingCompletedAt) {
+        this.onboardingCompletedAt = onboardingCompletedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
