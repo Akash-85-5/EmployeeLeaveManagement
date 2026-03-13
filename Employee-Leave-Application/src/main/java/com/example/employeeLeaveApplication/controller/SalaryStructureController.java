@@ -6,6 +6,8 @@ import com.example.employeeLeaveApplication.enums.Role;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/salary-structure")
 public class SalaryStructureController {
@@ -17,6 +19,7 @@ public class SalaryStructureController {
     }
 
     // CREATE SALARY STRUCTURE
+    @PreAuthorize("hasRole('HR')")
     @PostMapping
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure create(@RequestBody SalaryStructure structure) {
@@ -57,6 +60,7 @@ public class SalaryStructureController {
     }
 
     // GET SALARY STRUCTURE BY ROLE
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure getByRole(@PathVariable Role role) {
@@ -66,6 +70,7 @@ public class SalaryStructureController {
                         new RuntimeException("Salary structure not found for role: " + role)
                 );
     }
+    @PreAuthorize("hasRole('HR')")
     @PutMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure updateStructure(
@@ -86,6 +91,7 @@ public class SalaryStructureController {
 
         return repository.save(existing);
     }
+    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public String deleteSalaryStructure(@PathVariable Role role) {
@@ -96,5 +102,10 @@ public class SalaryStructureController {
         repository.delete(structure);
 
         return "Salary structure deleted successfully";
+    }
+    @PreAuthorize("hasAnyRole('HR','ADMIN')")
+    @GetMapping("/all")
+    public List<SalaryStructure> getAllSalaryStructures() {
+        return repository.findAll();
     }
 }

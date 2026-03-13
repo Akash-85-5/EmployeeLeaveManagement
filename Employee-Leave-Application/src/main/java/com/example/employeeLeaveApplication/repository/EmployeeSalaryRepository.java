@@ -24,4 +24,5 @@ public interface EmployeeSalaryRepository extends JpaRepository<EmployeeSalary, 
             Long employeeId,
             LocalDate effectiveFrom
     );
+    List<EmployeeSalary> findByEmployeeIdOrderByEffectiveFromDesc(Long employeeId);
 }

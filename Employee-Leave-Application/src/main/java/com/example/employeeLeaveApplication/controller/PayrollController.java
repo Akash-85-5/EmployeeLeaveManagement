@@ -14,25 +14,21 @@ public class PayrollController {
         this.payrollService = payrollService;
     }
 
-    @PostMapping("/generate")
     @PreAuthorize("hasRole('HR')")
-    public String generatePayroll(
-            @RequestParam Integer year,
-            @RequestParam Integer month) {
+    @PostMapping("/generate")
+    public String generatePayroll(@RequestParam Integer year,
+                                  @RequestParam Integer month) {
 
         payrollService.generatePayroll(year, month);
-
         return "Payroll generated successfully";
     }
 
-    @PutMapping("/mark-paid")
     @PreAuthorize("hasRole('ADMIN')")
-    public String markPaid(
-            @RequestParam Integer year,
-            @RequestParam Integer month) {
+    @PutMapping("/mark-paid")
+    public String markPaid(@RequestParam Integer year,
+                           @RequestParam Integer month) {
 
         payrollService.markPayrollPaid(year, month);
-
         return "Payroll marked as PAID";
     }
 }

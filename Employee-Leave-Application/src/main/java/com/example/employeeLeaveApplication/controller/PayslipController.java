@@ -30,17 +30,15 @@ public class PayslipController {
         this.payslipPdfService = payslipPdfService;
     }
 
-    @PostMapping("/generate")
     @PreAuthorize("hasRole('HR')")
-    public Payslip generatePayslip(
-            @RequestBody GeneratePayslipRequest request) {
-
+    @PostMapping("/generate")
+    public Payslip generatePayslip(@RequestBody GeneratePayslipRequest request) {
         return payslipService.generatePayslip(request);
     }
 
-
+    // Employee view own payslip
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','HR','ADMIN')")
     @GetMapping("/my/{year}/{month}")
-    @PreAuthorize("hasRole('HR')")
     public Payslip getMyPayslip(
             @PathVariable Integer year,
             @PathVariable Integer month,
@@ -56,9 +54,8 @@ public class PayslipController {
                 .orElseThrow(() -> new RuntimeException("Payslip not found"));
     }
 
-    // Get my payslip history
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','HR','ADMIN')")
     @GetMapping("/history")
-
     public List<Payslip> getMyPayslipHistory(Authentication authentication) {
 
         CustomUserDetails userDetails =
@@ -68,10 +65,10 @@ public class PayslipController {
 
         return payslipRepository.findByEmployeeId(employeeId);
     }
+
+    @PreAuthorize("hasRole('HR')")
     @PutMapping("/update/{id}")
-    public Payslip updatePayslip(
-            @PathVariable Long id,
-            @RequestBody Payslip updated) {
+    public Payslip updatePayslip(@PathVariable Long id, @RequestBody Payslip updated) {
 
         Payslip payslip = payslipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payslip not found"));
@@ -90,13 +87,14 @@ public class PayslipController {
         return payslipRepository.save(payslip);
     }
 
+    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{id}")
     public String deletePayslip(@PathVariable Long id) {
-
         payslipRepository.deleteById(id);
-
         return "Payslip deleted successfully";
     }
+
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','HR','ADMIN')")
     @GetMapping("/download/{employeeId}/{year}/{month}")
     public ResponseEntity<byte[]> downloadPayslip(
             @PathVariable Long employeeId,
@@ -107,13 +105,14 @@ public class PayslipController {
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
                 .orElseThrow(() -> new RuntimeException("Payslip not found"));
 
-        ByteArrayInputStream pdf =
-                payslipPdfService.generatePdf(payslip);
+        ByteArrayInputStream pdf = payslipPdfService.generatePdf(payslip);
 
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=payslip.pdf")
                 .body(pdf.readAllBytes());
     }
+
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/export/{year}/{month}")
     public ResponseEntity<String> exportPayroll(
             @PathVariable Integer year,
@@ -122,7 +121,6 @@ public class PayslipController {
         List<Payslip> payslips = payslipRepository.findByYearAndMonth(year, month);
 
         StringBuilder csv = new StringBuilder();
-
         csv.append("EmployeeId,Year,Month,Basic,HRA,Conveyance,PF,ProfessionalTax,LOP,NetSalary\n");
 
         for (Payslip p : payslips) {
@@ -144,31 +142,18 @@ public class PayslipController {
                 .body(csv.toString());
     }
 
-    @GetMapping("/export/range")
-    public List<Payslip> exportPayrollRange(
-            @RequestParam Integer startYear,
-            @RequestParam Integer startMonth,
-            @RequestParam Integer endYear,
-            @RequestParam Integer endMonth) {
-
-        return payslipRepository.findPayslipsBetweenDates(
-                startYear,
-                startMonth,
-                endYear,
-                endMonth
-        );
-    }
+    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/payroll/{year}/{month}")
-    public String deletePayroll(
-            @PathVariable Integer year,
-            @PathVariable Integer month) {
+    public String deletePayroll(@PathVariable Integer year,
+                                @PathVariable Integer month) {
 
         List<Payslip> payslips = payslipRepository.findByYearAndMonth(year, month);
-
         payslipRepository.deleteAll(payslips);
 
-        return "Payroll deleted successfully for " + month + "/" + year;
+        return "Payroll deleted successfully";
     }
+
+    @PreAuthorize("hasAnyRole('HR','ADMIN')")
     @GetMapping("/employee/{employeeId}/{year}/{month}")
     public Payslip getEmployeePayslip(
             @PathVariable Long employeeId,
@@ -179,6 +164,8 @@ public class PayslipController {
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
                 .orElseThrow(() -> new RuntimeException("Payslip not found"));
     }
+
+    @PreAuthorize("hasAnyRole('HR','ADMIN')")
     @GetMapping("/payroll/{year}/{month}")
     public List<Payslip> getPayrollByMonth(
             @PathVariable Integer year,
