@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.component.HolidayChecker;
 import com.example.employeeLeaveApplication.dto.LeaveBalanceResponse;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
+import com.example.employeeLeaveApplication.dto.LeaveTypeBreakdown;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
@@ -67,7 +68,9 @@ public class LeaveApplicationService {
 
     @Transactional
     public LeaveResponse applyLeave(LeaveApplication leave, boolean confirmLossOfPay) {
+        leave.setYear(leave.getStartDate().getYear());
         checkLeaveOverlap(leave);
+
         if (leave.getEndDate().isBefore(leave.getStartDate())) {
             throw new BadRequestException("End date cannot be before start date");
         }
@@ -78,14 +81,26 @@ public class LeaveApplicationService {
         if (warning != null && !confirmLossOfPay) {
             return new LeaveResponse(null, warning);
         }
+
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        leave.setManagerId(employee.getManagerId());
+        setupApprovalChain(leave, employee, calculatedDays);
         leave.setDays(calculatedDays);
-        leave.setStatus(LeaveStatus.PENDING);
-        leave.setYear(leave.getStartDate().getYear());
 
+        // ── HR/ADMIN: auto-approve, no approval chain ─────────────
+        if (leave.getRequiredApprovalLevels() == 0) {
+            leave.setStatus(LeaveStatus.APPROVED);
+            leave.setApprovedBy(employee.getId());
+            leave.setApprovedRole(employee.getRole());
+            leave.setApprovedAt(java.time.LocalDateTime.now());
+            LeaveApplication savedLeave = leaveApplicationRepository.save(leave);
+            leaveBalanceService.applyApprovedLeave(savedLeave);
+            return new LeaveResponse(savedLeave, null);
+        }
+
+        // ── Everyone else: PENDING, notify first approver ─────────
+        leave.setStatus(LeaveStatus.PENDING);
         LeaveApplication savedLeave = leaveApplicationRepository.save(leave);
 
         if (leave.getLeaveType() == LeaveType.COMP_OFF && warning == null) {
@@ -95,8 +110,81 @@ public class LeaveApplicationService {
                     savedLeave.getId()
             );
         }
-        notifyManager(savedLeave);
+
+        // Notify the correct first approver based on who applied
+        notifyFirstApprover(savedLeave, employee);
+
         return new LeaveResponse(savedLeave, null);
+    }
+
+    private void setupApprovalChain(LeaveApplication leave, Employee employee, BigDecimal days) {
+        Role role = employee.getRole();
+
+        switch (role) {
+            case EMPLOYEE    -> setupEmployeeChain(leave, employee, days);
+            case TEAM_LEADER -> setupTeamLeaderChain(leave, employee, days);
+            case MANAGER     -> setupManagerChain(leave, employee);
+            case ADMIN       -> setupManagerChain(leave, employee);
+            default -> throw new BadRequestException(
+                    "Unknown role: " + role + ". Cannot setup approval chain.");
+        }
+    }
+
+    private void setupEmployeeChain(LeaveApplication leave,
+                                    Employee employee, BigDecimal days) {
+        if (employee.getTeamLeaderId() == null) {
+            throw new BadRequestException(
+                    "No Team Leader assigned. Please contact HR.");
+        }
+
+        leave.setTeamLeaderId(employee.getTeamLeaderId());
+        leave.setCurrentApprovalLevel(ApprovalLevel.TEAM_LEADER);
+
+        if (days.compareTo(BigDecimal.ONE) <= 0) {
+            leave.setRequiredApprovalLevels(1);
+            leave.setManagerId(null);
+
+        } else if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
+            if (employee.getManagerId() == null) {
+                throw new BadRequestException(
+                        "No Manager assigned. Please contact HR.");
+            }
+            leave.setRequiredApprovalLevels(2);
+            leave.setManagerId(employee.getManagerId());
+
+        } else {
+            if (employee.getManagerId() == null) {
+                throw new BadRequestException(
+                        "No Manager assigned. Please contact HR.");
+            }
+            leave.setRequiredApprovalLevels(3);
+            leave.setManagerId(employee.getManagerId());
+        }
+    }
+
+    private void setupTeamLeaderChain(LeaveApplication leave,
+                                      Employee employee, BigDecimal days) {
+        if (employee.getManagerId() == null) {
+            throw new BadRequestException(
+                    "No Manager assigned to Team Leader. Please contact HR.");
+        }
+
+        leave.setTeamLeaderId(null);
+        leave.setManagerId(employee.getManagerId());
+        leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
+
+        if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
+            leave.setRequiredApprovalLevels(2);
+        } else {
+            leave.setRequiredApprovalLevels(3);
+        }
+    }
+
+    private void setupManagerChain(LeaveApplication leave, Employee employee) {
+        leave.setTeamLeaderId(null);
+        leave.setManagerId(null);
+        leave.setCurrentApprovalLevel(ApprovalLevel.HR);
+        leave.setRequiredApprovalLevels(3);
     }
 
     public List<LeaveApplication> getLeavesByEmployee(Long employeeId, Pageable pageable) {
@@ -309,34 +397,63 @@ public class LeaveApplicationService {
         };
     }
 
-    private void notifyManager(LeaveApplication leave) {
-        Employee employee = employeeRepository.findById(leave.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+    private void notifyFirstApprover(LeaveApplication leave, Employee employee) {
+        ApprovalLevel firstLevel = leave.getCurrentApprovalLevel();
 
-        if (employee.getManagerId() == null) {
-            return;
+        if (firstLevel == ApprovalLevel.TEAM_LEADER) {
+            if (leave.getTeamLeaderId() == null) return;
+            Employee teamLeader = employeeRepository
+                    .findById(leave.getTeamLeaderId()).orElse(null);
+            if (teamLeader == null) return;
+
+            notificationService.createNotification(
+                    teamLeader.getId(),
+                    employee.getEmail(),
+                    teamLeader.getEmail(),
+                    EventType.LEAVE_APPLIED,
+                    teamLeader.getRole(),
+                    Channel.EMAIL,
+                    employee.getName() + " applied leave from "
+                            + leave.getStartDate() + " to " + leave.getEndDate()
+                            + ". Awaiting your approval."
+            );
+
+        } else if (firstLevel == ApprovalLevel.MANAGER) {
+            // Team Leader applied → notify Manager
+            if (leave.getManagerId() == null) return;
+            Employee manager = employeeRepository
+                    .findById(leave.getManagerId()).orElse(null);
+            if (manager == null) return;
+
+            notificationService.createNotification(
+                    manager.getId(),
+                    employee.getEmail(),
+                    manager.getEmail(),
+                    EventType.LEAVE_APPLIED,
+                    manager.getRole(),
+                    Channel.EMAIL,
+                    "Team Leader " + employee.getName() + " applied leave from "
+                            + leave.getStartDate() + " to " + leave.getEndDate()
+                            + ". Awaiting your approval."
+            );
+
+        } else if (firstLevel == ApprovalLevel.HR) {
+            // Manager applied → notify HR
+            List<Employee> hrList = employeeRepository.findAllHr();
+            for (Employee hr : hrList) {
+                notificationService.createNotification(
+                        hr.getId(),
+                        employee.getEmail(),
+                        hr.getEmail(),
+                        EventType.LEAVE_APPLIED,
+                        hr.getRole(),
+                        Channel.EMAIL,
+                        "Manager " + employee.getName() + " applied leave from "
+                                + leave.getStartDate() + " to " + leave.getEndDate()
+                                + ". Awaiting your approval."
+                );
+            }
         }
-
-        Employee manager = employeeRepository.findById(employee.getManagerId())
-                .orElse(null);
-
-        if (manager == null) {
-            return; // Manager record deleted or not found
-        }
-
-        notificationService.createNotification(
-                manager.getId(),
-                employee.getEmail(),
-                manager.getEmail(),
-                EventType.LEAVE_APPLIED,
-                manager.getRole(),
-                Channel.EMAIL,
-                "Employee " + employee.getName()
-                        + " applied leave from "
-                        + leave.getStartDate()
-                        + " to "
-                        + leave.getEndDate()
-        );
     }
 
     private void checkLeaveOverlap(LeaveApplication leave) {
@@ -372,18 +489,37 @@ public class LeaveApplicationService {
         leaveApplicationRepository.save(leave);
     }
 
-    private String  checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
+    private String checkBalanceAndGetWarning(LeaveApplication leave, BigDecimal calculatedDays) {
         if (leave.getLeaveType() == LeaveType.COMP_OFF) {
-            BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId().longValue());
+            BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId());
             if (available.compareTo(calculatedDays) < 0) {
-                return "Insufficient leave balance (Available: " + available + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
+                return "Insufficient Comp-Off balance (Available: " + available + ").";
             }
+            return null;
         }
-//        LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(),leave.getYear());
-//        BigDecimal totalAvaliableBalance = balance.getTotalRemaining();
-//        if(totalAvaliableBalance.compareTo(calculatedDays)<0){
-//            return "Insufficient leave balance (Avaliable: " + balance.getTotalRemaining() + "). The request will use carry-forwarded leave from the previous year or proceed as Loss of Pay.";
-//        }
+        // 2. Get the full balance response
+        LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(), leave.getYear());
+
+        // 3. Find the breakdown for the SPECIFIC leave type requested
+        LeaveTypeBreakdown specificTypeBreakdown = balance.getBreakdown().stream()
+                .filter(b -> String.valueOf(b.getLeaveType()).equals(String.valueOf(leave.getLeaveType())))
+                .findFirst()
+                .orElse(null);
+
+        // 4. Validate based on that specific type's remaining days
+        if (specificTypeBreakdown != null) {
+            BigDecimal remainingForType = BigDecimal.valueOf(specificTypeBreakdown.getRemainingDays());
+
+            if (remainingForType.compareTo(calculatedDays) < 0) {
+                return "Insufficient " + leave.getLeaveType() + " balance. " +
+                        "(Available: " + remainingForType + ", Requested: " + calculatedDays + "). " +
+                        "The request will proceed as Loss of Pay.";
+            }
+        } else {
+            // This handles cases where the leave type might not be allocated to the user at all
+            return "No allocation found for leave type: " + leave.getLeaveType();
+        }
+
         return null;
     }
 

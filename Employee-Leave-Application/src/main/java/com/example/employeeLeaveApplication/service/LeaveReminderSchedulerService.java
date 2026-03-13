@@ -39,19 +39,17 @@ public class LeaveReminderSchedulerService {
     private final LeaveReminderRepository leaveReminderRepository;
     private final EmployeeRepository employeeRepository;
     private final NotificationService notificationService;
-    private final EscalationService escalationService;
 
     public LeaveReminderSchedulerService(
             LeaveApplicationRepository leaveApplicationRepository,
             LeaveReminderRepository leaveReminderRepository,
             EmployeeRepository employeeRepository,
-            NotificationService notificationService,
-            EscalationService escalationService) {
+            NotificationService notificationService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.leaveReminderRepository = leaveReminderRepository;
         this.employeeRepository = employeeRepository;
         this.notificationService = notificationService;
-        this.escalationService=escalationService;
+
     }
 
 //    @Scheduled(cron = "0 0 9 * * ?")
@@ -100,6 +98,10 @@ public class LeaveReminderSchedulerService {
     }
 
     private void processFirstReminder(LeaveApplication leave, long daysUntilLeave, long daysSinceApplied) {
+        logger.info("Leave ID {}: daysUntilLeave={}, daysSinceApplied={}, urgencyMode={}",
+                leave.getId(), daysUntilLeave, daysSinceApplied,
+                daysUntilLeave <= URGENCY_MODE_THRESHOLD_DAYS);
+
         boolean shouldSendReminder = false;
 
         if (daysUntilLeave <= URGENCY_MODE_THRESHOLD_DAYS) {
@@ -107,12 +109,21 @@ public class LeaveReminderSchedulerService {
                 shouldSendReminder = true;
                 logger.info("Leave ID {}: URGENCY MODE - Sending first reminder", leave.getId());
             }
-        } else {
+            else {
+                logger.info("Leave ID {}: URGENCY MODE - Skipping, daysSinceApplied({}) < threshold({})",
+                        leave.getId(), daysSinceApplied, URGENCY_INITIAL_REMINDER_DAYS);
+            }
+        }
+        else {
             long reminderDay = calculateHalfDay(daysUntilLeave);
             if (daysSinceApplied >= reminderDay) {
                 shouldSendReminder = true;
                 logger.info("Leave ID {}: INTELLIGENT MODE - Sending first reminder at half-day ({} days)",
                         leave.getId(), reminderDay);
+            }
+            else {
+                logger.info("Leave ID {}: INTELLIGENT MODE - Skipping, daysSinceApplied({}) < halfDay({})",
+                        leave.getId(), daysSinceApplied, reminderDay);
             }
         }
 
@@ -184,9 +195,6 @@ public class LeaveReminderSchedulerService {
             Employee manager = employeeRepository.findById(employee.getManagerId())
                     .orElseThrow(() -> new RuntimeException("Manager not found"));
 
-            Employee hr = employeeRepository.findById(manager.getManagerId())
-                    .orElseThrow(() -> new RuntimeException("Hr not found"));
-
             String urgencyLevel = getUrgencyLevel(daysUntilLeave);
 
             String context = String.format(
@@ -202,7 +210,7 @@ public class LeaveReminderSchedulerService {
 
             notificationService.createNotification(
                     manager.getId(),
-                    hr.getEmail(),
+                    "crazyyy1235@gmail.com",
                     manager.getEmail(),
                     EventType.PENDING_LEAVE_REMINDER,
                     manager.getRole(),

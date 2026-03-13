@@ -1,22 +1,18 @@
 package com.example.employeeLeaveApplication.controller;
 
-import com.example.employeeLeaveApplication.dto.LeaveApplictionRequest;
 import com.example.employeeLeaveApplication.dto.LeaveResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
-import com.example.employeeLeaveApplication.entity.LeaveAllocation;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveAttachment;
 import com.example.employeeLeaveApplication.enums.HalfDayType;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
-import com.example.employeeLeaveApplication.service.LeaveAllocationService;
 import com.example.employeeLeaveApplication.service.LeaveApplicationService;
-import com.example.employeeLeaveApplication.service.LeaveBalanceService;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.employeeLeaveApplication.service.LeaveAttachmentService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,108 +25,141 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/leaves")
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
+    private final LeaveAttachmentService leaveAttachmentService;
     private final EmployeeRepository employeeRepository;
 
     public LeaveApplicationController(LeaveApplicationService leaveApplicationService,
+                                      LeaveAttachmentService leaveAttachmentService,
                                       EmployeeRepository employeeRepository) {
         this.leaveApplicationService = leaveApplicationService;
-        this.employeeRepository=employeeRepository;
+        this.leaveAttachmentService = leaveAttachmentService;
+        this.employeeRepository = employeeRepository;
     }
 
-    @Value("${file.upload-dir:uploads/leaves}")
-    private String uploadDir;
-
-    // ==================== APPLY LEAVE ====================
-    @PostMapping("/apply")
-    public LeaveResponse applyLeave(@RequestBody LeaveApplictionRequest request) {
+    @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LeaveResponse> applyLeave(
+            @RequestParam Long employeeId,
+            @RequestParam String leaveType,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam String reason,
+            @RequestParam(required = false) String halfDayType,
+            @RequestParam(defaultValue = "false") boolean confirmLossOfPay,
+            @RequestParam(value = "files", required = false) MultipartFile[] files) {
 
         LeaveType type;
         try {
-            type = LeaveType.valueOf(request.getLeaveType().toUpperCase());
+            type = LeaveType.valueOf(leaveType.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid leave type");
         }
 
-        LeaveApplication leave = new LeaveApplication();
-        leave.setEmployeeId(request.getEmployeeId());
-
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(()-> new RuntimeException("Employee not found"));
-
-        leave.setEmployeeName(employee.getName());
-        leave.setLeaveType(type);
-        leave.setStartDate(request.getStartDate());
-        leave.setEndDate(request.getEndDate());
-        leave.setReason(request.getReason());
-
-        if (request.getHalfDayType() != null) {
-            leave.setHalfDayType(HalfDayType.valueOf(request.getHalfDayType().toUpperCase()));
+        if (startDate == null) {
+            throw new BadRequestException("Start date is required");
+        }
+        if (startDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Leave cannot be applied for past dates");
         }
 
-//        // File handling
-//        if (files != null && files.length > 0) {
-//            Path uploadPath = Paths.get(uploadDir);
-//            Files.createDirectories(uploadPath);
-//            List<LeaveAttachment> attachments = new ArrayList<>();
-//            for (MultipartFile file : files) {
-//                if (file.isEmpty()) continue;
-//                String uniqueName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-//                Files.write(uploadPath.resolve(uniqueName), file.getBytes());
-//                LeaveAttachment attachment = new LeaveAttachment();
-//                attachment.setFileUrl(uniqueName);
-//                attachment.setLeaveApplication(leave);
-//                attachments.add(attachment);
-//            }
-//            leave.setAttachments(attachments);
-//        }
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        LeaveResponse response = leaveApplicationService.applyLeave(leave, request.isConfirmLossOfPay());
+        LeaveApplication leave = new LeaveApplication();
+        leave.setEmployeeId(employeeId);
+        leave.setEmployeeName(employee.getName());
+        leave.setLeaveType(type);
+        leave.setStartDate(startDate);
+        leave.setEndDate(endDate);
+        leave.setReason(reason);
 
-        // Clean up circular reference for JSON response
-//        if (response.getLeaveApplication() != null && response.getLeaveApplication().getAttachments() != null) {
-//            response.getLeaveApplication().getAttachments().forEach(a -> a.setLeaveApplication(null));
-//        }
+        if (halfDayType != null && !halfDayType.isBlank()) {
+            try {
+                leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid half day type: " + halfDayType);
+            }
+        }
 
-        return response;
+
+        LeaveResponse response = leaveApplicationService.applyLeave(leave, confirmLossOfPay);
+
+        if (response.getWarning() != null && response.getLeaveApplication() == null) {
+            return ResponseEntity.ok(response);
+        }
+
+        if (files != null && files.length > 0) {
+            Long leaveId = response.getLeaveApplication().getId();
+            try {
+                leaveAttachmentService.uploadAttachments(leaveId, employeeId, files);
+            } catch (Exception e) {
+                response.setWarning("Leave applied successfully but file upload failed: "
+                        + e.getMessage());
+            }
+        }
+
+        return ResponseEntity.ok(response);
     }
 
-    // ==================== GET ALL LEAVES (WITH PAGINATION & FILTERS) - NEW ====================
-//    @GetMapping
-//    public Page<LeaveApplication> getAllLeaves(
-//            @RequestParam(required = false) Long employeeId,
-//            @RequestParam(required = false) LeaveStatus status,
-//            @RequestParam(required = false) LeaveType leaveType,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-//            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-//            @RequestParam(required = false) Integer year,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size
-//    ) {
-//        Pageable pageable = PageRequest.of(page, size);
-//        return leaveApplicationService.getAllLeaves(employeeId, status, leaveType, startDate, endDate, year, pageable);
-//    }
+    // ── Get attachments for a leave ───────────────────────────────
+    @GetMapping("/{leaveId}/attachments")
+    public ResponseEntity<List<LeaveAttachment>> getAttachments(
+            @PathVariable Long leaveId) {
+        return ResponseEntity.ok(leaveAttachmentService.getAttachments(leaveId));
+    }
 
-    // ==================== GET SINGLE LEAVE BY ID - NEW ====================
+    // ── Download attachment file ──────────────────────────────────
+    @GetMapping("/attachments/download/{filename}")
+    public ResponseEntity<Resource> downloadAttachment(
+            @PathVariable String filename) {
+        try {
+            Path filePath = leaveAttachmentService.getFilePath(filename);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+            }
+
+            String contentType = Files.probeContentType(filePath);
+            if (contentType == null) contentType = "application/octet-stream";
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file");
+        }
+    }
+
+    // ── Delete an attachment ──────────────────────────────────────
+    @DeleteMapping("/attachments/{attachmentId}")
+    public ResponseEntity<String> deleteAttachment(
+            @PathVariable Long attachmentId,
+            @RequestParam Long employeeId) {
+        leaveAttachmentService.deleteAttachment(attachmentId, employeeId);
+        return ResponseEntity.ok("Attachment deleted successfully");
+    }
+
+    // ── Get single leave ──────────────────────────────────────────
     @GetMapping("/{id}")
     public LeaveApplication getLeaveById(@PathVariable Long id) {
         return leaveApplicationService.getLeaveById(id);
     }
 
-    // ==================== GET EMPLOYEE LEAVES (WITH PAGINATION & FILTERS) - UPDATED ====================
+    // ── Get employee leaves ───────────────────────────────────────
     @GetMapping("/employee/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")
     public List<LeaveApplication> getEmployeeLeaves(
@@ -141,18 +170,12 @@ public class LeaveApplicationController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Integer year,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return leaveApplicationService.getLeavesByEmployee(employeeId, pageable);
     }
 
-    // ==================== UPDATE LEAVE (BEFORE APPROVAL) - NEW ====================
-
-
-
-
-
+    // ── Update leave ──────────────────────────────────────────────
     @PutMapping("/{id}")
     public LeaveResponse updateLeave(
             @PathVariable Long id,
@@ -160,71 +183,17 @@ public class LeaveApplicationController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) String reason,
-            @RequestParam(required = false) String halfDayType
-    ) {
-        return leaveApplicationService.updateLeave(id, employeeId, startDate, endDate, reason, halfDayType);
+            @RequestParam(required = false) String halfDayType) {
+        return leaveApplicationService.updateLeave(
+                id, employeeId, startDate, endDate, reason, halfDayType);
     }
 
+    // ── Cancel leave ──────────────────────────────────────────────
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<String> cancelEmployeeLeave(
             @PathVariable Long id,
-            @RequestParam Long employeeId
-    ) {
+            @RequestParam Long employeeId) {
         leaveApplicationService.cancelEmployeeLeave(id, employeeId);
         return ResponseEntity.ok("Leave cancelled successfully.");
     }
-
-    @GetMapping("/attachments/{filename}")
-    public ResponseEntity<Resource> downloadAttachment(@PathVariable String filename) {
-        try {
-            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (!resource.exists()) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
-            }
-
-            String contentType = Files.probeContentType(filePath);
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                    .body(resource);
-
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file");
-        }
-    }
-
-    // ==================== DELETE ATTACHMENT - NEW ====================
-    @DeleteMapping("/attachments/{id}")
-    public ResponseEntity<String> deleteAttachment(@PathVariable Long id) {
-        leaveApplicationService.deleteAttachment(id);
-        return ResponseEntity.ok("Attachment deleted successfully.");
-    }
-
-    // ==================== LEAVE ALLOCATIONS ====================
-//    @PostMapping("/allocations")
-//    public LeaveAllocation createAllocation(@RequestBody LeaveAllocation leaveAllocation) {
-//        return leaveAllocationService.createEmployeeAllocation(leaveAllocation);
-//    }
-//
-//    @GetMapping("/allocations/{employeeId}")
-//    public List<LeaveAllocation> getEmployeeAllocations(
-//            @PathVariable Long employeeId,
-//            @RequestParam(required = false) Integer year
-//    ) {
-//        return leaveAllocationService.getEmployeeAllocations(employeeId, year);
-//    }
-//
-//    @PutMapping("/allocations/{id}")
-//    public LeaveAllocation updateAllocation(
-//            @PathVariable Long id,
-//            @RequestBody LeaveAllocation leaveAllocation
-//    ) {
-//        return leaveAllocationService.updateAllocation(id, leaveAllocation);
-//    }
 }

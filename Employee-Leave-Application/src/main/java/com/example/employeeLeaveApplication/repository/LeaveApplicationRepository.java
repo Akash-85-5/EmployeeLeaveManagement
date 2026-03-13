@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
+import com.example.employeeLeaveApplication.enums.ApprovalLevel;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             List<Long> employeeIds,
             LeaveStatus status
     );
+
     List<LeaveApplication> findByStatusAndCreatedAtBeforeAndEscalatedFalse(
             LeaveStatus status,
             LocalDateTime createdAt
@@ -31,42 +33,85 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<LeaveApplication>findByManagerId(
-            Long managerId
-    );
+    List<LeaveApplication> findByManagerId(Long managerId);
+
     List<LeaveApplication> findByManagerIdAndStatus(
             Long managerId,
             LeaveStatus status
     );
+
     List<LeaveApplication> findByEscalatedTrueAndStatus(LeaveStatus status);
 
     List<LeaveApplication> findByEscalatedTrue();
+
     @Query("""
-    SELECT l.leaveType,
-           COUNT(l),
-           SUM(l.days)
-    FROM LeaveApplication l
-    WHERE l.employeeId = :employeeId
-      AND l.status = 'APPROVED'
-      AND YEAR(l.startDate) = :year
-      AND MONTH(l.startDate) = :month
-    GROUP BY l.leaveType
-""")
+        SELECT l.leaveType,
+               COUNT(l),
+               SUM(l.days)
+        FROM LeaveApplication l
+        WHERE l.employeeId = :employeeId
+          AND l.status = 'APPROVED'
+          AND YEAR(l.startDate) = :year
+          AND MONTH(l.startDate) = :month
+        GROUP BY l.leaveType
+    """)
     List<Object[]> getMonthlyStats(
             @Param("employeeId") Long employeeId,
             @Param("year") Integer year,
             @Param("month") Integer month
     );
 
+    // ─────────────────────────────────────────────────────────────
+    // Counts NUMBER OF APPLICATIONS approved in a month
+    // Used for: general reporting, dashboard counts
+    // NOT used for LOP calculation (use getTotalApprovedDaysInMonth)
+    // ─────────────────────────────────────────────────────────────
     @Query("""
-    SELECT COUNT(l)
-    FROM LeaveApplication l
-    WHERE l.employeeId = :employeeId
-      AND l.status = 'APPROVED'
-      AND YEAR(l.startDate) = :year
-      AND MONTH(l.startDate) = :month
-""")
+        SELECT COUNT(l)
+        FROM LeaveApplication l
+        WHERE l.employeeId = :employeeId
+          AND l.status = 'APPROVED'
+          AND YEAR(l.startDate) = :year
+          AND MONTH(l.startDate) = :month
+    """)
     int countApprovedInMonth(
+            @Param("employeeId") Long employeeId,
+            @Param("year") Integer year,
+            @Param("month") Integer month
+    );
+
+    // ─────────────────────────────────────────────────────────────
+    // ✅ NEW — Counts total DAYS approved in a month
+    //
+    // WHY THIS IS NEEDED:
+    // countApprovedInMonth() counts applications (1, 2, 3...)
+    // but monthly limit = 2 DAYS not 2 applications
+    //
+    // Example:
+    //   Leave 1 → March 3 to March 5 = 3 days (1 application)
+    //   Leave 2 → March 10           = 1 day  (1 application)
+    //
+    //   countApprovedInMonth = 2 applications → 2 > 2? ❌ NO LOP
+    //   getTotalApprovedDaysInMonth = 4 days  → 4 > 2? ✅ LOP!
+    //
+    // Also handles half days correctly:
+    //   Leave 1 → 0.5 days (half day)
+    //   Leave 2 → 0.5 days (half day)
+    //   Leave 3 → 1.5 days
+    //   Total   → 2.5 days → 2.5 > 2 ✅ → excess = 0.5 → LOP = 0.50%
+    //
+    // Used in: LeaveApprovalService.finalizeLeave()
+    //          for CF check and LOP calculation
+    // ─────────────────────────────────────────────────────────────
+    @Query("""
+        SELECT COALESCE(SUM(l.days), 0)
+        FROM LeaveApplication l
+        WHERE l.employeeId = :employeeId
+          AND l.status = 'APPROVED'
+          AND YEAR(l.startDate) = :year
+          AND MONTH(l.startDate) = :month
+    """)
+    Double getTotalApprovedDaysInMonth(
             @Param("employeeId") Long employeeId,
             @Param("year") Integer year,
             @Param("month") Integer month
@@ -91,12 +136,12 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     );
 
     @Query("""
-    SELECT COALESCE(SUM(lr.days), 0)
-    FROM LeaveApplication lr
-    WHERE lr.employeeId = :empId
-      AND lr.status = :status
-      AND lr.year = :year
-""")
+        SELECT COALESCE(SUM(lr.days), 0)
+        FROM LeaveApplication lr
+        WHERE lr.employeeId = :empId
+          AND lr.status = :status
+          AND lr.year = :year
+    """)
     Double getTotalUsedDays(
             @Param("empId") Long employeeId,
             @Param("status") LeaveStatus status,
@@ -115,6 +160,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
     @Query(
             "SELECT l FROM LeaveApplication l " +
                     "WHERE l.managerId = :managerId " +
@@ -127,9 +173,6 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("weekEnd") LocalDate weekEnd
     );
 
-
-
-    // ===== NEW: Additional queries for dashboard =====
     @Query("""
         SELECT l FROM LeaveApplication l
         WHERE l.employeeId = :employeeId
@@ -137,14 +180,17 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
         AND l.startDate > :currentDate
         ORDER BY l.startDate ASC
     """)
-    List<LeaveApplication> findUpcomingLeaves(@Param("employeeId") Long employeeId, @Param("currentDate") LocalDate currentDate);
+    List<LeaveApplication> findUpcomingLeaves(
+            @Param("employeeId") Long employeeId,
+            @Param("currentDate") LocalDate currentDate
+    );
 
     @Query("""
-    SELECT l FROM LeaveApplication l
-    WHERE l.employeeId = :employeeId
-    AND l.status IN ('APPROVED', 'REJECTED')
-    ORDER BY l.createdAt DESC
-""")
+        SELECT l FROM LeaveApplication l
+        WHERE l.employeeId = :employeeId
+        AND l.status IN ('APPROVED', 'REJECTED')
+        ORDER BY l.createdAt DESC
+    """)
     Page<LeaveApplication> findRecentLeaves(
             @Param("employeeId") Long employeeId,
             Pageable pageable
@@ -154,13 +200,14 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             "WHERE la.employeeId = :employeeId " +
             "AND la.year = :year " +
             "AND la.status = :status")
-    Integer countByStatus(@Param("employeeId") Long employeeId,
-                          @Param("year") Integer year,
-                          @Param("status") LeaveStatus status);
+    Integer countByStatus(
+            @Param("employeeId") Long employeeId,
+            @Param("year") Integer year,
+            @Param("status") LeaveStatus status
+    );
 
     List<LeaveApplication> findByEmployeeIdAndStatus(Long employeeId, LeaveStatus status);
 
-    // For "Who's Out" feature
     @Query("""
         SELECT l FROM LeaveApplication l
         WHERE l.status = 'APPROVED'
@@ -189,7 +236,8 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             "ORDER BY la.startDate ASC")
     List<LeaveApplication> findApprovedLeavesInDateRange(
             @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
+            @Param("endDate") LocalDate endDate
+    );
 
     @Query("SELECT DISTINCT la.approvedBy FROM LeaveApplication la " +
             "WHERE la.status = 'APPROVED' " +
@@ -209,16 +257,19 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             "AND la.approvedBy = :managerId " +
             "AND la.year = :year " +
             "ORDER BY la.approvedAt DESC")
-    List<LeaveApplication> findLeavesApprovedByManager(@Param("managerId") Long managerId, @Param("year") Integer year);
+    List<LeaveApplication> findLeavesApprovedByManager(
+            @Param("managerId") Long managerId,
+            @Param("year") Integer year
+    );
 
     @Query("""
-    SELECT COALESCE(SUM(lr.days), 0)
-    FROM LeaveApplication lr
-    WHERE lr.employeeId = :empId
-      AND lr.status = :status
-      AND lr.year = :year
-      AND lr.leaveType = :leaveType
-""")
+        SELECT COALESCE(SUM(lr.days), 0)
+        FROM LeaveApplication lr
+        WHERE lr.employeeId = :empId
+          AND lr.status = :status
+          AND lr.year = :year
+          AND lr.leaveType = :leaveType
+    """)
     Double getTotalUsedDaysByType(
             @Param("empId") Long employeeId,
             @Param("status") LeaveStatus status,
@@ -226,26 +277,41 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("leaveType") LeaveType leaveType
     );
 
-    // For getAnnualLeaveSummary and getLeaveTypeDistribution
     @Query("""
-    SELECT l FROM LeaveApplication l
-    WHERE l.year = :year AND l.status = :status
-""")
+        SELECT l FROM LeaveApplication l
+        WHERE l.year = :year AND l.status = :status
+    """)
     List<LeaveApplication> findByYearAndStatus(
             @Param("year") Integer year,
             @Param("status") LeaveStatus status
     );
 
-    // For getMonthlyReport
     @Query("""
-    SELECT l FROM LeaveApplication l
-    WHERE YEAR(l.startDate) = :year
-      AND MONTH(l.startDate) = :month
-      AND l.status = :status
-""")
+        SELECT l FROM LeaveApplication l
+        WHERE YEAR(l.startDate) = :year
+          AND MONTH(l.startDate) = :month
+          AND l.status = :status
+    """)
     List<LeaveApplication> findByYearAndMonthAndStatus(
             @Param("year") Integer year,
             @Param("month") Integer month,
             @Param("status") LeaveStatus status
+    );
+
+    List<LeaveApplication> findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
+            Long teamLeaderId,
+            LeaveStatus status,
+            ApprovalLevel currentApprovalLevel
+    );
+
+    List<LeaveApplication> findByManagerIdAndStatusAndCurrentApprovalLevel(
+            Long managerId,
+            LeaveStatus status,
+            ApprovalLevel currentApprovalLevel
+    );
+
+    List<LeaveApplication> findByStatusAndCurrentApprovalLevel(
+            LeaveStatus status,
+            ApprovalLevel currentApprovalLevel
     );
 }

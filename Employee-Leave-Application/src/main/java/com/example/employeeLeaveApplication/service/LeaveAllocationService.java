@@ -6,123 +6,200 @@ import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveAllocationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import static com.example.employeeLeaveApplication.enums.CompOffStatus.EARNED;
 import static com.example.employeeLeaveApplication.enums.LeaveType.*;
 
 @Service
 public class LeaveAllocationService {
 
-    private final LeaveAllocationRepository leaveAllocationRepository;
-    private final EmployeeRepository  employeeRepository;
+    private static final Logger log = LoggerFactory.getLogger(LeaveAllocationService.class);
 
-    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository,
-                                  EmployeeRepository employeeRepository) {
+    // ✅ Centralized default allocations — change in ONE place only
+    private static final LeaveType[] DEFAULT_CATEGORIES = {SICK, CASUAL, EARNED_LEAVES, PERSONAL};
+    private static final double[]    DEFAULT_DAYS        = {12.0, 6.0, 4.0, 2.0};
+
+    private final LeaveAllocationRepository leaveAllocationRepository;
+    private final EmployeeRepository employeeRepository;
+
+    public LeaveAllocationService(
+            LeaveAllocationRepository leaveAllocationRepository,
+            EmployeeRepository employeeRepository) {
         this.leaveAllocationRepository = leaveAllocationRepository;
-        this.employeeRepository=employeeRepository;
+        this.employeeRepository = employeeRepository;
     }
 
-
+    // Create ONE allocation manually
     public LeaveAllocation createEmployeeAllocation(LeaveAllocation leaveAllocation) {
+        // ✅ Duplicate check
+        Optional<LeaveAllocation> existing = leaveAllocationRepository
+                .findByEmployeeIdAndYearAndLeaveCategory(
+                        leaveAllocation.getEmployeeId(),
+                        leaveAllocation.getYear(),
+                        leaveAllocation.getLeaveCategory());
+
+        if (existing.isPresent()) {
+            throw new BadRequestException("Allocation already exists for this employee, year and leave type");
+        }
         return leaveAllocationRepository.save(leaveAllocation);
     }
 
-
-    /**
-     * Get employee allocations for a specific year (or current year)
-     */
+    // Get allocations for specific employee + year
     public List<LeaveAllocation> getEmployeeAllocations(Long employeeId, Integer year) {
         if (year == null) {
             year = Year.now().getValue();
         }
-
         return leaveAllocationRepository.findByEmployeeIdAndYear(employeeId, year);
     }
 
-    /**
-     * Update leave allocation
-     */
+    // Update specific allocation by ID
     @Transactional
     public LeaveAllocation updateAllocation(Long id, LeaveAllocation allocation) {
-        LeaveAllocation existing = leaveAllocationRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Leave allocation not found with ID: " + id));
 
-        // Update fields if provided
+        LeaveAllocation existing = leaveAllocationRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException(
+                        "Leave allocation not found with ID: " + id));
+
         if (allocation.getAllocatedDays() != null) {
+            // ✅ Validate no negative days
+            if (allocation.getAllocatedDays() < 0) {
+                throw new BadRequestException("Allocated days cannot be negative");
+            }
             existing.setAllocatedDays(allocation.getAllocatedDays());
-        }
-        if (allocation.getCarriedForwardDays() != null) {
-            existing.setCarriedForwardDays(allocation.getCarriedForwardDays());
         }
         if (allocation.getLeaveCategory() != null) {
             existing.setLeaveCategory(allocation.getLeaveCategory());
         }
 
+        // ✅ carriedForwardDays update REMOVED — handled separately
+
         return leaveAllocationRepository.save(existing);
     }
 
-
-    /**
-     * Delete allocation
-     */
+    // Delete specific allocation by ID
     @Transactional
     public void deleteAllocation(Long id) {
         LeaveAllocation allocation = leaveAllocationRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Leave allocation not found with ID: " + id));
-
+                .orElseThrow(() -> new BadRequestException(
+                        "Leave allocation not found with ID: " + id));
         leaveAllocationRepository.delete(allocation);
     }
 
-    /**
-     * Get all allocations for a year (admin use)
-     */
+    // Get ALL employee allocations for a year
     public List<LeaveAllocation> getAllocationsByYear(Integer year) {
         if (year == null) {
             year = Year.now().getValue();
         }
-
         return leaveAllocationRepository.findByYear(year);
     }
 
-    /**
-     * Create bulk allocations for new employee
-     */
+    // ✅ Private helper — builds allocations for one employee (no duplication)
+    private List<LeaveAllocation> buildAllocations(Long employeeId, Integer year) {
+        List<LeaveAllocation> result = new ArrayList<>();
+        for (int i = 0; i < DEFAULT_CATEGORIES.length; i++) {
+            LeaveAllocation alloc = new LeaveAllocation();
+            alloc.setEmployeeId(employeeId);
+            alloc.setLeaveCategory(DEFAULT_CATEGORIES[i]);
+            alloc.setYear(year);
+            alloc.setAllocatedDays(DEFAULT_DAYS[i]);
+            // ✅ No carriedForwardDays here — handled separately
+            result.add(alloc);
+        }
+        return result;
+    }
+
+    // Create bulk allocations for ONE employee
     @Transactional
     public List<LeaveAllocation> createBulkAllocations(Long employeeId, Integer year) {
         if (year == null) {
             year = Year.now().getValue();
         }
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(()-> new RuntimeException("Employee not found"));
 
-        // Check if allocations already exist
-        List<LeaveAllocation> existing = leaveAllocationRepository.findByEmployeeIdAndYear(employeeId, year);
+        // ✅ Fixed: BadRequestException instead of RuntimeException
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Employee not found with ID: " + employeeId));
+
+        List<LeaveAllocation> existing = leaveAllocationRepository
+                .findByEmployeeIdAndYear(employeeId, year);
+
         if (!existing.isEmpty()) {
-            throw new BadRequestException("Allocations already exist for employee " + employeeId + " in year " + year);
+            throw new BadRequestException(
+                    "Allocations already exist for employee "
+                            + employeeId + " in year " + year);
         }
 
-        // Standard categories with default allocations
-        LeaveType[] categories = {SICK, CASUAL, EARNED_LEAVES, PERSONAL};
-        double[] allocations = {12.0, 6.0, 4.0, 2.0};  // Total = 24
+        List<LeaveAllocation> toSave = buildAllocations(employeeId, year);
+        return leaveAllocationRepository.saveAll(toSave);
+    }
 
-        List<LeaveAllocation> created = new java.util.ArrayList<>();
+    // Called when a new employee is created
+    @Transactional
+    public void allocateForNewEmployee(Long employeeId) {
+        createBulkAllocations(employeeId, Year.now().getValue());
+    }
 
-        for (int i = 0; i < categories.length; i++) {
-            LeaveAllocation alloc = new LeaveAllocation();
-            alloc.setEmployeeId(employeeId);
-            alloc.setLeaveCategory(categories[i]);
-            alloc.setYear(year);
-            alloc.setAllocatedDays(allocations[i]);
-            alloc.setCarriedForwardDays(0.0);
-
-            created.add(leaveAllocationRepository.save(alloc));
+    // Allocate ALL employees at once — skips already-allocated ones
+    @Transactional
+    public Map<String, Object> createBulkAllocationsForAllEmployees(Integer year) {
+        if (year == null) {
+            year = Year.now().getValue();
         }
 
-        return created;
+        List<Employee> allEmployees = employeeRepository.findAll();
+
+        List<String> success = new ArrayList<>();
+        List<String> skipped = new ArrayList<>();
+        List<String> failed  = new ArrayList<>();
+
+        for (Employee emp : allEmployees) {
+            try {
+                List<LeaveAllocation> existing = leaveAllocationRepository
+                        .findByEmployeeIdAndYear(emp.getId(), year);
+
+                if (!existing.isEmpty()) {
+                    skipped.add("Employee " + emp.getId()
+                            + " (" + emp.getName()
+                            + ") — already allocated for " + year);
+                    continue;
+                }
+
+                List<LeaveAllocation> toSave = buildAllocations(emp.getId(), year);
+                leaveAllocationRepository.saveAll(toSave);
+
+                success.add("Employee " + emp.getId()
+                        + " (" + emp.getName()
+                        + ") — allocated successfully for " + year);
+
+            } catch (Exception e) {
+                // ✅ Proper logging added
+                log.error("Failed to allocate for employee {}: {}", emp.getId(), e.getMessage(), e);
+                failed.add("Employee " + emp.getId()
+                        + " (" + emp.getName()
+                        + ") — FAILED: " + e.getMessage());
+            }
+        }
+
+        return Map.of(
+                "year",    year,
+                "total",   allEmployees.size(),
+                "success", success.size(),
+                "skipped", skipped.size(),
+                "failed",  failed.size(),
+                "details", Map.of(
+                        "success", success,
+                        "skipped", skipped,
+                        "failed",  failed
+                )
+        );
     }
 }

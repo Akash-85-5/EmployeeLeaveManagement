@@ -7,6 +7,15 @@ public class LeaveDecisionRequest {
     private Long managerId;
     private LeaveStatus decision;
     private String comments;
+    private Long approverId;
+
+    public Long getApproverId() {
+        return approverId;
+    }
+
+    public void setApproverId(Long approverId) {
+        this.approverId = approverId;
+    }
 
     public Long getLeaveId() {
         return leaveId;

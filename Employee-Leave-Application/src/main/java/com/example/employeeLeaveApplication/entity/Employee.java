@@ -20,7 +20,6 @@ import jakarta.validation.constraints.NotNull;
 
 import static com.example.employeeLeaveApplication.enums.BiometricVpnStatus.PENDING;
 
-
 @Entity
 @Table(name = "employee")
 public class Employee {
@@ -28,6 +27,12 @@ public class Employee {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "team_id")
+    private Long teamId;
+
+    @Column(name = "team_leader_id")
+    private Long teamLeaderId;
 
     @Column(nullable = false)
     private String name;
@@ -87,6 +92,22 @@ public class Employee {
     // ═══════════════════════════════════════════════════════════════
     // GETTERS & SETTERS
     // ═══════════════════════════════════════════════════════════════
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public Long getTeamLeaderId() {
+        return teamLeaderId;
+    }
+
+    public void setTeamLeaderId(Long teamLeaderId) {
+        this.teamLeaderId = teamLeaderId;
+    }
 
     public Long getId() {
         return id;

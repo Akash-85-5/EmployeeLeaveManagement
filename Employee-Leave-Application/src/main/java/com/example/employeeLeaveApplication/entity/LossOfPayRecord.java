@@ -15,7 +15,7 @@ import lombok.Data;
 
 @Entity
 @Table(name = "loss_of_pay_record",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "lop_year", "lop_month"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "year", "month"}))
 public class LossOfPayRecord {
 
     @Id

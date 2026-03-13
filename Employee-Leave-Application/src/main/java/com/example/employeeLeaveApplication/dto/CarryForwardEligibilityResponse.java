@@ -10,6 +10,7 @@ public class CarryForwardEligibilityResponse {
     private Boolean eligible;
     private Double eligibleAmount;
     private String reason;
+    private Double carriedIn;
 
     public CarryForwardEligibilityResponse() {
     }
@@ -84,5 +85,11 @@ public class CarryForwardEligibilityResponse {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+    public Double getCarriedIn() {
+        return carriedIn;
+    }
+    public void setCarriedIn(Double carriedIn) {
+        this.carriedIn = carriedIn;
     }
 }

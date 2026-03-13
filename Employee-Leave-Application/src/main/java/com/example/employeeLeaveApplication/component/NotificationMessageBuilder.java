@@ -26,7 +26,7 @@ public class NotificationMessageBuilder {
 
             case MEETING_REQUIRED:
                 return new EmailMessage(
-                        "Meeting Required for Leave Request",
+                         "Meeting Required for Leave Request",
                         reason
                 );
 
@@ -45,6 +45,12 @@ public class NotificationMessageBuilder {
             case PENDING_LEAVE_REMINDER:
                 return new EmailMessage(
                         "Reminder: Pending Leave Approval Required",
+                        reason
+                );
+
+            case LEAVE_IN_PROGRESS:
+                return new EmailMessage(
+                        "Leave Application Progress",
                         reason
                 );
 
