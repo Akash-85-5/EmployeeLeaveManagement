@@ -16,21 +16,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CarryForwardController {
 
-    // ===================== EXISTING =====================
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(
                     CarryForwardController.class);
 
-    // ===================== EXISTING =====================
     private final CarryForwardService carryForwardService;
 
-    // ===================== EXISTING (UPDATED) =====================
-    // Was: employee only
-    // Now: HR/Admin/Manager can also view
+    // ✅ FIXED: Added TEAM_LEADER
     @GetMapping("/balance/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER')") // ✅ UPDATED
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<CarryForwardBalanceResponse> getBalance(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -41,13 +37,11 @@ public class CarryForwardController {
                 carryForwardService.getBalance(employeeId, year));
     }
 
-    // ===================== EXISTING (UPDATED) =====================
-    // Was: no security at all — anyone could access
-    // Now: Employee sees own, HR/Admin/Manager see any
+    // ✅ FIXED: Added TEAM_LEADER
     @GetMapping("/eligibility/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER')") // ✅ ADDED
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<CarryForwardEligibilityResponse> checkEligibility(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
@@ -59,12 +53,10 @@ public class CarryForwardController {
                         employeeId, year));
     }
 
-    // ===================== EXISTING (UPDATED) =====================
-    // Was: no security — anyone could access all balances
-    // Now: HR/Admin/Manager only
+    // ✅ FIXED: Added TEAM_LEADER
     @GetMapping("/balances/{year}")
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER')") // ✅ ADDED
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<List<CarryForwardBalanceResponse>> getAllBalances(
             @PathVariable Integer year) {
         log.info("[CARRYFORWARD] Fetching all balances " +

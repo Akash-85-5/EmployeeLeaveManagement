@@ -71,8 +71,7 @@ public class LossOfPayService {
             double newPercent  = lop.getLossPercentage() - (excessDays * PolicyConstants.LOSS_OF_PAY_PERCENT_PER_DAY);
 
             if (newExcess <= 0.0) {
-                // Fully reversed — safe to delete the record entirely
-                lopRepo.delete(lop);
+                lopRepo.deleteByEmployeeIdAndYearAndMonth(empId, year, month);
                 log.info("[LOP-RESTORE] LOP record fully reversed and deleted for month {}", month);
             } else {
                 // Partial reversal — keep record, just decrement

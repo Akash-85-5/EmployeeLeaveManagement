@@ -17,21 +17,21 @@ public class ManagerController {
         this.teamService = teamService;
     }
 
+    // ✅ FIXED: Added hasRole('MANAGER') + HR/ADMIN can view too
     @GetMapping("/{managerId}/team-leaves")
-    @PreAuthorize("#managerId == authentication.principal.user.id")
-
+    @PreAuthorize("(hasRole('MANAGER') and #managerId == authentication.principal.user.id) " +
+            "or hasRole('HR') or hasRole('ADMIN')")
     public List<LeaveApplication> getTeamLeaves(
-            @PathVariable Long managerId
-    ) {
+            @PathVariable Long managerId) {
         return teamService.getTeamLeaves(managerId);
     }
-    @GetMapping("/{managerId}/team-leaves/week")
-    @PreAuthorize("#managerId == authentication.principal.user.id")
 
+    // ✅ FIXED: Added hasRole('MANAGER') + HR/ADMIN can view too
+    @GetMapping("/{managerId}/team-leaves/week")
+    @PreAuthorize("(hasRole('MANAGER') and #managerId == authentication.principal.user.id) " +
+            "or hasRole('HR') or hasRole('ADMIN')")
     public List<LeaveApplication> getCurrentWeekTeamLeaves(
-            @PathVariable Long managerId
-    ) {
+            @PathVariable Long managerId) {
         return teamService.getTeamLeavesForCurrentWeek(managerId);
     }
-
 }

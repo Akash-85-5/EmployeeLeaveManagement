@@ -37,7 +37,6 @@ public class LeaveApprovalService {
     private final LossOfPayService lossOfPayService;
     private final CompOffService compOffService;
     private final CarryForwardBalanceRepository carryForwardBalanceRepository;
-    private final LeaveApprovalService leaveApprovalService;
 
     // ═══════════════════════════════════════════════════════════════
     // CONSTRUCTOR
@@ -50,8 +49,8 @@ public class LeaveApprovalService {
                                 LeaveBalanceService leaveBalanceService,
                                 LossOfPayService lossOfPayService,
                                 CompOffService compOffService,
-                                CarryForwardBalanceRepository carryForwardBalanceRepository,
-                                LeaveApprovalService leaveApprovalService) {
+                                CarryForwardBalanceRepository carryForwardBalanceRepository
+                                ) {
         this.employeeRepository = employeeRepository;
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService = notificationService;
@@ -60,7 +59,6 @@ public class LeaveApprovalService {
         this.lossOfPayService = lossOfPayService;
         this.compOffService = compOffService;
         this.carryForwardBalanceRepository = carryForwardBalanceRepository;
-        this.leaveApprovalService=leaveApprovalService;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -448,7 +446,7 @@ public class LeaveApprovalService {
                         leaveApplicationRepository.save(leave);
                     }
 
-                    leaveApprovalService.handleLopConfirmation(leave.getId(), empId, true);
+                    handleLopConfirmation(leave.getId(), empId, true);
                     leave.setStatus(finalStatus);
                     leave.setPendingLopDays(lopDays);
                     leaveApplicationRepository.save(leave);

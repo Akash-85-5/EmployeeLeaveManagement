@@ -389,6 +389,135 @@ public class DashboardService {
 
         return allPending;
     }
+    @Transactional(readOnly = true)
+    public TeamLeaderDashboardResponse getTeamLeaderDashboard(Long teamLeaderId) {
+
+        log.info("🧑‍💼 [DASHBOARD-TEAMLEADER] Building dashboard for team leader: {}", teamLeaderId);
+
+        // Validate team leader exists and has TEAM_LEADER role
+        Employee teamLeader = employeeRepository.findById(teamLeaderId)
+                .orElseThrow(() -> new RuntimeException("Team Leader not found: " + teamLeaderId));
+
+        if (teamLeader.getRole() != Role.TEAM_LEADER) {
+            throw new RuntimeException("Employee " + teamLeaderId + " is not a Team Leader");
+        }
+
+        // ── 1. Team Leader's own personal leave stats ────────────────
+        EmployeeDashboardResponse ownStats = getDashboard(teamLeaderId);
+
+        TeamLeaderDashboardResponse response = new TeamLeaderDashboardResponse();
+        response.setPersonalStats(ownStats);
+
+        // ── 2. Fetch team members assigned to this team leader ───────
+        List<Employee> teamMembers = employeeRepository
+                .findActiveTeamMembersByTeamLeader(teamLeaderId);
+        response.setTeamSize(teamMembers.size());
+
+        log.info("   [TEAMLEADER] Team size: {}", teamMembers.size());
+
+        // ── 3. Pending leave requests (waiting for TL first-level approval) ──
+        List<TeamLeaderDashboardResponse.TeamPendingLeaveDTO> pendingDTOs = new ArrayList<>();
+
+        for (Employee member : teamMembers) {
+            List<LeaveApplication> memberPending = applicationRepository
+                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.PENDING);
+
+            for (LeaveApplication leave : memberPending) {
+                pendingDTOs.add(new TeamLeaderDashboardResponse.TeamPendingLeaveDTO(
+                        leave.getId(),
+                        leave.getEmployeeId(),
+                        member.getName(),
+                        leave.getLeaveType(),
+                        leave.getReason(),
+                        leave.getStatus(),
+                        leave.getStartDate(),
+                        leave.getEndDate(),
+                        leave.getDays().doubleValue(),
+                        leave.getCreatedAt()
+                ));
+            }
+        }
+
+        // Sort oldest first so urgent requests appear at the top
+        pendingDTOs.sort(Comparator.comparing(
+                TeamLeaderDashboardResponse.TeamPendingLeaveDTO::getAppliedAt,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+
+        response.setPendingTeamRequests(pendingDTOs);
+        response.setTeamPendingRequestCount(pendingDTOs.size());
+
+        log.info("   [TEAMLEADER] Pending requests: {}", pendingDTOs.size());
+
+        // ── 4. Team members on leave today ───────────────────────────
+        LocalDate today = LocalDate.now();
+        List<TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO> onLeaveDTOs = new ArrayList<>();
+
+        for (Employee member : teamMembers) {
+            applicationRepository
+                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
+                    .stream()
+                    .filter(la -> !today.isBefore(la.getStartDate()) &&
+                            !today.isAfter(la.getEndDate()))
+                    .forEach(leave -> {
+                        long daysRemaining = ChronoUnit.DAYS.between(today, leave.getEndDate());
+                        onLeaveDTOs.add(new TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO(
+                                member.getId(),
+                                member.getName(),
+                                leave.getLeaveType().name(),
+                                leave.getStartDate(),
+                                leave.getEndDate(),
+                                (double) Math.max(0, daysRemaining)
+                        ));
+                    });
+        }
+
+        response.setTeamOnLeaveToday(onLeaveDTOs);
+        response.setTeamOnLeaveCount(onLeaveDTOs.size());
+
+        log.info("   [TEAMLEADER] On leave today: {}", onLeaveDTOs.size());
+
+        // ── 5. Team leave balance summary (per member) ───────────────
+        int currentYear = LocalDate.now().getYear();
+        List<TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO> balanceSummaries = new ArrayList<>();
+
+        for (Employee member : teamMembers) {
+
+            Double allocated = allocationRepository
+                    .getTotalAllocatedDays(member.getId(), currentYear);
+            Double used = applicationRepository
+                    .getTotalUsedDays(member.getId(), LeaveStatus.APPROVED, currentYear);
+
+            if (allocated == null) allocated = 0.0;
+            if (used == null)      used      = 0.0;
+
+            CompOffBalance compOff = compOffRepository
+                    .findByEmployeeIdAndYear(member.getId(), currentYear).orElse(null);
+            double compOffBal = (compOff != null) ? compOff.getBalance() : 0.0;
+
+            Double lop = lopRepository
+                    .getTotalLossPercentageByEmployeeIdAndYear(member.getId(), currentYear);
+
+            balanceSummaries.add(new TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO(
+                    member.getId(),
+                    member.getName(),
+                    allocated,
+                    used,
+                    allocated - used,
+                    compOffBal,
+                    lop != null ? lop : 0.0
+            ));
+        }
+
+        response.setTeamBalances(balanceSummaries);
+        response.setLastUpdated(LocalDateTime.now());
+
+        log.info("✅ [DASHBOARD-TEAMLEADER] Dashboard complete for team leader: {}", teamLeaderId);
+
+        return response;
+    }
+
+
 
     // ═══════════════════════════════════════════════════════════════
     // HR DASHBOARD - Company-wide View

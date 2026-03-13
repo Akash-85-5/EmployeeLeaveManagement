@@ -24,15 +24,10 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ==================== CREATE EMPLOYEE ====================
-//    @PostMapping
-//    public Employee createEmployee(@RequestBody Employee employee) {
-//        return employeeService.createEmployee(employee);
-//    }
+    // ==================== GET ALL EMPLOYEES (HR & ADMIN) ====================
 
-    // ==================== GET ALL EMPLOYEES (WITH PAGINATION & FILTERS) - NEW ====================
     @GetMapping("/all")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -46,13 +41,26 @@ public class EmployeeController {
         return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
     }
 
-    // ==================== UPDATE EMPLOYEE  ====================
+    // ==================== GET PROFILE (EMPLOYEE SELF / ADMIN / HR) ====================
+
+    // ✅ FIXED: Employee sees own, ADMIN and HR see any
+    @GetMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('ADMIN') or hasRole('HR')")
+    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
+        return employeeService.getProfile(employeeId);
+    }
+
+    // ==================== UPDATE EMPLOYEE (ADMIN ONLY) ====================
+
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee employee) {
         return employeeService.updateEmployee(id, employee);
     }
 
-    // ==================== DELETE/DEACTIVATE EMPLOYEE  ====================
+    // ==================== DELETE/DEACTIVATE EMPLOYEE (ADMIN ONLY) ====================
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
@@ -60,35 +68,27 @@ public class EmployeeController {
         return ResponseEntity.ok("Employee deactivated successfully");
     }
 
-    // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
+    // ==================== GET TEAM MEMBERS — MANAGER ====================
+
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("#managerId == authentication.principal.user.id")
+    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
     }
 
-    // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
-    @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
-        return employeeService.getProfile(employeeId);
+    // ==================== GET TEAM MEMBERS — TEAM LEADER ====================
+
+    @GetMapping("/teamleader/{teamLeaderId}/team")
+    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
+    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
+        return employeeService.getTeamLeaderMembers(teamLeaderId);
     }
 
-    // ==================== UPDATE CURRENT EMPLOYEE (SELF)  ====================
-    @PutMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public Employee updateCurrentEmployee(
-            @PathVariable Long employeeId,
-            @RequestBody Employee employee
-    ) {
-        return employeeService.updateEmployee(employeeId, employee);
-    }
+    // ==================== SEARCH EMPLOYEES ====================
 
-    // ==================== SEARCH EMPLOYEES BY NAME  ====================
     @GetMapping("/search")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') ")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }
-
-
 }
