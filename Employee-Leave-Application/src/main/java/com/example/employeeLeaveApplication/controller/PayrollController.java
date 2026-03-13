@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.service.PayrollService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,23 +14,21 @@ public class PayrollController {
         this.payrollService = payrollService;
     }
 
+    @PreAuthorize("hasRole('HR')")
     @PostMapping("/generate")
-    public String generatePayroll(
-            @RequestParam Integer year,
-            @RequestParam Integer month) {
+    public String generatePayroll(@RequestParam Integer year,
+                                  @RequestParam Integer month) {
 
         payrollService.generatePayroll(year, month);
-
         return "Payroll generated successfully";
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/mark-paid")
-    public String markPaid(
-            @RequestParam Integer year,
-            @RequestParam Integer month) {
+    public String markPaid(@RequestParam Integer year,
+                           @RequestParam Integer month) {
 
         payrollService.markPayrollPaid(year, month);
-
         return "Payroll marked as PAID";
     }
 }

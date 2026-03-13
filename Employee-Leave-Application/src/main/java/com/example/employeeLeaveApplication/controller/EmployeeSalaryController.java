@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.entity.EmployeeSalary;
 import com.example.employeeLeaveApplication.repository.EmployeeSalaryRepository;
 import com.example.employeeLeaveApplication.service.EmployeeSalaryService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class EmployeeSalaryController {
     }
 
     // HR assigns salary
+    @PreAuthorize("hasRole('HR')")
     @PostMapping("/assign")
     public EmployeeSalary assignSalary(@RequestBody EmployeeSalary salary) {
 
@@ -27,6 +29,7 @@ public class EmployeeSalaryController {
     }
 
     // Get salary history
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/history/{employeeId}")
     public List<EmployeeSalary> getSalaryHistory(
             @PathVariable Long employeeId) {
@@ -35,13 +38,14 @@ public class EmployeeSalaryController {
     }
 
     // Get current salary
+    @PreAuthorize("hasRole('HR')")
     @GetMapping("/current/{employeeId}")
     public EmployeeSalary getCurrentSalary(
             @PathVariable Long employeeId) {
 
         return service.getCurrentSalary(employeeId);
     }
-
+    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{id}")
     public String deleteEmployeeSalary(@PathVariable Long id) {
 
