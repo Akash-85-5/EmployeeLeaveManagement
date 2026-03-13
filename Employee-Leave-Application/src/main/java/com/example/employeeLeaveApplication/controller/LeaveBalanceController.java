@@ -6,22 +6,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Year;
-
 @RestController
 @RequestMapping("/api/leaves-balance")
 public class LeaveBalanceController {
 
     private final LeaveBalanceService balanceService;
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LeaveBalanceController.class);
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(LeaveBalanceController.class);
 
     public LeaveBalanceController(LeaveBalanceService balanceService) {
         this.balanceService = balanceService;
     }
 
+    // ✅ FIXED: Added HR, ADMIN, MANAGER, TEAM_LEADER
     @GetMapping("/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<LeaveBalanceResponse> getBalance(
             @PathVariable Long employeeId,
             @RequestParam Integer year) {
@@ -37,8 +39,11 @@ public class LeaveBalanceController {
         }
     }
 
+    // ✅ FIXED: Added HR, ADMIN, MANAGER, TEAM_LEADER
     @GetMapping("/lop/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<Double> getLossOfPay(
             @PathVariable Long employeeId,
             @RequestParam Integer year) {
@@ -54,6 +59,3 @@ public class LeaveBalanceController {
         }
     }
 }
-
-
-

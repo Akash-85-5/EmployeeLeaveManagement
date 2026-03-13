@@ -274,4 +274,21 @@ public class DashboardController {
                 dashboardService.getEmployeesExceedingMonthlyLimit(
                         year, month));
     }
+
+    @GetMapping("/teamleader/{teamLeaderId}")
+    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id " +
+            "or hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
+    public ResponseEntity<TeamLeaderDashboardResponse> getTeamLeaderDashboard(
+            @PathVariable Long teamLeaderId) {
+        log.info("[API] GET team leader dashboard: {}", teamLeaderId);
+        try {
+            TeamLeaderDashboardResponse response =
+                    dashboardService.getTeamLeaderDashboard(teamLeaderId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("[API] Error: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
+

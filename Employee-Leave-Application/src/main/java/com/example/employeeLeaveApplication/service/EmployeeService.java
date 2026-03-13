@@ -42,6 +42,7 @@ public class EmployeeService {
     // ─── Profile ──────────────────────────────────────────────────
 
     public ProfileResponse getProfile(Long employeeId) {
+
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -57,6 +58,7 @@ public class EmployeeService {
         response.setManagerId(user.getManagerId());
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
+
         response.setJoiningDate(user.getJoiningDate());
         response.setBiometricStatus(user.getBiometricStatus().name());
         response.setVpnStatus(user.getVpnStatus().name());
@@ -204,61 +206,104 @@ public class EmployeeService {
     public Page<Employee> getAllEmployees(String name, String email, String role,
                                           Long managerId, Boolean active, Pageable pageable) {
         return employeeRepository.findAll(
-                createSpecification(name, email, role, managerId, active), pageable);
+                createSpecification(name, email, role, managerId, active),
+                pageable
+        );
     }
 
+    /**
+     * Update employee
+     */
     @Transactional
     public Employee updateEmployee(Long id, Employee employee) {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
-        if (employee.getName() != null) existing.setName(employee.getName());
-        if (employee.getEmail() != null) existing.setEmail(employee.getEmail());
-        if (employee.getRole() != null) existing.setRole(employee.getRole());
-        if (employee.getManagerId() != null) existing.setManagerId(employee.getManagerId());
+
+        if (employee.getName() != null) {
+            existing.setName(employee.getName());
+        }
+        if (employee.getEmail() != null) {
+            existing.setEmail(employee.getEmail());
+        }
+        if (employee.getRole() != null) {
+            existing.setRole(employee.getRole());
+        }
+        if (employee.getManagerId() != null) {
+            existing.setManagerId(employee.getManagerId());
+        }
+
+
         return employeeRepository.save(existing);
     }
 
+    /**
+     * Delete/Deactivate employee
+     */
     @Transactional
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
+
         employee.setActive(false);
         employeeRepository.save(employee);
     }
 
+    /**
+     * Get team members for a manager
+     */
     public List<Employee> getTeamMembers(Long managerId) {
         return employeeRepository.findByManagerId(managerId);
     }
 
+    public List<Employee> getTeamLeaderMembers(Long teamLeaderId) {
+        return employeeRepository.findByTeamLeaderId(teamLeaderId);
+    }
+
+    /**
+     * Search employees by name
+     */
     public List<Employee> searchEmployees(String query) {
         return employeeRepository.findByNameContainingIgnoreCase(query);
     }
 
+    /**
+     * Get active employees count
+     */
     public Long getActiveEmployeesCount() {
         return employeeRepository.countByActive(true);
     }
 
-    private Specification<Employee> createSpecification(String name, String email,
-                                                        String role, Long managerId,
-                                                        Boolean active) {
+    // ==================== HELPER METHODS ====================
+
+    /**
+     * Create JPA Specification for filtering
+     */
+    private Specification<Employee> createSpecification(
+            String name,
+            String email,
+            String role,
+            Long managerId,
+            Boolean active
+    ) {
         return (root, query, cb) -> {
-            var predicates = new java.util.ArrayList
-                    <Predicate>();
-            if (name != null && !name.isEmpty())
-                predicates.add(cb.like(cb.lower(root.get("name")),
-                        "%" + name.toLowerCase() + "%"));
-            if (email != null && !email.isEmpty())
-                predicates.add(cb.like(cb.lower(root.get("email")),
-                        "%" + email.toLowerCase() + "%"));
-            if (role != null && !role.isEmpty())
-                predicates.add(cb.equal(root.get("role"),
-                        Role.valueOf(role.toUpperCase())));
-            if (managerId != null)
+            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+
+            if (name != null && !name.isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
+            }
+            if (email != null && !email.isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase() + "%"));
+            }
+            if (role != null && !role.isEmpty()) {
+                predicates.add(cb.equal(root.get("role"), Role.valueOf(role.toUpperCase())));
+            }
+            if (managerId != null) {
                 predicates.add(cb.equal(root.get("managerId"), managerId));
             if (active != null)
                 predicates.add(cb.equal(root.get("active"), active));
-            return cb.and(predicates.toArray(
-                    new Predicate[0]));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }
 }

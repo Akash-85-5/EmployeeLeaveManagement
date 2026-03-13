@@ -56,7 +56,7 @@ public class EmployeeController {
     // ── Existing endpoints ────────────────────────────────────────
 
     @GetMapping("/all")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -64,19 +64,32 @@ public class EmployeeController {
             @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size
+    ) {
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.getAllEmployees(
                 name, email, role, managerId, active, pageable);
     }
 
+    // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("#managerId == authentication.principal.user.id")
+    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
     }
 
+    // ==================== GET TEAM MEMBERS — TEAM LEADER ====================
+
+    @GetMapping("/teamleader/{teamLeaderId}/team")
+    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
+    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
+        return employeeService.getTeamLeaderMembers(teamLeaderId);
+    }
+
+    // ==================== SEARCH EMPLOYEES ====================
+
     @GetMapping("/search")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') ")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }

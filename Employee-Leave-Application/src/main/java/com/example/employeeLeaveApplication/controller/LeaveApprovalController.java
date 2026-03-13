@@ -128,7 +128,7 @@ public class LeaveApprovalController {
     // ═══════════════════════════════════════════════════════════════
 
     @PostMapping("/{leaveId}/lop-confirmation")
-    @PreAuthorize("hasRole('EMPLOYEE')")
+    @PreAuthorize("hasRole('EMPLOYEE') and #empId == authentication.principal.user.id")
     public ResponseEntity<String> lopConfirmation(
             @PathVariable Long leaveId,
             @RequestParam Long empId,
@@ -138,7 +138,7 @@ public class LeaveApprovalController {
 
         return ResponseEntity.ok(
                 confirmed
-                        ? "Leave approved. Loss of pay of has been applied to your salary."
+                        ? "Leave approved. Loss of pay has been applied to your salary."
                         : "Leave cancelled successfully. No loss of pay applied."
         );
     }
