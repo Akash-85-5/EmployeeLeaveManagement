@@ -7,6 +7,7 @@ import com.example.employeeLeaveApplication.security.CustomUserDetails;
 import com.example.employeeLeaveApplication.service.PayslipPdfService;
 import com.example.employeeLeaveApplication.service.PayslipService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,7 @@ public class PayslipController {
     }
 
     @PostMapping("/generate")
+    @PreAuthorize("hasRole('HR')")
     public Payslip generatePayslip(
             @RequestBody GeneratePayslipRequest request) {
 
@@ -37,8 +39,8 @@ public class PayslipController {
     }
 
 
-    // Get my payslip using JWT
     @GetMapping("/my/{year}/{month}")
+    @PreAuthorize("hasRole('HR')")
     public Payslip getMyPayslip(
             @PathVariable Integer year,
             @PathVariable Integer month,
@@ -56,6 +58,7 @@ public class PayslipController {
 
     // Get my payslip history
     @GetMapping("/history")
+
     public List<Payslip> getMyPayslipHistory(Authentication authentication) {
 
         CustomUserDetails userDetails =

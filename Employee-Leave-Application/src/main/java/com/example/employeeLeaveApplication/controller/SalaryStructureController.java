@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.entity.SalaryStructure;
 import com.example.employeeLeaveApplication.repository.SalaryStructureRepository;
 import com.example.employeeLeaveApplication.enums.Role;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +18,7 @@ public class SalaryStructureController {
 
     // CREATE SALARY STRUCTURE
     @PostMapping
+    @PreAuthorize("hasRole('HR')")
     public SalaryStructure create(@RequestBody SalaryStructure structure) {
 
         if (structure.getRole() == null) {
@@ -56,6 +58,7 @@ public class SalaryStructureController {
 
     // GET SALARY STRUCTURE BY ROLE
     @GetMapping("/{role}")
+    @PreAuthorize("hasRole('HR')")
     public SalaryStructure getByRole(@PathVariable Role role) {
 
         return repository.findByRole(role)
@@ -64,6 +67,7 @@ public class SalaryStructureController {
                 );
     }
     @PutMapping("/{role}")
+    @PreAuthorize("hasRole('HR')")
     public SalaryStructure updateStructure(
             @PathVariable Role role,
             @RequestBody SalaryStructure request) {
@@ -83,6 +87,7 @@ public class SalaryStructureController {
         return repository.save(existing);
     }
     @DeleteMapping("/{role}")
+    @PreAuthorize("hasRole('HR')")
     public String deleteSalaryStructure(@PathVariable Role role) {
 
         SalaryStructure structure = repository.findByRole(role)
