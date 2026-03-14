@@ -44,7 +44,7 @@ public class LossOfPayService {
 
         lop.setExcessDays(lop.getExcessDays() + excessDays);
         lop.setLossPercentage(lop.getLossPercentage() + lossPercentage);
-        lop.setViolationCount(lop.getViolationCount() + 1); // ✅ ADDED
+        lop.setViolationCount(lop.getViolationCount() + 1);
         lop.setReason("Excess leave days beyond monthly limit");
         lop.setUpdatedAt(LocalDateTime.now());
 
@@ -82,8 +82,6 @@ public class LossOfPayService {
                 log.info("[LOP-RESTORE] LOP partially restored. Remaining: {}% for month {}", newPercent, month);
             }
         });
-
-        // No 'else' warn needed — if no record exists, nothing to restore
     }
 
     // ═══════════════════════════════════════════════════════════════

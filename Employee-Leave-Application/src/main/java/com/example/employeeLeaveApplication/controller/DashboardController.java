@@ -48,6 +48,13 @@ public class DashboardController {
         return dashboardService.getMonthlyStats(employeeId, year, month);
     }
 
+    @GetMapping("/employee/calendar/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<Map<String, List<TeamMemberBalance>>> getEmployeeLeaveCalendar(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(
+                dashboardService.getMyLeaveCalendar(employeeId));
+    }
     // ✅ UPDATED: Added @PreAuthorize — was missing before
     @GetMapping("/leave-counts/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +

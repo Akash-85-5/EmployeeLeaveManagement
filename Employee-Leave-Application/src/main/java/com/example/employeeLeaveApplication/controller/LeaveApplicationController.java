@@ -54,6 +54,9 @@ public class LeaveApplicationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam String reason,
             @RequestParam(required = false) String halfDayType,
+            @RequestParam(required = false) String startDateHalfDayType,
+            @RequestParam(required = false) String endDateHalfDayType,
+            @RequestParam(defaultValue = "false") boolean isAppointment,
             @RequestParam(defaultValue = "false") boolean confirmLossOfPay,
             @RequestParam(value = "files", required = false) MultipartFile[] files) {
 
@@ -67,9 +70,6 @@ public class LeaveApplicationController {
         if (startDate == null) {
             throw new BadRequestException("Start date is required");
         }
-        if (startDate.isBefore(LocalDate.now())) {
-            throw new BadRequestException("Leave cannot be applied for past dates");
-        }
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
@@ -81,15 +81,57 @@ public class LeaveApplicationController {
         leave.setStartDate(startDate);
         leave.setEndDate(endDate);
         leave.setReason(reason);
+        leave.setIsAppointment(isAppointment);
 
-        if (halfDayType != null && !halfDayType.isBlank()) {
+        if (startDateHalfDayType != null && !startDateHalfDayType.isBlank()) {
             try {
+                leave.setStartDateHalfDayType(
+                        HalfDayType.valueOf(startDateHalfDayType.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException(
+                        "Invalid startDateHalfDayType: " + startDateHalfDayType);
+            }
+        }
+        if (endDateHalfDayType != null && !endDateHalfDayType.isBlank()) {
+            try {
+                leave.setEndDateHalfDayType(
+                        HalfDayType.valueOf(endDateHalfDayType.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException(
+                        "Invalid endDateHalfDayType: " + endDateHalfDayType);
+            }
+        }
+
+        if (halfDayType != null && !halfDayType.isBlank()
+                && leave.getStartDateHalfDayType() == null
+                && leave.getEndDateHalfDayType() == null) {
+            try {
+                leave.setStartDateHalfDayType(
+                        HalfDayType.valueOf(halfDayType.toUpperCase()));
                 leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid half day type: " + halfDayType);
             }
         }
 
+        if (type == LeaveType.SICK && startDate.isAfter(LocalDate.now())) {
+            if (!isAppointment) {
+                throw new BadRequestException(
+                        "Sick leave cannot be applied for future dates " +
+                                "unless it is a pre-booked medical appointment. " +
+                                "Please set isAppointment=true and attach a document.");
+            }
+            if (files == null || files.length == 0) {
+                throw new BadRequestException(
+                        "An attachment (appointment proof) is required " +
+                                "for future sick leave applications.");
+            }
+        } else {
+            if (startDate.isBefore(LocalDate.now())) {
+                throw new BadRequestException(
+                        "Leave cannot be applied for past dates");
+            }
+        }
 
         LeaveResponse response = leaveApplicationService.applyLeave(leave, confirmLossOfPay);
 
@@ -183,9 +225,11 @@ public class LeaveApplicationController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) String reason,
-            @RequestParam(required = false) String halfDayType) {
+            @RequestParam(required = false) String startDateHalfDayType,
+            @RequestParam(required = false) String endDateHalfDayType) {
         return leaveApplicationService.updateLeave(
-                id, employeeId, startDate, endDate, reason, halfDayType);
+                id, employeeId, startDate, endDate, reason,
+                startDateHalfDayType, endDateHalfDayType);
     }
 
     // ── Cancel leave ──────────────────────────────────────────────

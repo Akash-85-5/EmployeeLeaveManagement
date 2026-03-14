@@ -4,16 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.example.employeeLeaveApplication.dto.*;
 import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.example.employeeLeaveApplication.exceptions.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -299,45 +295,64 @@ public class DashboardService {
     }
 
     public Map<String, List<TeamMemberBalance>> getTeamLeaveCalendar(Long managerId) {
-
-        log.info("📅 [DASHBOARD-MANAGER] Getting team leave calendar for manager: {}", managerId);
-
-        LocalDate today   = LocalDate.now();
-        LocalDate endDate = today.plusDays(7);
+        log.info("📅 [DASHBOARD-MANAGER] Getting full team leave calendar for manager: {}", managerId);
 
         List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
-        Map<String, List<TeamMemberBalance>> calendar = new LinkedHashMap<>();
-
-        for (LocalDate date = today; !date.isAfter(endDate); date = date.plusDays(1)) {
-            calendar.put(date.toString(), new ArrayList<>());
-        }
+        Map<String, List<TeamMemberBalance>> calendar = new TreeMap<>(); // TreeMap keeps dates sorted
 
         for (Employee member : teamMembers) {
             List<LeaveApplication> approvedLeaves = applicationRepository
-                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
-                    .stream()
-                    .filter(la -> !la.getEndDate().isBefore(today) &&
-                            !la.getStartDate().isAfter(endDate))
-                    .collect(Collectors.toList());
+                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED);
 
             for (LeaveApplication leave : approvedLeaves) {
                 LocalDate leaveDate = leave.getStartDate();
-                while (!leaveDate.isAfter(leave.getEndDate()) && !leaveDate.isAfter(endDate)) {
-                    if (!leaveDate.isBefore(today)) {
-                        TeamMemberBalance balance = new TeamMemberBalance();
-                        balance.setEmployeeId(member.getId());
-                        balance.setEmployeeName(member.getName());
-                        calendar.get(leaveDate.toString()).add(balance);
-                    }
+                // Loop through the entire duration of each leave
+                while (!leaveDate.isAfter(leave.getEndDate())) {
+                    String dateKey = leaveDate.toString();
+
+                    calendar.computeIfAbsent(dateKey, k -> new ArrayList<>());
+
+                    TeamMemberBalance balance = new TeamMemberBalance();
+                    balance.setEmployeeId(member.getId());
+                    balance.setEmployeeName(member.getName());
+                    calendar.get(dateKey).add(balance);
+
                     leaveDate = leaveDate.plusDays(1);
                 }
             }
         }
-
-        log.info("✅ [DASHBOARD-MANAGER] Team leave calendar prepared for 7 days");
-
         return calendar;
     }
+
+    public Map<String, List<TeamMemberBalance>> getMyLeaveCalendar(Long employeeId) {
+        log.info("📅 [DASHBOARD-EMPLOYEE] Getting personal leave calendar for employee: {}", employeeId);
+
+        Employee member = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        Map<String, List<TeamMemberBalance>> calendar = new TreeMap<>();
+        List<LeaveApplication> approvedLeaves = applicationRepository
+                .findByEmployeeIdAndStatus(employeeId, LeaveStatus.APPROVED);
+
+        for (LeaveApplication leave : approvedLeaves) {
+            LocalDate leaveDate = leave.getStartDate();
+            while (!leaveDate.isAfter(leave.getEndDate())) {
+                String dateKey = leaveDate.toString();
+
+                calendar.computeIfAbsent(dateKey, k -> new ArrayList<>());
+
+                TeamMemberBalance balance = new TeamMemberBalance();
+                balance.setEmployeeId(member.getId());
+                balance.setEmployeeName(member.getName());
+                // Add leave type or status here if your TeamMemberBalance supports it
+                calendar.get(dateKey).add(balance);
+
+                leaveDate = leaveDate.plusDays(1);
+            }
+        }
+        return calendar;
+    }
+
 
     public Integer getPendingTeamRequestsCount(Long managerId) {
 

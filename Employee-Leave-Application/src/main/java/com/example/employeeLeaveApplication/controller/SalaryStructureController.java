@@ -18,8 +18,6 @@ public class SalaryStructureController {
         this.repository = repository;
     }
 
-    // CREATE SALARY STRUCTURE
-    @PreAuthorize("hasRole('HR')")
     @PostMapping
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure create(@RequestBody SalaryStructure structure) {
@@ -59,8 +57,6 @@ public class SalaryStructureController {
         return repository.save(structure);
     }
 
-    // GET SALARY STRUCTURE BY ROLE
-    @PreAuthorize("hasRole('HR')")
     @GetMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure getByRole(@PathVariable Role role) {
@@ -70,7 +66,6 @@ public class SalaryStructureController {
                         new RuntimeException("Salary structure not found for role: " + role)
                 );
     }
-    @PreAuthorize("hasRole('HR')")
     @PutMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public SalaryStructure updateStructure(
@@ -91,7 +86,6 @@ public class SalaryStructureController {
 
         return repository.save(existing);
     }
-    @PreAuthorize("hasRole('HR')")
     @DeleteMapping("/{role}")
     @PreAuthorize("hasRole('HR')")
     public String deleteSalaryStructure(@PathVariable Role role) {
