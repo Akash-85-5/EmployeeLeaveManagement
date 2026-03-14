@@ -392,7 +392,7 @@ public class LeaveApprovalService {
     private void finalizeLeave(LeaveApplication leave,
                                LeaveStatus finalStatus,
                                Employee finalApprover) {
-
+        leave.setStatus(finalStatus);
         leave.setApprovedBy(finalApprover.getId());
         leave.setApprovedRole(finalApprover.getRole());
         leave.setApprovedAt(LocalDateTime.now());
@@ -437,7 +437,6 @@ public class LeaveApprovalService {
                             totalApprovedDays, cfBalance, excessDays);
 
                 } else {
-                    // Step 6: CF partial or zero
                     double lopDays = excessDays;
 
                     if (cf != null && cfBalance > 0) {
@@ -449,7 +448,7 @@ public class LeaveApprovalService {
                         leaveApplicationRepository.save(leave);
                     }
 
-                    handleLopConfirmation(leave.getId(), empId, true);
+//                    handleLopConfirmation(leave.getId(), empId, true);
                     leave.setStatus(finalStatus);
                     leave.setPendingLopDays(lopDays);
                     leaveApplicationRepository.save(leave);

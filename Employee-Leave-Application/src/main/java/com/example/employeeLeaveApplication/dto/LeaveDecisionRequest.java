@@ -4,7 +4,6 @@ import com.example.employeeLeaveApplication.enums.LeaveStatus;
 
 public class LeaveDecisionRequest {
     private Long leaveId;
-    private Long managerId;
     private LeaveStatus decision;
     private String comments;
     private Long approverId;
@@ -23,14 +22,6 @@ public class LeaveDecisionRequest {
 
     public void setLeaveId(Long leaveId) {
         this.leaveId = leaveId;
-    }
-
-    public Long getManagerId() {
-        return managerId;
-    }
-
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
     }
 
     public LeaveStatus getDecision() {

@@ -21,12 +21,10 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "leave_application")
-public class
-LeaveApplication {
+public class LeaveApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,9 +40,21 @@ LeaveApplication {
     @Column(name = "leave_type", nullable = false)
     private LeaveType leaveType;
 
+    @Deprecated
     @Enumerated(EnumType.STRING)
     @Column(name = "half_day_type")
     private HalfDayType halfDayType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "start_date_half_day_type")
+    private HalfDayType startDateHalfDayType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "end_date_half_day_type")
+    private HalfDayType endDateHalfDayType;
+
+    @Column(name = "is_appointment")
+    private Boolean isAppointment = false;
 
     @Column(name = "leave_year", nullable = false)
     private Integer year;
@@ -112,7 +122,6 @@ LeaveApplication {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-
     @Column(name = "carry_forward_used")
     private Double carryForwardUsed = 0.0;
 
@@ -158,6 +167,7 @@ LeaveApplication {
         }
     }
 
+    // ── Getters & Setters ──────────────────────────────────────────
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -171,8 +181,23 @@ LeaveApplication {
     public LeaveType getLeaveType() { return leaveType; }
     public void setLeaveType(LeaveType leaveType) { this.leaveType = leaveType; }
 
+    @Deprecated
     public HalfDayType getHalfDayType() { return halfDayType; }
+    @Deprecated
     public void setHalfDayType(HalfDayType halfDayType) { this.halfDayType = halfDayType; }
+
+    public HalfDayType getStartDateHalfDayType() { return startDateHalfDayType; }
+    public void setStartDateHalfDayType(HalfDayType startDateHalfDayType) {
+        this.startDateHalfDayType = startDateHalfDayType;
+    }
+
+    public HalfDayType getEndDateHalfDayType() { return endDateHalfDayType; }
+    public void setEndDateHalfDayType(HalfDayType endDateHalfDayType) {
+        this.endDateHalfDayType = endDateHalfDayType;
+    }
+
+    public Boolean getIsAppointment() { return isAppointment; }
+    public void setIsAppointment(Boolean isAppointment) { this.isAppointment = isAppointment; }
 
     public Integer getYear() { return year; }
     public void setYear(Integer year) { this.year = year; }
@@ -193,19 +218,27 @@ LeaveApplication {
     public void setStatus(LeaveStatus status) { this.status = status; }
 
     public ApprovalLevel getCurrentApprovalLevel() { return currentApprovalLevel; }
-    public void setCurrentApprovalLevel(ApprovalLevel currentApprovalLevel) { this.currentApprovalLevel = currentApprovalLevel; }
+    public void setCurrentApprovalLevel(ApprovalLevel currentApprovalLevel) {
+        this.currentApprovalLevel = currentApprovalLevel;
+    }
 
     public Integer getRequiredApprovalLevels() { return requiredApprovalLevels; }
-    public void setRequiredApprovalLevels(Integer requiredApprovalLevels) { this.requiredApprovalLevels = requiredApprovalLevels; }
+    public void setRequiredApprovalLevels(Integer requiredApprovalLevels) {
+        this.requiredApprovalLevels = requiredApprovalLevels;
+    }
 
     public Long getTeamLeaderId() { return teamLeaderId; }
     public void setTeamLeaderId(Long teamLeaderId) { this.teamLeaderId = teamLeaderId; }
 
     public LeaveStatus getTeamLeaderDecision() { return teamLeaderDecision; }
-    public void setTeamLeaderDecision(LeaveStatus teamLeaderDecision) { this.teamLeaderDecision = teamLeaderDecision; }
+    public void setTeamLeaderDecision(LeaveStatus teamLeaderDecision) {
+        this.teamLeaderDecision = teamLeaderDecision;
+    }
 
     public LocalDateTime getTeamLeaderDecidedAt() { return teamLeaderDecidedAt; }
-    public void setTeamLeaderDecidedAt(LocalDateTime teamLeaderDecidedAt) { this.teamLeaderDecidedAt = teamLeaderDecidedAt; }
+    public void setTeamLeaderDecidedAt(LocalDateTime teamLeaderDecidedAt) {
+        this.teamLeaderDecidedAt = teamLeaderDecidedAt;
+    }
 
     public Long getManagerId() { return managerId; }
     public void setManagerId(Long managerId) { this.managerId = managerId; }
@@ -214,7 +247,9 @@ LeaveApplication {
     public void setManagerDecision(LeaveStatus managerDecision) { this.managerDecision = managerDecision; }
 
     public LocalDateTime getManagerDecidedAt() { return managerDecidedAt; }
-    public void setManagerDecidedAt(LocalDateTime managerDecidedAt) { this.managerDecidedAt = managerDecidedAt; }
+    public void setManagerDecidedAt(LocalDateTime managerDecidedAt) {
+        this.managerDecidedAt = managerDecidedAt;
+    }
 
     public LeaveStatus getHrDecision() { return hrDecision; }
     public void setHrDecision(LeaveStatus hrDecision) { this.hrDecision = hrDecision; }
@@ -244,9 +279,7 @@ LeaveApplication {
     public void setLossOfPayApplied(Double lossOfPayApplied) { this.lossOfPayApplied = lossOfPayApplied; }
 
     public Double getPendingLopDays() { return pendingLopDays; }
-    public void setPendingLopDays(Double pendingLopDays) {
-        this.pendingLopDays = pendingLopDays;
-    }
+    public void setPendingLopDays(Double pendingLopDays) { this.pendingLopDays = pendingLopDays; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

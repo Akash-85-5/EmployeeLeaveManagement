@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class EmployeeSalaryService {
@@ -27,18 +28,35 @@ public class EmployeeSalaryService {
             throw new RuntimeException("Basic salary is required");
         }
 
+        // If effective date not provided → today
         if (salary.getEffectiveFrom() == null) {
             salary.setEffectiveFrom(LocalDate.now());
         }
 
+        // Check if salary already exists for same employee and date
+        Optional<EmployeeSalary> existing =
+                repository.findByEmployeeIdAndEffectiveFrom(
+                        salary.getEmployeeId(),
+                        salary.getEffectiveFrom()
+                );
+
+        if (existing.isPresent()) {
+
+            // UPDATE existing salary
+            EmployeeSalary existingSalary = existing.get();
+            existingSalary.setBasicSalary(salary.getBasicSalary());
+
+            return repository.save(existingSalary);
+        }
+
+        // INSERT new salary record
         return repository.save(salary);
     }
 
     // Salary history
     public List<EmployeeSalary> getSalaryHistory(Long employeeId) {
 
-        return repository.findByEmployeeId(employeeId);
-    }
+        return repository.findByEmployeeIdOrderByEffectiveFromDesc(employeeId);    }
 
     // Current salary
     public EmployeeSalary getCurrentSalary(Long employeeId) {

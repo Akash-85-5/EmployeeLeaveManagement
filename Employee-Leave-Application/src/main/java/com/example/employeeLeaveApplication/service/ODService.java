@@ -327,4 +327,19 @@ public class ODService {
                         + " has been cancelled by " + cancelledBy.getName() + "."
         );
     }
+
+    public List<ODRequest> getMyODRequests(Long employeeId) {
+        return odRepository.findByEmployeeId(employeeId);
+    }
+
+    public List<ODRequest> getPendingForTeamLeader(Long tlId) {
+        return odRepository.findPendingForTeamLeader(tlId);
+    }
+
+    public List<ODRequest> getPendingForHR() {
+        return odRepository.findByStatus(ODStatus.PENDING_HR);
+    }
+    public List<ODRequest> getPendingForManager(Long managerId) {
+        return odRepository.findPendingForManager(managerId);
+    }
 }

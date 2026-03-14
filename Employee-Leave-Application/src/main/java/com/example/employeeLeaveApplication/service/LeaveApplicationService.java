@@ -237,20 +237,41 @@ public class LeaveApplicationService {
 
     public BigDecimal calculateLeaveDuration(LeaveApplication leave) {
 
-        long days = ChronoUnit.DAYS.between(
+        long totalDays = ChronoUnit.DAYS.between(
                 leave.getStartDate(),
                 leave.getEndDate()
-        ) + 1; // +1 to include both start & end
+        ) + 1;
 
-        if (days <= 0) {
+        if (totalDays <= 0) {
             throw new BadRequestException("Invalid date range.");
         }
-        if (leave.getHalfDayType() != null) {
-            return BigDecimal.valueOf(days)
-                    .multiply(new BigDecimal("0.5"));
+
+        BigDecimal days = BigDecimal.valueOf(totalDays);
+
+        boolean startIsHalf = leave.getStartDateHalfDayType() != null;
+        boolean endIsHalf   = leave.getEndDateHalfDayType() != null;
+
+        boolean sameDay = leave.getStartDate().isEqual(leave.getEndDate());
+
+        if (sameDay) {
+            if (startIsHalf || endIsHalf) {
+                days = new BigDecimal("0.5");
+            }
+        } else {
+            if (startIsHalf) {
+                days = days.subtract(new BigDecimal("0.5"));
+            }
+            if (endIsHalf) {
+                days = days.subtract(new BigDecimal("0.5"));
+            }
         }
 
-        return BigDecimal.valueOf(days);
+        if (days.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException(
+                    "Calculated leave duration is zero or negative. " +
+                            "Check your dates and half-day selections.");
+        }
+        return days;
     }
 
     // ==================== NEW METHODS FOR UPDATED CONTROLLER ====================
@@ -309,36 +330,55 @@ public class LeaveApplicationService {
             LocalDate startDate,
             LocalDate endDate,
             String reason,
-            String halfDayType
+            String startDateHalfDayType,
+            String endDateHalfDayType
     ) {
         LeaveApplication leave = leaveApplicationRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Leave application not found with ID: " + id));
+                .orElseThrow(() -> new BadRequestException(
+                        "Leave application not found with ID: " + id));
 
-        // Verify ownership
         if (!leave.getEmployeeId().equals(employeeId)) {
-            throw new BadRequestException("Unauthorized: You can only update your own leaves");
+            throw new BadRequestException(
+                    "Unauthorized: You can only update your own leaves");
         }
 
-        // Can only update pending leaves
         if (leave.getStatus() != LeaveStatus.PENDING) {
-            throw new BadRequestException("Can only update PENDING leaves. Current status: " + leave.getStatus());
+            throw new BadRequestException(
+                    "Can only update PENDING leaves. Current status: " + leave.getStatus());
         }
 
-        // Update fields if provided
-        if (startDate != null) {
-            leave.setStartDate(startDate);
-        }
-        if (endDate != null) {
-            leave.setEndDate(endDate);
-        }
-        if (reason != null && !reason.isEmpty()) {
-            leave.setReason(reason);
-        }
-        if (halfDayType != null && !halfDayType.isEmpty()) {
-            leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
+        if (startDate != null) leave.setStartDate(startDate);
+        if (endDate   != null) leave.setEndDate(endDate);
+        if (reason    != null && !reason.isEmpty()) leave.setReason(reason);
+
+        if (startDateHalfDayType != null) {
+            if (startDateHalfDayType.isBlank()) {
+                leave.setStartDateHalfDayType(null);
+            } else {
+                try {
+                    leave.setStartDateHalfDayType(
+                            HalfDayType.valueOf(startDateHalfDayType.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException(
+                            "Invalid startDateHalfDayType: " + startDateHalfDayType);
+                }
+            }
         }
 
-        // Recalculate days
+        if (endDateHalfDayType != null) {
+            if (endDateHalfDayType.isBlank()) {
+                leave.setEndDateHalfDayType(null);
+            } else {
+                try {
+                    leave.setEndDateHalfDayType(
+                            HalfDayType.valueOf(endDateHalfDayType.toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    throw new BadRequestException(
+                            "Invalid endDateHalfDayType: " + endDateHalfDayType);
+                }
+            }
+        }
+
         validateDates(leave);
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);

@@ -416,4 +416,13 @@ public class MeetingService {
             );
         }
     }
+    public List<Meeting> getMeetingsCreatedBy(Long employeeId) {
+        return meetingRepository.findByCreatedBy(employeeId);
+    }
+    public List<Meeting> getPendingForManager(Long managerId) {
+        return meetingRepository.findPendingForManager(managerId);
+    }
+    public List<Meeting> getPendingForHr() {
+        return meetingRepository.findByStatus(MeetingStatus.PENDING_HR_APPROVAL);
+    }
 }
