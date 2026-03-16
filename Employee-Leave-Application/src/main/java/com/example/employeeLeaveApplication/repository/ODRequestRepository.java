@@ -39,4 +39,6 @@ WHERE e.managerId = :managerId
 AND o.status = com.example.employeeLeaveApplication.enums.ODStatus.PENDING_MANAGER
 """)
     List<ODRequest> findPendingForManager(Long managerId);
+
+    List<ODRequest> findByEmployeeIdAndStatus(Long employeeId, ODStatus status);
 }

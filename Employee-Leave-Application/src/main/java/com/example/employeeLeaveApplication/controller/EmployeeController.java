@@ -31,6 +31,7 @@ public class EmployeeController {
     @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<ProfileResponse> getProfile(
             @PathVariable Long employeeId) {
+        System.out.println(employeeId);
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 

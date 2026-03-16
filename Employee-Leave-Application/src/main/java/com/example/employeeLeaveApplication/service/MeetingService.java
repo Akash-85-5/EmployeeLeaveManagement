@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.service;
 
+import com.example.employeeLeaveApplication.dto.CalendarDayResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.Meeting;
 import com.example.employeeLeaveApplication.enums.*;
@@ -11,6 +12,8 @@ import com.example.employeeLeaveApplication.repository.MeetingRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 
@@ -424,5 +427,48 @@ public class MeetingService {
     }
     public List<Meeting> getPendingForHr() {
         return meetingRepository.findByStatus(MeetingStatus.PENDING_HR_APPROVAL);
+    }
+
+
+    public CalendarDayResponse getDayCalendar(Long employeeId, LocalDate date) {
+        // Validate employee exists
+        employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        LocalDateTime dayStart = date.atStartOfDay();
+        LocalDateTime dayEnd   = date.plusDays(1).atStartOfDay();
+
+        List<Meeting> meetings = meetingRepository
+                .findDayCalendarForEmployee(employeeId, dayStart, dayEnd);
+
+        List<CalendarDayResponse.MeetingSlot> slots = meetings.stream()
+                .map(m -> {
+                    List<CalendarDayResponse.AttendeeInfo> attendeeInfos =
+                            m.getAttendees() == null ? List.of() :
+                                    m.getAttendees().stream()
+                                            .map(a -> new CalendarDayResponse.AttendeeInfo(
+                                                    a.getId(),
+                                                    a.getName(),
+                                                    a.getRole().name()))
+                                            .toList();
+
+                    return new CalendarDayResponse.MeetingSlot(
+                            m.getId(),
+                            m.getTitle(),
+                            m.getStartTime(),
+                            m.getEndTime(),
+                            m.getType(),
+                            m.getLocationOrLink(),
+                            m.getAgenda(),
+                            m.getPriority(),
+                            m.getStatus(),
+                            m.getCreatedBy().equals(employeeId),   // isOrganizer
+                            m.isHrApprovalRequired(),
+                            attendeeInfos
+                    );
+                })
+                .toList();
+
+        return new CalendarDayResponse(date, slots.size(), slots);
     }
 }

@@ -132,6 +132,8 @@ public class LeaveApplicationService {
 
     private void setupEmployeeChain(LeaveApplication leave,
                                     Employee employee, BigDecimal days) {
+        Employee manager = employeeRepository.findById(employee.getManagerId())
+                .orElseThrow(()-> new RuntimeException("Manager not found"));
         if (employee.getTeamLeaderId() == null) {
             throw new BadRequestException(
                     "No Team Leader assigned. Please contact HR.");
@@ -142,7 +144,8 @@ public class LeaveApplicationService {
 
         if (days.compareTo(BigDecimal.ONE) <= 0) {
             leave.setRequiredApprovalLevels(1);
-            leave.setManagerId(null);
+            leave.setManagerId(employee.getManagerId());
+            leave.setHrId(manager.getManagerId());
 
         } else if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
             if (employee.getManagerId() == null) {
@@ -151,6 +154,7 @@ public class LeaveApplicationService {
             }
             leave.setRequiredApprovalLevels(2);
             leave.setManagerId(employee.getManagerId());
+            leave.setHrId(manager.getManagerId());
 
         } else {
             if (employee.getManagerId() == null) {
@@ -159,6 +163,7 @@ public class LeaveApplicationService {
             }
             leave.setRequiredApprovalLevels(3);
             leave.setManagerId(employee.getManagerId());
+            leave.setHrId(manager.getManagerId());
         }
     }
 
@@ -168,23 +173,27 @@ public class LeaveApplicationService {
             throw new BadRequestException(
                     "No Manager assigned to Team Leader. Please contact HR.");
         }
-
+        Employee manager = employeeRepository.findById(employee.getManagerId())
+                .orElseThrow(()-> new RuntimeException("Manager not found"));
         leave.setTeamLeaderId(null);
         leave.setManagerId(employee.getManagerId());
-        leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
 
         if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
-            leave.setRequiredApprovalLevels(2);
+            leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
+            leave.setRequiredApprovalLevels(1);
+            leave.setHrId(manager.getManagerId());
         } else {
-            leave.setRequiredApprovalLevels(3);
+            leave.setHrId(manager.getManagerId());
+            leave.setRequiredApprovalLevels(2);
         }
     }
 
     private void setupManagerChain(LeaveApplication leave, Employee employee) {
         leave.setTeamLeaderId(null);
         leave.setManagerId(null);
+        leave.setHrId(employee.getManagerId());
         leave.setCurrentApprovalLevel(ApprovalLevel.HR);
-        leave.setRequiredApprovalLevels(3);
+        leave.setRequiredApprovalLevels(1);
     }
 
     public List<LeaveApplication> getLeavesByEmployee(Long employeeId, Pageable pageable) {
@@ -537,7 +546,6 @@ public class LeaveApplicationService {
             }
             return null;
         }
-        // 2. Get the full balance response
         LeaveBalanceResponse balance = leaveBalanceService.getBalance(leave.getEmployeeId(), leave.getYear());
 
         // 3. Find the breakdown for the SPECIFIC leave type requested
@@ -551,9 +559,9 @@ public class LeaveApplicationService {
             BigDecimal remainingForType = BigDecimal.valueOf(specificTypeBreakdown.getRemainingDays());
 
             if (remainingForType.compareTo(calculatedDays) < 0) {
-                return "Insufficient " + leave.getLeaveType() + " balance. " +
+                return "Your Leave Applicaion has not been submited because of Insufficient " + leave.getLeaveType() + " balance. " +
                         "(Available: " + remainingForType + ", Requested: " + calculatedDays + "). " +
-                        "The request will proceed as Loss of Pay.";
+                        "Re-Apply with Loss of pay if needed.";
             }
         } else {
             // This handles cases where the leave type might not be allocated to the user at all

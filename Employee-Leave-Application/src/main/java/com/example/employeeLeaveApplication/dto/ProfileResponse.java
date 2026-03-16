@@ -18,6 +18,7 @@ public class ProfileResponse {
     private String managerName;
     private Long teamLeaderId;
     private String teamLeaderName;
+    private String hrname;
     private boolean active;
     private boolean mustChangePassword;
     private LocalDate joiningDate;
@@ -135,4 +136,12 @@ public class ProfileResponse {
 
     public boolean isPersonalDetailsComplete() { return personalDetailsComplete; }
     public void setPersonalDetailsComplete(boolean personalDetailsComplete) { this.personalDetailsComplete = personalDetailsComplete; }
+
+    public String getHrname() {
+        return hrname;
+    }
+
+    public void setHrname(String hrname) {
+        this.hrname = hrname;
+    }
 }

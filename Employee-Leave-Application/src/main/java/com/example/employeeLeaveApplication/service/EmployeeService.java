@@ -39,15 +39,24 @@ public class EmployeeService {
         this.personalDetailsRepository = personalDetailsRepository;
     }
 
-    // ─── Profile ──────────────────────────────────────────────────
 
     public ProfileResponse getProfile(Long employeeId) {
 
+        System.out.println(employeeId);
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
+        String hrName = null;
+        if(employee.getRole()==Role.MANAGER || employee.getRole()== Role.ADMIN){
+            Employee hr = employeeRepository.findById(employee.getManagerId())
+                    .orElseThrow(()-> new RuntimeException("hr not found"));
+            hrName = hr.getName();
+        }
+        else if(employee.getRole()==Role.HR){
+            hrName = null;
+        }
 
         ProfileResponse response = new ProfileResponse();
 
@@ -56,6 +65,7 @@ public class EmployeeService {
         response.setEmail(user.getEmail());
         response.setRole(user.getRole().name());
         response.setManagerId(user.getManagerId());
+        response.setHrname(hrName);
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
 
