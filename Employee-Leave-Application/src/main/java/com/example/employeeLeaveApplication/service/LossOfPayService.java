@@ -1,6 +1,5 @@
 package com.example.employeeLeaveApplication.service;
 
-import com.example.employeeLeaveApplication.component.PolicyConstants;
 import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,130 +17,112 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * LossOfPayService — MANUAL entry only.
+ *
+ * LOP is no longer auto-calculated by the system.
+ * The CFO reviews attendance data from the attendance application
+ * and manually sets the LOP percentage for each employee per month.
+ *
+ * HR or Manager can view LOP records but cannot modify them.
+ * Only CFO (via ADMIN role) can record or update LOP.
+ */
 @Service
 @RequiredArgsConstructor
 public class LossOfPayService {
 
     private final LossOfPayRecordRepository lopRepo;
-
     private static final Logger log = LoggerFactory.getLogger(LossOfPayService.class);
 
     // ═══════════════════════════════════════════════════════════════
-    // APPLY LOP — FIXED: INCREMENT instead of overwrite
+    // RECORD LOP — CFO manually sets loss percentage for a month
+    // Called by: POST /api/lop/record  (ADMIN/CFO only)
     // ═══════════════════════════════════════════════════════════════
 
+    /**
+     * Records or updates a manual LOP entry for an employee.
+     *
+     * @param empId          Employee ID
+     * @param year           Year
+     * @param month          Month (1–12)
+     * @param lossPercentage The LOP percentage decided by CFO (e.g. 3.5 means 3.5%)
+     * @param reason         Reason noted by CFO (e.g. "3 days absent without approval")
+     */
     @Transactional
-    public void applyLossOfPay(Long empId, Integer year, Integer month, Double excessDays) {
-
+    public LossOfPayRecord recordLossOfPay(Long empId, Integer year, Integer month,
+                                           Double lossPercentage, String reason) {
         validateMonth(month);
 
-        log.info("[LOP] Applying loss of pay: employee={}, year={}, month={}, excessDays={}",
-                empId, year, month, excessDays);
+        if (lossPercentage == null || lossPercentage < 0) {
+            throw new IllegalArgumentException("Loss percentage must be a non-negative value");
+        }
 
-        double lossPercentage = excessDays * PolicyConstants.LOSS_OF_PAY_PERCENT_PER_DAY;
+        log.info("[LOP] CFO recording LOP: employee={}, year={}, month={}, lossPercentage={}%",
+                empId, year, month, lossPercentage);
 
         LossOfPayRecord lop = getOrCreate(empId, year, month);
-
-        lop.setExcessDays(lop.getExcessDays() + excessDays);
-        lop.setLossPercentage(lop.getLossPercentage() + lossPercentage);
-        lop.setViolationCount(lop.getViolationCount() + 1);
-        lop.setReason("Excess leave days beyond monthly limit");
+        lop.setLossPercentage(lossPercentage);
+        lop.setReason(reason != null ? reason : "Manual entry by CFO");
         lop.setUpdatedAt(LocalDateTime.now());
 
-        lopRepo.save(lop);
+        LossOfPayRecord saved = lopRepo.save(lop);
 
-        log.info("[LOP] Applied {}% loss of pay for {} excess days. Total LOP this month: {}%",
-                lossPercentage, excessDays, lop.getLossPercentage());
+        log.info("[LOP] Recorded {}% LOP for employee {} month {}/{}", lossPercentage, empId, month, year);
+        return saved;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // RESTORE LOP — called ONLY internally by leave cancellation flow
-    // NOT exposed as API endpoint — no one can manually delete LOP
+    // DELETE LOP — CFO removes an incorrect LOP entry
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
-    public void restoreLossOfPay(Long empId, Integer year, Integer month, Double excessDays) {
-
-        log.info("[LOP-RESTORE] Restoring LOP: employee={}, year={}, month={}, excessDays={}",
-                empId, year, month, excessDays);
-
-        lopRepo.findByEmployeeIdAndYearAndMonth(empId, year, month).ifPresent(lop -> {
-
-            double newExcess   = lop.getExcessDays()     - excessDays;
-            double newPercent  = lop.getLossPercentage() - (excessDays * PolicyConstants.LOSS_OF_PAY_PERCENT_PER_DAY);
-
-            if (newExcess <= 0.0) {
-                lopRepo.deleteByEmployeeIdAndYearAndMonth(empId, year, month);
-                log.info("[LOP-RESTORE] LOP record fully reversed and deleted for month {}", month);
-            } else {
-                // Partial reversal — keep record, just decrement
-                lop.setExcessDays(newExcess);
-                lop.setLossPercentage(newPercent);
-                lop.setUpdatedAt(LocalDateTime.now());
-                lopRepo.save(lop);
-                log.info("[LOP-RESTORE] LOP partially restored. Remaining: {}% for month {}", newPercent, month);
-            }
-        });
+    public void deleteLossOfPay(Long empId, Integer year, Integer month) {
+        validateMonth(month);
+        lopRepo.deleteByEmployeeIdAndYearAndMonth(empId, year, month);
+        log.info("[LOP] Deleted LOP record for employee={}, year={}, month={}", empId, year, month);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // MONTHLY LOP — returns formatted percentage for a specific month
+    // READ — Monthly LOP for a specific month
     // ═══════════════════════════════════════════════════════════════
 
     public String getMonthlyLossOfPay(Long empId, Integer year, Integer month) {
-
         validateMonth(month);
-
         Optional<LossOfPayRecord> lop =
                 lopRepo.findByEmployeeIdAndYearAndMonth(empId, year, month);
-
-        double percentage = lop.isPresent()
-                ? lop.get().getLossPercentage()
-                : 0.0;
-
+        double percentage = lop.map(LossOfPayRecord::getLossPercentage).orElse(0.0);
         return String.format("%.2f%%", percentage);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // YEARLY LOP — returns total LOP% across all months in a year
+    // READ — Yearly total LOP across all months
     // ═══════════════════════════════════════════════════════════════
 
     public String getYearlyLossOfPay(Long empId, Integer year) {
-
-        Double total = lopRepo
-                .getTotalLossPercentageByEmployeeIdAndYear(empId, year);
-
-        double result = (total != null) ? total : 0.0;
-
-        return String.format("%.2f%%", result);
+        Double total = lopRepo.getTotalLossPercentageByEmployeeIdAndYear(empId, year);
+        return String.format("%.2f%%", total != null ? total : 0.0);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // FULL SUMMARY — month by month breakdown for a year
+    // READ — Full month-by-month summary for a year
     // ═══════════════════════════════════════════════════════════════
 
     public Map<String, Object> getLopSummary(Long empId, Integer year) {
+        List<LossOfPayRecord> records = lopRepo.findByEmployeeIdAndYear(empId, year);
 
-        List<LossOfPayRecord> records =
-                lopRepo.findByEmployeeIdAndYear(empId, year);
-
-        // Initialize all 12 months to "0.00%" using Java Month enum
         Map<String, String> monthlyBreakdown = new LinkedHashMap<>();
         for (int m = 1; m <= 12; m++) {
-            String name = Month.of(m)
-                    .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-            monthlyBreakdown.put(name, "0.00%");
+            monthlyBreakdown.put(
+                    Month.of(m).getDisplayName(TextStyle.FULL, Locale.ENGLISH),
+                    "0.00%");
         }
 
-        // Fill actual LOP values with formatted percentage
         for (LossOfPayRecord record : records) {
-            String name = Month.of(record.getMonth())
-                    .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
-            monthlyBreakdown.put(name,
+            monthlyBreakdown.put(
+                    Month.of(record.getMonth()).getDisplayName(TextStyle.FULL, Locale.ENGLISH),
                     String.format("%.2f%%", record.getLossPercentage()));
         }
 
-        // Calculate yearly total
         double yearlyTotal = records.stream()
                 .mapToDouble(LossOfPayRecord::getLossPercentage)
                 .sum();
@@ -151,23 +132,20 @@ public class LossOfPayService {
         summary.put("year",             year);
         summary.put("monthlyBreakdown", monthlyBreakdown);
         summary.put("yearlyTotal",      String.format("%.2f%%", yearlyTotal));
-
         return summary;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // EXISTING — Get total accumulated LOP% for the year (as Double)
-    // Used internally by LeaveBalanceService
+    // READ — Total LOP% as Double (used by LeaveBalanceService)
     // ═══════════════════════════════════════════════════════════════
 
     public Double getTotalLossOfPayPercentage(Long empId, Integer year) {
-        Double total = lopRepo
-                .getTotalLossPercentageByEmployeeIdAndYear(empId, year);
+        Double total = lopRepo.getTotalLossPercentageByEmployeeIdAndYear(empId, year);
         return total != null ? total : 0.0;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // EXISTING — Get all LOP records for an employee (all years)
+    // READ — All LOP records for an employee (all years)
     // ═══════════════════════════════════════════════════════════════
 
     public List<LossOfPayRecord> getAllForEmployee(Long empId) {
@@ -175,7 +153,7 @@ public class LossOfPayService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // EXISTING — Get LOP records for an employee in a specific year
+    // READ — LOP records for a specific year
     // ═══════════════════════════════════════════════════════════════
 
     public List<LossOfPayRecord> getForEmployeeAndYear(Long empId, Integer year) {
@@ -183,29 +161,22 @@ public class LossOfPayService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PRIVATE — Find existing LOP record or create new one
+    // PRIVATE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
     private LossOfPayRecord getOrCreate(Long empId, Integer year, Integer month) {
-
         return lopRepo.findByEmployeeIdAndYearAndMonth(empId, year, month)
                 .orElseGet(() -> {
                     LossOfPayRecord lop = new LossOfPayRecord();
                     lop.setEmployeeId(empId);
                     lop.setYear(year);
                     lop.setMonth(month);
-                    lop.setExcessDays(0.0);
                     lop.setLossPercentage(0.0);
-                    lop.setViolationCount(0);
                     lop.setCreatedAt(LocalDateTime.now());
                     lop.setUpdatedAt(LocalDateTime.now());
                     return lop;
                 });
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // PRIVATE — Validate month is between 1 and 12
-    // ═══════════════════════════════════════════════════════════════
 
     private void validateMonth(Integer month) {
         if (month == null || month < 1 || month > 12) {

@@ -154,13 +154,13 @@ public class DashboardController {
                 dashboardService.getTeamMembersOnLeaveToday(managerId));
     }
 
-    @GetMapping("/manager/team-calendar/{managerId}")
-    @PreAuthorize("hasRole('MANAGER') " +
-            "and #managerId == authentication.principal.user.id")
-    public ResponseEntity<Map<String, List<TeamMemberBalance>>> getTeamLeaveCalendar(
-            @PathVariable Long managerId) {
+    @GetMapping("/team-calendar/{id}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('TEAM_LEADER') " +
+            "and #id == authentication.principal.user.id")
+    public ResponseEntity<Map<String, List<TeamMemberBalance>>> getManagerTeamLeaveCalendar(
+            @PathVariable Long id) {
         return ResponseEntity.ok(
-                dashboardService.getTeamLeaveCalendar(managerId));
+                dashboardService.getTeamLeaveCalendar(id));
     }
 
     // ── HR ───────────────────────────────────────────────────────
