@@ -8,27 +8,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import com.example.employeeLeaveApplication.dto.*;
+import com.example.employeeLeaveApplication.entity.*;
 import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.example.employeeLeaveApplication.enums.ODStatus;
 import com.example.employeeLeaveApplication.exceptions.ResourceNotFoundException;
+import com.example.employeeLeaveApplication.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.employeeLeaveApplication.component.PolicyConstants;
-import com.example.employeeLeaveApplication.entity.CarryForwardBalance;
-import com.example.employeeLeaveApplication.entity.CompOffBalance;
-import com.example.employeeLeaveApplication.entity.Employee;
-import com.example.employeeLeaveApplication.entity.LeaveAllocation;
-import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.Role;
-import com.example.employeeLeaveApplication.repository.CarryForwardBalanceRepository;
-import com.example.employeeLeaveApplication.repository.CompOffBalanceRepository;
-import com.example.employeeLeaveApplication.repository.EmployeeRepository;
-import com.example.employeeLeaveApplication.repository.LeaveAllocationRepository;
-import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
-import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +37,7 @@ public class DashboardService {
     private final CompOffBalanceRepository compOffRepository;
     private final CarryForwardBalanceRepository carryForwardRepository;
     private final LossOfPayRecordRepository lopRepository;
+    private final ODRequestRepository odRepository;
 
     // ═══════════════════════════════════════════════════════════════
     // EMPLOYEE DASHBOARD (Reusable for Employee/Manager/Admin own stats)
@@ -295,37 +288,25 @@ public class DashboardService {
     }
 
     public Map<String, List<TeamMemberBalance>> getTeamLeaveCalendar(Long managerId) {
-        log.info("📅 [DASHBOARD-MANAGER] Getting full team leave calendar for manager: {}", managerId);
+        log.info("📅 [DASHBOARD-MANAGER] Getting full team leave/OD calendar for manager: {}", managerId);
 
         List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
-        Map<String, List<TeamMemberBalance>> calendar = new TreeMap<>(); // TreeMap keeps dates sorted
+        Map<String, List<TeamMemberBalance>> calendar = new TreeMap<>();
 
         for (Employee member : teamMembers) {
             List<LeaveApplication> approvedLeaves = applicationRepository
                     .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED);
+            processLeavesIntoCalendar(calendar, member, approvedLeaves);
 
-            for (LeaveApplication leave : approvedLeaves) {
-                LocalDate leaveDate = leave.getStartDate();
-                // Loop through the entire duration of each leave
-                while (!leaveDate.isAfter(leave.getEndDate())) {
-                    String dateKey = leaveDate.toString();
-
-                    calendar.computeIfAbsent(dateKey, k -> new ArrayList<>());
-
-                    TeamMemberBalance balance = new TeamMemberBalance();
-                    balance.setEmployeeId(member.getId());
-                    balance.setEmployeeName(member.getName());
-                    calendar.get(dateKey).add(balance);
-
-                    leaveDate = leaveDate.plusDays(1);
-                }
-            }
+            List<ODRequest> approvedODs = odRepository
+                    .findByEmployeeIdAndStatus(member.getId(), ODStatus.APPROVED);
+            processODsIntoCalendar(calendar, member, approvedODs);
         }
         return calendar;
     }
 
     public Map<String, List<TeamMemberBalance>> getMyLeaveCalendar(Long employeeId) {
-        log.info("📅 [DASHBOARD-EMPLOYEE] Getting personal leave calendar for employee: {}", employeeId);
+        log.info("📅 [DASHBOARD-EMPLOYEE] Getting personal calendar for employee: {}", employeeId);
 
         Employee member = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
@@ -333,24 +314,44 @@ public class DashboardService {
         Map<String, List<TeamMemberBalance>> calendar = new TreeMap<>();
         List<LeaveApplication> approvedLeaves = applicationRepository
                 .findByEmployeeIdAndStatus(employeeId, LeaveStatus.APPROVED);
+        processLeavesIntoCalendar(calendar, member, approvedLeaves);
 
-        for (LeaveApplication leave : approvedLeaves) {
-            LocalDate leaveDate = leave.getStartDate();
-            while (!leaveDate.isAfter(leave.getEndDate())) {
-                String dateKey = leaveDate.toString();
+        List<ODRequest> approvedODs = odRepository
+                .findByEmployeeIdAndStatus(employeeId, ODStatus.APPROVED);
+        processODsIntoCalendar(calendar, member, approvedODs);
 
-                calendar.computeIfAbsent(dateKey, k -> new ArrayList<>());
+        return calendar;
+    }
 
-                TeamMemberBalance balance = new TeamMemberBalance();
-                balance.setEmployeeId(member.getId());
-                balance.setEmployeeName(member.getName());
-                // Add leave type or status here if your TeamMemberBalance supports it
-                calendar.get(dateKey).add(balance);
-
-                leaveDate = leaveDate.plusDays(1);
+    private void processLeavesIntoCalendar(Map<String, List<TeamMemberBalance>> calendar, Employee member, List<LeaveApplication> leaves) {
+        for (LeaveApplication leave : leaves) {
+            LocalDate date = leave.getStartDate();
+            while (!date.isAfter(leave.getEndDate())) {
+                addToCalendar(calendar, date, member, "LEAVE");
+                date = date.plusDays(1);
             }
         }
-        return calendar;
+    }
+
+    private void processODsIntoCalendar(Map<String, List<TeamMemberBalance>> calendar, Employee member, List<ODRequest> ods) {
+        for (ODRequest od : ods) {
+            LocalDate date = od.getFromDate();
+            while (!date.isAfter(od.getToDate())) {
+                addToCalendar(calendar, date, member, "OD");
+                date = date.plusDays(1);
+            }
+        }
+    }
+
+    private void addToCalendar(Map<String, List<TeamMemberBalance>> calendar, LocalDate date, Employee member, String type) {
+        String dateKey = date.toString();
+        calendar.computeIfAbsent(dateKey, k -> new ArrayList<>());
+
+        TeamMemberBalance entry = new TeamMemberBalance();
+        entry.setEmployeeId(member.getId());
+        entry.setEmployeeName(member.getName());
+
+        calendar.get(dateKey).add(entry);
     }
 
 

@@ -1,11 +1,14 @@
 package com.example.employeeLeaveApplication.controller;
 
+import com.example.employeeLeaveApplication.dto.CalendarDayResponse;
 import com.example.employeeLeaveApplication.entity.Meeting;
 import com.example.employeeLeaveApplication.service.MeetingService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -78,5 +81,13 @@ public class MeetingController {
     @GetMapping("/pending/hr")
     public List<Meeting> getPendingForHr() {
         return meetingService.getPendingForHr();
+    }
+
+    // GET /api/meetings/calendar/day?employeeId=5&date=2025-07-15
+    @GetMapping("/calendar/day")
+    public ResponseEntity<CalendarDayResponse> getDayCalendar(
+            @RequestParam Long employeeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(meetingService.getDayCalendar(employeeId, date));
     }
 }

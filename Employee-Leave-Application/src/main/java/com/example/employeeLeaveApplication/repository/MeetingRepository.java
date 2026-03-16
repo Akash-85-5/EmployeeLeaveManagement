@@ -52,4 +52,23 @@ WHERE e.managerId = :managerId
 AND m.status = com.example.employeeLeaveApplication.enums.MeetingStatus.PENDING
 """)
     List<Meeting> findPendingForManager(Long managerId);
+
+    // Fetch all meetings for a day where the employee is creator or attendee
+    @Query("""
+    SELECT DISTINCT m FROM Meeting m
+    LEFT JOIN m.attendees a
+    WHERE (m.createdBy = :employeeId OR a.id = :employeeId)
+      AND m.startTime >= :dayStart
+      AND m.startTime < :dayEnd
+      AND m.status NOT IN (
+          com.example.employeeLeaveApplication.enums.MeetingStatus.CANCELLED,
+          com.example.employeeLeaveApplication.enums.MeetingStatus.REJECTED
+      )
+    ORDER BY m.startTime ASC
+""")
+    List<Meeting> findDayCalendarForEmployee(
+            @Param("employeeId") Long employeeId,
+            @Param("dayStart") LocalDateTime dayStart,
+            @Param("dayEnd") LocalDateTime dayEnd
+    );
 }

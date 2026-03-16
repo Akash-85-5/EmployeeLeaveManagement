@@ -11,6 +11,7 @@ import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.service.LeaveApplicationService;
 import com.example.employeeLeaveApplication.service.LeaveAttachmentService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -45,6 +47,7 @@ public class LeaveApplicationController {
         this.leaveAttachmentService = leaveAttachmentService;
         this.employeeRepository = employeeRepository;
     }
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LeaveResponse> applyLeave(
@@ -114,22 +117,37 @@ public class LeaveApplicationController {
             }
         }
 
-        if (type == LeaveType.SICK && startDate.isAfter(LocalDate.now())) {
-            if (!isAppointment) {
+        LocalDate today = LocalDate.now(IST);
+        if (type == LeaveType.SICK) {
+
+            if (startDate.isBefore(today)) {
+                // Past date: sick leave for past days is not allowed
                 throw new BadRequestException(
-                        "Sick leave cannot be applied for future dates " +
-                                "unless it is a pre-booked medical appointment. " +
-                                "Please set isAppointment=true and attach a document.");
+                        "Sick leave cannot be applied for past dates.");
             }
-            if (files == null || files.length == 0) {
-                throw new BadRequestException(
-                        "An attachment (appointment proof) is required " +
-                                "for future sick leave applications.");
+
+            if (startDate.isAfter(today)) {
+                // Future date: only allowed as a pre-booked appointment with proof
+                if (!isAppointment) {
+                    throw new BadRequestException(
+                            "Sick leave cannot be applied for future dates " +
+                                    "unless it is a pre-booked medical appointment. " +
+                                    "Please set isAppointment=true and attach a document.");
+                }
+                if (files == null || files.length == 0) {
+                    throw new BadRequestException(
+                            "An attachment (appointment proof) is required " +
+                                    "for future sick leave applications.");
+                }
             }
+
+            // startDate == today: always allowed, no extra checks needed
+
         } else {
-            if (startDate.isBefore(LocalDate.now())) {
+            // All other leave types: cannot apply for past dates
+            if (startDate.isBefore(today)) {
                 throw new BadRequestException(
-                        "Leave cannot be applied for past dates");
+                        "Leave cannot be applied for past dates.");
             }
         }
 

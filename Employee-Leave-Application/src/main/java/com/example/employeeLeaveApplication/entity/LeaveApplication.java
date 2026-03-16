@@ -102,6 +102,9 @@ public class LeaveApplication {
     @Column(name = "manager_decided_at")
     private LocalDateTime managerDecidedAt;
 
+    @Column(name = "hr_id")
+    private Long hrId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "hr_decision")
     private LeaveStatus hrDecision;
@@ -168,6 +171,22 @@ public class LeaveApplication {
     }
 
     // ── Getters & Setters ──────────────────────────────────────────
+
+    public Boolean getAppointment() {
+        return isAppointment;
+    }
+
+    public void setAppointment(Boolean appointment) {
+        isAppointment = appointment;
+    }
+
+    public Long getHrId() {
+        return hrId;
+    }
+
+    public void setHrId(Long hrId) {
+        this.hrId = hrId;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
