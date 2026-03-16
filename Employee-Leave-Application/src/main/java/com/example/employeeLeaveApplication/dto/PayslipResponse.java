@@ -1,24 +1,31 @@
 package com.example.employeeLeaveApplication.dto;
 
+import java.math.BigDecimal;
+
 public class PayslipResponse {
 
     private Long employeeId;
+    private Integer month;
+    private Integer year;
 
-    private String month;
+    private BigDecimal basicSalary;
+    private BigDecimal hra;
+    private BigDecimal conveyance;
+    private BigDecimal medical;
+    private BigDecimal otherAllowance;
 
-    private double basicSalary;
+    private BigDecimal bonus;
+    private BigDecimal incentive;
+    private BigDecimal stipend;
 
-    private double hra;
+    private BigDecimal pf;
+    private BigDecimal esi;
+    private BigDecimal professionalTax;
+    private BigDecimal tds;
+    private BigDecimal lop;
 
-    private double transport;
-
-    private double pf;
-
-    private double tax;
-
-    private double lop;
-
-    private double netSalary;
+    private BigDecimal grossSalary;
+    private BigDecimal netSalary;
 
     // getters setters
 
@@ -30,67 +37,139 @@ public class PayslipResponse {
         this.employeeId = employeeId;
     }
 
-    public String getMonth() {
+    public Integer getMonth() {
         return month;
     }
 
-    public void setMonth(String month) {
+    public void setMonth(Integer month) {
         this.month = month;
     }
 
-    public double getBasicSalary() {
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public BigDecimal getBasicSalary() {
         return basicSalary;
     }
 
-    public void setBasicSalary(double basicSalary) {
+    public void setBasicSalary(BigDecimal basicSalary) {
         this.basicSalary = basicSalary;
     }
 
-    public double getHra() {
+    public BigDecimal getHra() {
         return hra;
     }
 
-    public void setHra(double hra) {
+    public void setHra(BigDecimal hra) {
         this.hra = hra;
     }
 
-    public double getTransport() {
-        return transport;
+    public BigDecimal getConveyance() {
+        return conveyance;
     }
 
-    public void setTransport(double transport) {
-        this.transport = transport;
+    public void setConveyance(BigDecimal conveyance) {
+        this.conveyance = conveyance;
     }
 
-    public double getPf() {
+    public BigDecimal getMedical() {
+        return medical;
+    }
+
+    public void setMedical(BigDecimal medical) {
+        this.medical = medical;
+    }
+
+    public BigDecimal getOtherAllowance() {
+        return otherAllowance;
+    }
+
+    public void setOtherAllowance(BigDecimal otherAllowance) {
+        this.otherAllowance = otherAllowance;
+    }
+
+    public BigDecimal getBonus() {
+        return bonus;
+    }
+
+    public void setBonus(BigDecimal bonus) {
+        this.bonus = bonus;
+    }
+
+    public BigDecimal getIncentive() {
+        return incentive;
+    }
+
+    public void setIncentive(BigDecimal incentive) {
+        this.incentive = incentive;
+    }
+
+    public BigDecimal getStipend() {
+        return stipend;
+    }
+
+    public void setStipend(BigDecimal stipend) {
+        this.stipend = stipend;
+    }
+
+    public BigDecimal getPf() {
         return pf;
     }
 
-    public void setPf(double pf) {
+    public void setPf(BigDecimal pf) {
         this.pf = pf;
     }
 
-    public double getTax() {
-        return tax;
+    public BigDecimal getEsi() {
+        return esi;
     }
 
-    public void setTax(double tax) {
-        this.tax = tax;
+    public void setEsi(BigDecimal esi) {
+        this.esi = esi;
     }
 
-    public double getLop() {
+    public BigDecimal getProfessionalTax() {
+        return professionalTax;
+    }
+
+    public void setProfessionalTax(BigDecimal professionalTax) {
+        this.professionalTax = professionalTax;
+    }
+
+    public BigDecimal getTds() {
+        return tds;
+    }
+
+    public void setTds(BigDecimal tds) {
+        this.tds = tds;
+    }
+
+    public BigDecimal getLop() {
         return lop;
     }
 
-    public void setLop(double lop) {
+    public void setLop(BigDecimal lop) {
         this.lop = lop;
     }
 
-    public double getNetSalary() {
+    public BigDecimal getGrossSalary() {
+        return grossSalary;
+    }
+
+    public void setGrossSalary(BigDecimal grossSalary) {
+        this.grossSalary = grossSalary;
+    }
+
+    public BigDecimal getNetSalary() {
         return netSalary;
     }
 
-    public void setNetSalary(double netSalary) {
+    public void setNetSalary(BigDecimal netSalary) {
         this.netSalary = netSalary;
     }
 }

@@ -5,5 +5,6 @@ public enum Role {
     TEAM_LEADER,
     MANAGER,
     HR,
-    ADMIN
+    ADMIN,
+    CFO;
 }

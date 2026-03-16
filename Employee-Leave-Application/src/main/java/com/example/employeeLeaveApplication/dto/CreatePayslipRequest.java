@@ -1,70 +1,30 @@
-package com.example.employeeLeaveApplication.entity;
-
-import com.example.employeeLeaveApplication.enums.PayrollStatus;
-import jakarta.persistence.*;
+package com.example.employeeLeaveApplication.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
-@Entity
-@Table(name = "payslip",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id","year","month"}))
-public class Payslip {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class CreatePayslipRequest {
 
     private Long employeeId;
-
     private Integer month;
-
     private Integer year;
 
     private BigDecimal basicSalary;
-
     private BigDecimal hra;
-
     private BigDecimal conveyance;
-
     private BigDecimal medical;
-
     private BigDecimal otherAllowance;
 
     private BigDecimal bonus;
-
     private BigDecimal incentive;
-
     private BigDecimal stipend;
 
-    private BigDecimal grossSalary;
-
     private BigDecimal pf;
-
     private BigDecimal esi;
-
     private BigDecimal professionalTax;
-
     private BigDecimal tds;
-
     private BigDecimal lop;
 
-    private BigDecimal netSalary;
-
-    private LocalDate generatedDate;
-
-    @Enumerated(EnumType.STRING)
-    private PayrollStatus status;
-
     // getters setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public Long getEmployeeId() {
         return employeeId;
@@ -154,14 +114,6 @@ public class Payslip {
         this.stipend = stipend;
     }
 
-    public BigDecimal getGrossSalary() {
-        return grossSalary;
-    }
-
-    public void setGrossSalary(BigDecimal grossSalary) {
-        this.grossSalary = grossSalary;
-    }
-
     public BigDecimal getPf() {
         return pf;
     }
@@ -200,29 +152,5 @@ public class Payslip {
 
     public void setLop(BigDecimal lop) {
         this.lop = lop;
-    }
-
-    public BigDecimal getNetSalary() {
-        return netSalary;
-    }
-
-    public void setNetSalary(BigDecimal netSalary) {
-        this.netSalary = netSalary;
-    }
-
-    public LocalDate getGeneratedDate() {
-        return generatedDate;
-    }
-
-    public void setGeneratedDate(LocalDate generatedDate) {
-        this.generatedDate = generatedDate;
-    }
-
-    public PayrollStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PayrollStatus status) {
-        this.status = status;
     }
 }
