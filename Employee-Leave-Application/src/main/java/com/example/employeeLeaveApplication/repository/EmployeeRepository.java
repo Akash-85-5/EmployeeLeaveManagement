@@ -28,8 +28,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     List<Employee> findByActiveTrue();
 
-    @Query("SELECT e FROM Employee e WHERE e.managerId = :managerId AND e.active = true")
-    List<Employee> findActiveTeamMembers(@Param("managerId") Long managerId);
+    @Query("SELECT e FROM Employee e WHERE e.managerId = :id or e.teamLeaderId = :id AND e.active = true")
+    List<Employee> findActiveTeamMembers(@Param("id") Long id);
 
     @Query("SELECT e FROM Employee e WHERE e.active = true")
     List<Employee> findActiveEmployees();

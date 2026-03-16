@@ -1,4 +1,3 @@
-// src/main/java/com/example/employeeLeaveApplication/controller/LeaveApprovalController.java
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.BulkLeaveDecisionRequest;
@@ -23,11 +22,8 @@ public class LeaveApprovalController {
         this.leaveApprovalService = leaveApprovalService;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // PENDING LEAVES — per role
-    // ═══════════════════════════════════════════════════════════════
+    // ── Pending per role ──────────────────────────────────────────
 
-    // Team Leader: pending leaves waiting for TL approval
     @GetMapping("/pending/team-leader/{teamLeaderId}")
     @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForTeamLeader(
@@ -39,7 +35,6 @@ public class LeaveApprovalController {
                 leaveApprovalService.getPendingLeavesForTeamLeader(teamLeaderId, pageable));
     }
 
-    // Manager: pending leaves waiting for Manager approval
     @GetMapping("/pending/manager/{managerId}")
     @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForManager(
@@ -51,20 +46,16 @@ public class LeaveApprovalController {
                 leaveApprovalService.getPendingLeavesForManager(managerId, pageable));
     }
 
-    // HR: pending leaves waiting for HR approval
     @GetMapping("/pending/hr")
     @PreAuthorize("hasRole('HR')")
     public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForHr(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(
-                leaveApprovalService.getPendingLeavesForHr(pageable));
+        return ResponseEntity.ok(leaveApprovalService.getPendingLeavesForHr(pageable));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CORE DECISION — TL / Manager / HR all use this
-    // ═══════════════════════════════════════════════════════════════
+    // ── Core decision ─────────────────────────────────────────────
 
     @PatchMapping("/decision")
     @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
@@ -73,10 +64,6 @@ public class LeaveApprovalController {
         return ResponseEntity.ok("Decision recorded: " + request.getDecision());
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // CONVENIENCE APPROVE / REJECT
-    // ═══════════════════════════════════════════════════════════════
-
     @PatchMapping("/{leaveId}/approve")
     @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveLeave(
@@ -84,7 +71,7 @@ public class LeaveApprovalController {
             @RequestParam Long approverId,
             @RequestParam(required = false) String comments) {
         leaveApprovalService.approveLeave(leaveId, approverId, comments);
-        return ResponseEntity.ok("Leave approved at current level successfully");
+        return ResponseEntity.ok("Leave approved successfully");
     }
 
     @PatchMapping("/{leaveId}/reject")
@@ -97,9 +84,7 @@ public class LeaveApprovalController {
         return ResponseEntity.ok("Leave rejected successfully");
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // BULK DECISIONS
-    // ═══════════════════════════════════════════════════════════════
+    // ── Bulk decisions ────────────────────────────────────────────
 
     @PostMapping("/manager/bulk-decision")
     @PreAuthorize("hasRole('MANAGER')")
@@ -115,44 +100,15 @@ public class LeaveApprovalController {
         return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, true));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // LOP CONFIRMATION — NEW
-    // Employee confirms or cancels leave when LOP is involved
-    // POST /api/leave-approvals/{leaveId}/lop-confirmation
-    //
-    // Called when leave status = PENDING_LOP_CONFIRMATION
-    // Employee receives notification with this endpoint to respond
-    //
-    // confirmed = true  → Accept LOP, leave becomes APPROVED
-    // confirmed = false → Cancel leave, no LOP applied
-    // ═══════════════════════════════════════════════════════════════
-
-    @PostMapping("/{leaveId}/lop-confirmation")
-    @PreAuthorize("hasRole('EMPLOYEE') and #empId == authentication.principal.user.id")
-    public ResponseEntity<String> lopConfirmation(
-            @PathVariable Long leaveId,
-            @RequestParam Long empId,
-            @RequestParam boolean confirmed) {
-
-        leaveApprovalService.handleLopConfirmation(leaveId, empId, confirmed);
-
-        return ResponseEntity.ok(
-                confirmed
-                        ? "Leave approved. Loss of pay has been applied to your salary."
-                        : "Leave cancelled successfully. No loss of pay applied."
-        );
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // HISTORY & AUDIT
-    // ═══════════════════════════════════════════════════════════════
+    // ── History & audit ───────────────────────────────────────────
 
     @GetMapping("/history/{leaveId}")
     public ResponseEntity<Page<LeaveApproval>> getApprovalHistory(
             @PathVariable Long leaveId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(leaveApprovalService.getApprovalHistory(leaveId, PageRequest.of(page, size)));
+        return ResponseEntity.ok(
+                leaveApprovalService.getApprovalHistory(leaveId, PageRequest.of(page, size)));
     }
 
     @GetMapping("/my-decisions/{approverId}")
@@ -161,7 +117,8 @@ public class LeaveApprovalController {
             @PathVariable Long approverId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(leaveApprovalService.getManagerDecisions(approverId, PageRequest.of(page, size)));
+        return ResponseEntity.ok(
+                leaveApprovalService.getManagerDecisions(approverId, PageRequest.of(page, size)));
     }
 
     @GetMapping("/hr/escalated")

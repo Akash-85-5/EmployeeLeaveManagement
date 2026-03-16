@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.LeaveBalanceResponse;
 import com.example.employeeLeaveApplication.service.LeaveBalanceService;
+import com.example.employeeLeaveApplication.service.LossOfPayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -11,15 +12,18 @@ import org.springframework.web.bind.annotation.*;
 public class LeaveBalanceController {
 
     private final LeaveBalanceService balanceService;
+    private final LossOfPayService    lossOfPayService;
 
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(LeaveBalanceController.class);
 
-    public LeaveBalanceController(LeaveBalanceService balanceService) {
-        this.balanceService = balanceService;
+    public LeaveBalanceController(LeaveBalanceService balanceService,
+                                  LossOfPayService lossOfPayService) {
+        this.balanceService   = balanceService;
+        this.lossOfPayService = lossOfPayService;
     }
 
-    // ✅ FIXED: Added HR, ADMIN, MANAGER, TEAM_LEADER
+    // ── Leave balance (all types) ─────────────────────────────────
     @GetMapping("/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
@@ -29,17 +33,15 @@ public class LeaveBalanceController {
             @RequestParam Integer year) {
 
         log.info("📊 [API] GET balance: employee={}, year={}", employeeId, year);
-
         try {
-            LeaveBalanceResponse response = balanceService.getBalance(employeeId, year);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(balanceService.getBalance(employeeId, year));
         } catch (Exception e) {
             log.error("❌ [API] Error getting balance: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
 
-    // ✅ FIXED: Added HR, ADMIN, MANAGER, TEAM_LEADER
+    // ── LOP total for a year (manual CFO entry, read-only here) ───
     @GetMapping("/lop/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
@@ -49,10 +51,9 @@ public class LeaveBalanceController {
             @RequestParam Integer year) {
 
         log.info("💰 [API] GET LOP: employee={}, year={}", employeeId, year);
-
         try {
-            Double lop = balanceService.getTotalLossOfPayPercentage(employeeId, year);
-            return ResponseEntity.ok(lop);
+            return ResponseEntity.ok(
+                    lossOfPayService.getTotalLossOfPayPercentage(employeeId, year));
         } catch (Exception e) {
             log.error("❌ [API] Error getting LOP: {}", e.getMessage());
             return ResponseEntity.badRequest().build();

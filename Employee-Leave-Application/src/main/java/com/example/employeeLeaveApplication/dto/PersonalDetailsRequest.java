@@ -7,6 +7,8 @@ import java.time.LocalDate;
 
 public class PersonalDetailsRequest {
 
+    private String firstName;
+    private String lastName;
     private String contactNumber;
     private Gender gender;
     private String aadharNumber;

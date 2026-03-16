@@ -11,7 +11,6 @@ import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.service.LeaveApplicationService;
 import com.example.employeeLeaveApplication.service.LeaveAttachmentService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.PageRequest;
@@ -37,18 +36,20 @@ import java.util.List;
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
-    private final LeaveAttachmentService leaveAttachmentService;
-    private final EmployeeRepository employeeRepository;
+    private final LeaveAttachmentService  leaveAttachmentService;
+    private final EmployeeRepository      employeeRepository;
+
+    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
     public LeaveApplicationController(LeaveApplicationService leaveApplicationService,
                                       LeaveAttachmentService leaveAttachmentService,
                                       EmployeeRepository employeeRepository) {
         this.leaveApplicationService = leaveApplicationService;
-        this.leaveAttachmentService = leaveAttachmentService;
-        this.employeeRepository = employeeRepository;
+        this.leaveAttachmentService  = leaveAttachmentService;
+        this.employeeRepository      = employeeRepository;
     }
-    private static final ZoneId IST = ZoneId.of("Asia/Kolkata");
 
+    // ── Apply leave ───────────────────────────────────────────────
     @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LeaveResponse> applyLeave(
             @RequestParam Long employeeId,
@@ -60,14 +61,13 @@ public class LeaveApplicationController {
             @RequestParam(required = false) String startDateHalfDayType,
             @RequestParam(required = false) String endDateHalfDayType,
             @RequestParam(defaultValue = "false") boolean isAppointment,
-            @RequestParam(defaultValue = "false") boolean confirmLossOfPay,
             @RequestParam(value = "files", required = false) MultipartFile[] files) {
 
         LeaveType type;
         try {
             type = LeaveType.valueOf(leaveType.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid leave type");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid leave type: " + leaveType);
         }
 
         if (startDate == null) {
@@ -76,6 +76,34 @@ public class LeaveApplicationController {
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        LocalDate today = LocalDate.now(IST);
+
+        // ── Date rules per leave type ─────────────────────────────
+        if (type == LeaveType.SICK) {
+            if (startDate.isBefore(today)) {
+                throw new BadRequestException("Sick leave cannot be applied for past dates.");
+            }
+            if (startDate.isAfter(today)) {
+                if (!isAppointment) {
+                    throw new BadRequestException(
+                            "Sick leave for future dates requires isAppointment=true "
+                                    + "and an attachment as proof.");
+                }
+                if (files == null || files.length == 0) {
+                    throw new BadRequestException(
+                            "An attachment (appointment proof) is required for future sick leave.");
+                }
+            }
+        } else if (type == LeaveType.MATERNITY || type == LeaveType.PATERNITY) {
+            // Maternity/Paternity can be applied for future dates (planned)
+            // No past-date restriction here; service validates allocation
+        } else {
+            // ANNUAL_LEAVE, COMP_OFF: no past dates
+            if (startDate.isBefore(today)) {
+                throw new BadRequestException("Leave cannot be applied for past dates.");
+            }
+        }
 
         LeaveApplication leave = new LeaveApplication();
         leave.setEmployeeId(employeeId);
@@ -86,13 +114,13 @@ public class LeaveApplicationController {
         leave.setReason(reason);
         leave.setIsAppointment(isAppointment);
 
+        // ── Half-day parsing (logic unchanged) ───────────────────
         if (startDateHalfDayType != null && !startDateHalfDayType.isBlank()) {
             try {
                 leave.setStartDateHalfDayType(
                         HalfDayType.valueOf(startDateHalfDayType.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException(
-                        "Invalid startDateHalfDayType: " + startDateHalfDayType);
+                throw new BadRequestException("Invalid startDateHalfDayType: " + startDateHalfDayType);
             }
         }
         if (endDateHalfDayType != null && !endDateHalfDayType.isBlank()) {
@@ -100,70 +128,31 @@ public class LeaveApplicationController {
                 leave.setEndDateHalfDayType(
                         HalfDayType.valueOf(endDateHalfDayType.toUpperCase()));
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException(
-                        "Invalid endDateHalfDayType: " + endDateHalfDayType);
+                throw new BadRequestException("Invalid endDateHalfDayType: " + endDateHalfDayType);
             }
         }
-
+        // Backward-compatible: if only halfDayType is provided
         if (halfDayType != null && !halfDayType.isBlank()
                 && leave.getStartDateHalfDayType() == null
                 && leave.getEndDateHalfDayType() == null) {
             try {
-                leave.setStartDateHalfDayType(
-                        HalfDayType.valueOf(halfDayType.toUpperCase()));
-                leave.setHalfDayType(HalfDayType.valueOf(halfDayType.toUpperCase()));
+                HalfDayType hdt = HalfDayType.valueOf(halfDayType.toUpperCase());
+                leave.setStartDateHalfDayType(hdt);
+                leave.setHalfDayType(hdt);
             } catch (IllegalArgumentException e) {
                 throw new BadRequestException("Invalid half day type: " + halfDayType);
             }
         }
 
-        LocalDate today = LocalDate.now(IST);
-        if (type == LeaveType.SICK) {
+        LeaveResponse response = leaveApplicationService.applyLeave(leave);
 
-            if (startDate.isBefore(today)) {
-                // Past date: sick leave for past days is not allowed
-                throw new BadRequestException(
-                        "Sick leave cannot be applied for past dates.");
-            }
-
-            if (startDate.isAfter(today)) {
-                // Future date: only allowed as a pre-booked appointment with proof
-                if (!isAppointment) {
-                    throw new BadRequestException(
-                            "Sick leave cannot be applied for future dates " +
-                                    "unless it is a pre-booked medical appointment. " +
-                                    "Please set isAppointment=true and attach a document.");
-                }
-                if (files == null || files.length == 0) {
-                    throw new BadRequestException(
-                            "An attachment (appointment proof) is required " +
-                                    "for future sick leave applications.");
-                }
-            }
-
-            // startDate == today: always allowed, no extra checks needed
-
-        } else {
-            // All other leave types: cannot apply for past dates
-            if (startDate.isBefore(today)) {
-                throw new BadRequestException(
-                        "Leave cannot be applied for past dates.");
-            }
-        }
-
-        LeaveResponse response = leaveApplicationService.applyLeave(leave, confirmLossOfPay);
-
-        if (response.getWarning() != null && response.getLeaveApplication() == null) {
-            return ResponseEntity.ok(response);
-        }
-
-        if (files != null && files.length > 0) {
+        // Upload attachments if any
+        if (response.getLeaveApplication() != null && files != null && files.length > 0) {
             Long leaveId = response.getLeaveApplication().getId();
             try {
                 leaveAttachmentService.uploadAttachments(leaveId, employeeId, files);
             } catch (Exception e) {
-                response.setWarning("Leave applied successfully but file upload failed: "
-                        + e.getMessage());
+                response.setWarning("Leave applied but file upload failed: " + e.getMessage());
             }
         }
 
@@ -172,39 +161,32 @@ public class LeaveApplicationController {
 
     // ── Get attachments for a leave ───────────────────────────────
     @GetMapping("/{leaveId}/attachments")
-    public ResponseEntity<List<LeaveAttachment>> getAttachments(
-            @PathVariable Long leaveId) {
+    public ResponseEntity<List<LeaveAttachment>> getAttachments(@PathVariable Long leaveId) {
         return ResponseEntity.ok(leaveAttachmentService.getAttachments(leaveId));
     }
 
-    // ── Download attachment file ──────────────────────────────────
+    // ── Download attachment ───────────────────────────────────────
     @GetMapping("/attachments/download/{filename}")
-    public ResponseEntity<Resource> downloadAttachment(
-            @PathVariable String filename) {
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable String filename) {
         try {
             Path filePath = leaveAttachmentService.getFilePath(filename);
             Resource resource = new UrlResource(filePath.toUri());
-
             if (!resource.exists()) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
             }
-
             String contentType = Files.probeContentType(filePath);
             if (contentType == null) contentType = "application/octet-stream";
-
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=\"" + resource.getFilename() + "\"")
                     .body(resource);
-
         } catch (Exception e) {
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file");
         }
     }
 
-    // ── Delete an attachment ──────────────────────────────────────
+    // ── Delete attachment ─────────────────────────────────────────
     @DeleteMapping("/attachments/{attachmentId}")
     public ResponseEntity<String> deleteAttachment(
             @PathVariable Long attachmentId,
@@ -219,7 +201,7 @@ public class LeaveApplicationController {
         return leaveApplicationService.getLeaveById(id);
     }
 
-    // ── Get employee leaves ───────────────────────────────────────
+    // ── Get employee's leaves ─────────────────────────────────────
     @GetMapping("/employee/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")
     public List<LeaveApplication> getEmployeeLeaves(
@@ -235,7 +217,7 @@ public class LeaveApplicationController {
         return leaveApplicationService.getLeavesByEmployee(employeeId, pageable);
     }
 
-    // ── Update leave ──────────────────────────────────────────────
+    // ── Update leave (before approval) ───────────────────────────
     @PutMapping("/{id}")
     public LeaveResponse updateLeave(
             @PathVariable Long id,
