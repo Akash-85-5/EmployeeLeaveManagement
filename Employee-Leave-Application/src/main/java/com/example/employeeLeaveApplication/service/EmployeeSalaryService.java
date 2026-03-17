@@ -4,6 +4,7 @@ import com.example.employeeLeaveApplication.entity.EmployeeSalary;
 import com.example.employeeLeaveApplication.repository.EmployeeSalaryRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -28,12 +29,15 @@ public class EmployeeSalaryService {
             throw new RuntimeException("Basic salary is required");
         }
 
+        if (salary.getBasicSalary().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("Basic salary cannot be negative");
+        }
+
         // If effective date not provided → today
         if (salary.getEffectiveFrom() == null) {
             salary.setEffectiveFrom(LocalDate.now());
         }
 
-        // Check if salary already exists for same employee and date
         Optional<EmployeeSalary> existing =
                 repository.findByEmployeeIdAndEffectiveFrom(
                         salary.getEmployeeId(),
@@ -42,24 +46,32 @@ public class EmployeeSalaryService {
 
         if (existing.isPresent()) {
 
-            // UPDATE existing salary
             EmployeeSalary existingSalary = existing.get();
+
             existingSalary.setBasicSalary(salary.getBasicSalary());
 
             return repository.save(existingSalary);
         }
 
-        // INSERT new salary record
         return repository.save(salary);
     }
 
     // Salary history
     public List<EmployeeSalary> getSalaryHistory(Long employeeId) {
 
-        return repository.findByEmployeeIdOrderByEffectiveFromDesc(employeeId);    }
+        if (employeeId == null) {
+            throw new RuntimeException("Employee ID is required");
+        }
+
+        return repository.findByEmployeeIdOrderByEffectiveFromDesc(employeeId);
+    }
 
     // Current salary
     public EmployeeSalary getCurrentSalary(Long employeeId) {
+
+        if (employeeId == null) {
+            throw new RuntimeException("Employee ID is required");
+        }
 
         return repository
                 .findEffectiveSalary(employeeId, LocalDate.now())

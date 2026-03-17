@@ -14,21 +14,24 @@ public class PayrollController {
         this.payrollService = payrollService;
     }
 
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasRole('CFO')")
     @PostMapping("/generate")
     public String generatePayroll(@RequestParam Integer year,
-                                  @RequestParam Integer month) {
+                                  @RequestParam Integer month){
 
-        payrollService.generatePayroll(year, month);
+        payrollService.generatePayroll(year,month);
+
         return "Payroll generated successfully";
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/mark-paid")
-    public String markPaid(@RequestParam Integer year,
-                           @RequestParam Integer month) {
 
-        payrollService.markPayrollPaid(year, month);
-        return "Payroll marked as PAID";
+    @PreAuthorize("hasRole('CFO')")
+    @PostMapping("/prepare")
+    public String preparePayroll(@RequestParam Integer year,
+                                 @RequestParam Integer month){
+
+        payrollService.preparePayroll(year,month);
+
+        return "Payroll prepared from previous month";
     }
 }

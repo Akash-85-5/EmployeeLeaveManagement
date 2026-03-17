@@ -39,10 +39,32 @@ public class DashboardService {
     private final LossOfPayRecordRepository lopRepository;
     private final ODRequestRepository odRepository;
     private final AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository;
+    private final EmployeePersonalDetailsRepository employeePersonalDetailsRepository;
 
     // ═══════════════════════════════════════════════════════════════
     // EMPLOYEE DASHBOARD
     // ═══════════════════════════════════════════════════════════════
+
+    public List<TeamMember> getTeamMembers(Long id) {
+        log.info("👥 [DASHBOARD-MANAGER] Getting team members for manager: {}", id);
+
+        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(id);
+
+        return teamMembers.stream().map(member -> {
+            TeamMember dto = new TeamMember();
+            dto.setEmployeeId(member.getId());
+            dto.setEmployeeName(member.getName());
+
+
+            employeePersonalDetailsRepository.findByEmployeeId(member.getId())
+                    .ifPresent(details -> {
+                        dto.setDesignation(details.getDesignation());
+                        dto.setSkills(details.getSkillSet());
+                    });
+
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
     public EmployeeDashboardResponse getDashboard(Long employeeId) {
 
@@ -243,9 +265,9 @@ public class DashboardService {
         return balances;
     }
 
-    public List<TeamMemberBalance> getTeamMembersOnLeaveToday(Long managerId) {
+    public List<TeamMemberBalance> getTeamMembersOnLeaveToday(Long id) {
         LocalDate today = LocalDate.now();
-        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
+        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(id);
         List<TeamMemberBalance> onLeave = new ArrayList<>();
 
         for (Employee member : teamMembers) {

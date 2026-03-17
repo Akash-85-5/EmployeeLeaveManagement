@@ -37,6 +37,7 @@ public class PayslipPdfService {
             document.add(new Paragraph("Professional Tax: " + payslip.getProfessionalTax()));
             document.add(new Paragraph("ESI Deduction: " + payslip.getEsi()));
             document.add(new Paragraph("LOP Deduction: " + payslip.getLop()));
+            document.add(new Paragraph("Variable Pay Deduction: " + payslip.getVariablePay()));
 
             document.add(new Paragraph("Net Salary: " + payslip.getNetSalary()));
 

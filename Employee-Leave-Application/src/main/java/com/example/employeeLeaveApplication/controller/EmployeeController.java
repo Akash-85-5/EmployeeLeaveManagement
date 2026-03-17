@@ -57,7 +57,7 @@ public class EmployeeController {
     // ── Existing endpoints ────────────────────────────────────────
 
     @GetMapping("/all")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('HR','CFO')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -79,7 +79,12 @@ public class EmployeeController {
         return employeeService.getTeamMembers(managerId);
     }
 
-    // ==================== GET TEAM MEMBERS — TEAM LEADER ====================
+    // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
+    @GetMapping("/profile/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
+        return employeeService.getProfile(employeeId);
+    }
 
     @GetMapping("/teamleader/{teamLeaderId}/team")
     @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
