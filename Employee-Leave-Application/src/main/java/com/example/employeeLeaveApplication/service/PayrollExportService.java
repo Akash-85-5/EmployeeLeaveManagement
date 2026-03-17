@@ -1,6 +1,7 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.entity.Payslip;
+import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,11 @@ public class PayrollExportService {
     }
 
     public List<Payslip> getMonthlyPayroll(Integer year, Integer month) {
-        return payslipRepository.findByYearAndMonth(year, month);
+
+        return payslipRepository.findByYearAndMonthAndStatusNot(
+                year,
+                month,
+                PayrollStatus.DELETED
+        );
     }
 }
