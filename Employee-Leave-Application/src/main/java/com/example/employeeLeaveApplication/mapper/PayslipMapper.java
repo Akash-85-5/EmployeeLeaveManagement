@@ -31,6 +31,8 @@ public class PayslipMapper {
 
         r.setGrossSalary(p.getGrossSalary());
         r.setNetSalary(p.getNetSalary());
+        r.setLopDays(p.getLopDays());
+        r.setVariablePay(p.getVariablePay());
 
         return r;
     }

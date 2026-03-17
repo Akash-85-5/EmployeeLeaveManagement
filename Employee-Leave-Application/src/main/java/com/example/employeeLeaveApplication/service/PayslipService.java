@@ -3,9 +3,11 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.dto.CreatePayslipRequest;
 import com.example.employeeLeaveApplication.dto.PayslipResponse;
 import com.example.employeeLeaveApplication.dto.YearlySummaryResponse;
+import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.mapper.PayslipMapper;
+import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
@@ -19,11 +21,15 @@ public class PayslipService {
 
     private final PayslipRepository payslipRepository;
     private final PayslipPdfService pdfService;
+    private final LossOfPayRecordRepository lopRepository;
 
     public PayslipService(PayslipRepository payslipRepository,
-                          PayslipPdfService pdfService) {
+                          PayslipPdfService pdfService,
+                          LossOfPayRecordRepository lopRepository
+                          ) {
         this.payslipRepository = payslipRepository;
         this.pdfService = pdfService;
+        this.lopRepository = lopRepository;
     }
 
     private BigDecimal safe(BigDecimal v){
@@ -82,6 +88,7 @@ public class PayslipService {
         p.setProfessionalTax(safe(req.getProfessionalTax()));
         p.setTds(safe(req.getTds()));
         p.setLop(safe(req.getLop()));
+        p.setVariablePay(safe(req.getVariablePay()));
 
         calculatePayroll(p);
 
@@ -111,6 +118,19 @@ public class PayslipService {
         p.setProfessionalTax(safe(req.getProfessionalTax()));
         p.setTds(safe(req.getTds()));
         p.setLop(safe(req.getLop()));
+        p.setVariablePay(safe(req.getVariablePay()));
+
+        Optional<LossOfPayRecord> lopRecord =
+                lopRepository.findByEmployeeIdAndYearAndMonth(
+                        req.getEmployeeId(),
+                        req.getYear(),
+                        req.getMonth());
+
+        if(lopRecord.isPresent()){
+            p.setLopDays(lopRecord.get().getExcessDays());
+        }else{
+            p.setLopDays(0.0);
+        }
 
         calculatePayroll(p);
     }
@@ -118,21 +138,22 @@ public class PayslipService {
     private void calculatePayroll(Payslip p){
 
         BigDecimal gross =
-                p.getBasicSalary()
-                        .add(p.getHra())
-                        .add(p.getConveyance())
-                        .add(p.getMedical())
-                        .add(p.getOtherAllowance())
-                        .add(p.getBonus())
-                        .add(p.getIncentive())
-                        .add(p.getStipend());
+                safe(p.getBasicSalary())
+                        .add(safe(p.getHra()))
+                        .add(safe(p.getConveyance()))
+                        .add(safe(p.getMedical()))
+                        .add(safe(p.getOtherAllowance()))
+                        .add(safe(p.getBonus()))
+                        .add(safe(p.getIncentive()))
+                        .add(safe(p.getStipend()));
 
         BigDecimal deductions =
-                p.getPf()
-                        .add(p.getEsi())
-                        .add(p.getProfessionalTax())
-                        .add(p.getTds())
-                        .add(p.getLop());
+                safe(p.getPf())
+                        .add(safe(p.getEsi()))
+                        .add(safe(p.getProfessionalTax()))
+                        .add(safe(p.getTds()))
+                        .add(safe(p.getLop()))
+                        .add(safe(p.getVariablePay()));  // 🔥 ADDED HERE
 
         p.setGrossSalary(gross);
         p.setNetSalary(gross.subtract(deductions));

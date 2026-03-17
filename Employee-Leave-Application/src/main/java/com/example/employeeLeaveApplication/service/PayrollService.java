@@ -1,22 +1,30 @@
 package com.example.employeeLeaveApplication.service;
 
+import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
+import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PayrollService {
 
     private final PayslipRepository payslipRepository;
+    private final LossOfPayRecordRepository lopRepository;
 
-    public PayrollService(PayslipRepository payslipRepository){
+    public PayrollService(PayslipRepository payslipRepository,
+                          LossOfPayRecordRepository lopRepository){
         this.payslipRepository = payslipRepository;
+        this.lopRepository = lopRepository;
     }
 
+    // GENERATE PAYROLL
     public void generatePayroll(Integer year,Integer month){
 
         List<Payslip> payslips =
@@ -34,6 +42,7 @@ public class PayrollService {
         }
     }
 
+    // PREPARE PAYROLL
     public void preparePayroll(Integer year,Integer month){
 
         int previousMonth = month==1?12:month-1;
@@ -57,6 +66,7 @@ public class PayrollService {
             p.setYear(year);
             p.setMonth(month);
 
+            // COPY SALARY STRUCTURE
             p.setBasicSalary(prev.getBasicSalary());
             p.setHra(prev.getHra());
             p.setConveyance(prev.getConveyance());
@@ -71,7 +81,20 @@ public class PayrollService {
             p.setEsi(prev.getEsi());
             p.setProfessionalTax(prev.getProfessionalTax());
             p.setTds(prev.getTds());
-            p.setLop(prev.getLop());
+
+            // RESET LOP AMOUNT
+            p.setLop(BigDecimal.ZERO);
+
+            // FETCH LOP DAYS FROM LOP SERVICE
+            Optional<LossOfPayRecord> lop =
+                    lopRepository.findByEmployeeIdAndYearAndMonth(
+                            prev.getEmployeeId(), previousYear, previousMonth);
+
+            if(lop.isPresent()){
+                p.setLopDays(lop.get().getExcessDays());
+            }else{
+                p.setLopDays(0.0);
+            }
 
             p.setStatus(PayrollStatus.DRAFT);
 

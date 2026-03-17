@@ -22,7 +22,9 @@ public class PayslipResponse {
     private BigDecimal esi;
     private BigDecimal professionalTax;
     private BigDecimal tds;
+    private Double lopDays;
     private BigDecimal lop;
+    private BigDecimal variablePay;
 
     private BigDecimal grossSalary;
     private BigDecimal netSalary;
@@ -171,5 +173,21 @@ public class PayslipResponse {
 
     public void setNetSalary(BigDecimal netSalary) {
         this.netSalary = netSalary;
+    }
+
+    public Double getLopDays() {
+        return lopDays;
+    }
+
+    public void setLopDays(Double lopDays) {
+        this.lopDays = lopDays;
+    }
+
+    public BigDecimal getVariablePay() {
+        return variablePay;
+    }
+
+    public void setVariablePay(BigDecimal variablePay) {
+        this.variablePay = variablePay;
     }
 }

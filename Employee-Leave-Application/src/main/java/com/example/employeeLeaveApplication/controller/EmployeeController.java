@@ -32,7 +32,7 @@ public class EmployeeController {
 
     // ==================== GET ALL EMPLOYEES (WITH PAGINATION & FILTERS) - NEW ====================
     @GetMapping("/all")
-    @PreAuthorize("hasRole('HR')")
+    @PreAuthorize("hasAnyRole('HR','CFO')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,

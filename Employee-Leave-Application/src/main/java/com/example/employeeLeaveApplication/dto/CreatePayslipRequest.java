@@ -23,6 +23,7 @@ public class CreatePayslipRequest {
     private BigDecimal professionalTax;
     private BigDecimal tds;
     private BigDecimal lop;
+    private BigDecimal variablePay;
 
     // getters setters
 
@@ -152,5 +153,13 @@ public class CreatePayslipRequest {
 
     public void setLop(BigDecimal lop) {
         this.lop = lop;
+    }
+
+    public BigDecimal getVariablePay() {
+        return variablePay;
+    }
+
+    public void setVariablePay(BigDecimal variablePay) {
+        this.variablePay = variablePay;
     }
 }

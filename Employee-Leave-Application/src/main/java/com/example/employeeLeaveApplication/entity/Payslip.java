@@ -47,6 +47,8 @@ public class Payslip {
 
     private BigDecimal tds;
 
+    private Double lopDays;
+
     private BigDecimal lop;
 
     private BigDecimal netSalary;
@@ -55,6 +57,8 @@ public class Payslip {
 
     @Enumerated(EnumType.STRING)
     private PayrollStatus status;
+
+    private BigDecimal variablePay;
 
     // getters setters
 
@@ -224,5 +228,21 @@ public class Payslip {
 
     public void setStatus(PayrollStatus status) {
         this.status = status;
+    }
+
+    public Double getLopDays() {
+        return lopDays;
+    }
+
+    public void setLopDays(Double lopDays) {
+        this.lopDays = lopDays;
+    }
+
+    public BigDecimal getVariablePay() {
+        return variablePay;
+    }
+
+    public void setVariablePay(BigDecimal variablePay) {
+        this.variablePay = variablePay;
     }
 }
