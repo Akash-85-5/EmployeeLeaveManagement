@@ -145,13 +145,13 @@ public class DashboardController {
         }
     }
 
-    @GetMapping("/manager/team-on-leave/{managerId}")
-    @PreAuthorize("hasRole('MANAGER') " +
-            "and #managerId == authentication.principal.user.id")
+    @GetMapping("/team-on-leave/{id}")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('TEAM_LEADER') " +
+            "and #id == authentication.principal.user.id")
     public ResponseEntity<List<TeamMemberBalance>> getTeamMembersOnLeaveToday(
-            @PathVariable Long managerId) {
+            @PathVariable Long id) {
         return ResponseEntity.ok(
-                dashboardService.getTeamMembersOnLeaveToday(managerId));
+                dashboardService.getTeamMembersOnLeaveToday(id));
     }
 
     @GetMapping("/team-calendar/{id}")
@@ -224,6 +224,21 @@ public class DashboardController {
         return ResponseEntity.ok(
                 dashboardService.getCompanyWideStats(year));
     }
+    @GetMapping("/team-members/{Id}")
+    @PreAuthorize("hasAnyRole('MANAGER','TEAM_LEADER') " +
+            "and #Id == authentication.principal.user.id")
+    public ResponseEntity<List<TeamMember>> getTeamMembers(
+            @PathVariable Long Id) {
+        log.info("[API] GET team balances: manager={}",
+                Id);
+        try {
+            return ResponseEntity.ok(
+                    dashboardService.getTeamMembers(Id));
+        } catch (Exception e) {
+            log.error("[API] Error: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
 
     // ✅ UPDATED: Added hasRole('ADMIN') access too
     @GetMapping("/hr/low-balance")
@@ -283,8 +298,7 @@ public class DashboardController {
     }
 
     @GetMapping("/teamleader/{teamLeaderId}")
-    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id " +
-            "or hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id ")
     public ResponseEntity<TeamLeaderDashboardResponse> getTeamLeaderDashboard(
             @PathVariable Long teamLeaderId) {
         log.info("[API] GET team leader dashboard: {}", teamLeaderId);
