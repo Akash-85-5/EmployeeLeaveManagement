@@ -191,18 +191,18 @@ public class PayslipService {
         return PayslipMapper.toResponse(p);
     }
 
-    public ByteArrayInputStream downloadPayslip(Long employeeId,Integer year,Integer month){
+    public byte[] downloadPayslip(Long employeeId, Integer year, Integer month) {
 
-        Payslip p =
-                payslipRepository.findByEmployeeIdAndYearAndMonth(
-                                employeeId,year,month)
-                        .orElseThrow(() -> new RuntimeException("Payslip not found"));
+        Payslip p = payslipRepository
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new RuntimeException("Payslip not found"));
 
-        if(p.getStatus()!=PayrollStatus.GENERATED){
+        if (p.getStatus() != PayrollStatus.GENERATED) {
             throw new RuntimeException("Payslip not generated yet");
         }
 
-        return pdfService.generatePdf(p);
+        ByteArrayInputStream bis = pdfService.generatePdf(p);
+        return bis.readAllBytes(); // convert here itself
     }
 
     public YearlySummaryResponse yearlySummary(Long employeeId,Integer year){

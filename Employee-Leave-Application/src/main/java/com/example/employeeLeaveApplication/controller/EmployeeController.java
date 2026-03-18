@@ -79,12 +79,6 @@ public class EmployeeController {
         return employeeService.getTeamMembers(managerId);
     }
 
-    // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
-    @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
-        return employeeService.getProfile(employeeId);
-    }
 
     @GetMapping("/teamleader/{teamLeaderId}/team")
     @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")

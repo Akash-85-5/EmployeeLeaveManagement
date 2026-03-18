@@ -6,6 +6,8 @@ import com.example.employeeLeaveApplication.dto.YearlySummaryResponse;
 import com.example.employeeLeaveApplication.security.CustomUserDetails;
 import com.example.employeeLeaveApplication.service.PayslipPdfService;
 import com.example.employeeLeaveApplication.service.PayslipService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -53,7 +55,7 @@ public class PayslipController {
         return payslipService.getEmployeeHistory(employeeId, year);
     }
 
-    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER')")
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER','HR')")
     @GetMapping("/my/{year}/{month}")
     public PayslipResponse myPayslip(
             @PathVariable Integer year,
@@ -67,24 +69,25 @@ public class PayslipController {
                 user.getUser().getId(),year,month);
     }
 
-    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER')")
+    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER','HR')")
     @GetMapping("/download/{year}/{month}")
     public ResponseEntity<byte[]> download(
             @PathVariable Integer year,
             @PathVariable Integer month,
-            Authentication auth) throws Exception {
+            Authentication auth) {
 
         CustomUserDetails user =
                 (CustomUserDetails) auth.getPrincipal();
 
-        ByteArrayInputStream pdf =
-                payslipService.downloadPayslip(
-                        user.getUser().getId(),year,month);
+        byte[] pdf = payslipService.downloadPayslip(
+                user.getUser().getId(), year, month);
 
         return ResponseEntity.ok()
-                .header("Content-Disposition","attachment; filename=payslip.pdf")
-                .body(pdf.readAllBytes());
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=payslip.pdf")
+                .body(pdf);
     }
+
 
     @PreAuthorize("hasRole('CFO')")
     @DeleteMapping("/{employeeId}/{year}/{month}")
