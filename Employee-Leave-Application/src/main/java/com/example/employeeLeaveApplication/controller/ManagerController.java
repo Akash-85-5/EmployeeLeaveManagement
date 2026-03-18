@@ -28,7 +28,7 @@ public class ManagerController {
 
     // ✅ FIXED: Added hasRole('MANAGER') + HR/ADMIN can view too
     @GetMapping("/{managerId}/team-leaves/week")
-    @PreAuthorize("(hasRole('MANAGER') and #managerId == authentication.principal.user.id) " +
+    @PreAuthorize("(hasAnyRole('MANAGER','TEAM_LEADER') and #managerId == authentication.principal.user.id) " +
             "or hasRole('HR') or hasRole('ADMIN')")
     public List<LeaveApplication> getCurrentWeekTeamLeaves(
             @PathVariable Long managerId) {

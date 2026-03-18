@@ -11,14 +11,11 @@ import java.util.List;
 
 public interface ODRequestRepository extends JpaRepository<ODRequest, Long> {
     @Query("SELECT o FROM ODRequest o WHERE o.employeeId = :employeeId " +
-            "AND o.status NOT IN (com.example.employeeLeaveApplication.enums.ODStatus.REJECTED, " +
-            "com.example.employeeLeaveApplication.enums.ODStatus.CANCELLED) " +
-            "AND ((o.fromDate <= :toDate) AND (o.toDate >= :fromDate))")
-    List<ODRequest> findOverlappingODs(
-            @Param("employeeId") Long employeeId,
-            @Param("fromDate") LocalDate fromDate,
-            @Param("toDate") LocalDate toDate
-    );
+            "AND o.status NOT IN (ODStatus.REJECTED, " + "ODStatus.CANCELLED) " +
+            "AND ((o.startDate <= :toDate) AND (o.endDate >= :fromDate))")
+    List<ODRequest> findOverlappingODs(Long employeeId,
+                                       LocalDate fromDate,
+                                       LocalDate toDate);
 
     List<ODRequest> findByEmployeeId(Long employeeId);
 
@@ -28,7 +25,7 @@ public interface ODRequestRepository extends JpaRepository<ODRequest, Long> {
 SELECT o FROM ODRequest o
 JOIN Employee e ON o.employeeId = e.id
 WHERE e.teamLeaderId = :tlId
-AND o.status = com.example.employeeLeaveApplication.enums.ODStatus.PENDING_TEAM_LEADER
+AND o.status = ODStatus.PENDING_TEAM_LEADER
 """)
     List<ODRequest> findPendingForTeamLeader(Long tlId);
 
@@ -36,7 +33,7 @@ AND o.status = com.example.employeeLeaveApplication.enums.ODStatus.PENDING_TEAM_
 SELECT o FROM ODRequest o
 JOIN Employee e ON o.employeeId = e.id
 WHERE e.managerId = :managerId
-AND o.status = com.example.employeeLeaveApplication.enums.ODStatus.PENDING_MANAGER
+AND o.status = ODStatus.PENDING_MANAGER
 """)
     List<ODRequest> findPendingForManager(Long managerId);
 

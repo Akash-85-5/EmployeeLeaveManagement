@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Returns a unified leave balance summary for an employee.
@@ -55,33 +57,44 @@ public class LeaveBalanceService {
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
-
+        int currentYear = LocalDate.now().getYear();
         int currentMonth = (year == LocalDate.now().getYear())
                 ? LocalDate.now().getMonthValue() : 12;
 
         List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
 
-        // ── SICK ──────────────────────────────────────────────────
+        List<LeaveApplication> pendingLeaves = leaveApplicationRepository
+                .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.PENDING, currentYear);
+        Map<LeaveType, List<LeaveApplication>> pendingByType = pendingLeaves.stream()
+                .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
         double sickAllocated = getAllocated(employeeId, year, LeaveType.SICK);
         double sickUsed      = getUsed(employeeId, year, LeaveType.SICK);
+        Long pendingCount = (long) pendingByType
+                .getOrDefault(LeaveType.SICK, List.of())
+                .size();
         breakdown.add(new LeaveTypeBreakdown(
                 LeaveType.SICK,
                 (Double) sickAllocated,
                 (Double) sickUsed,
                 (Double)(sickAllocated - sickUsed),
-                0));
+                0,
+                pendingCount));
 
         // ── ANNUAL_LEAVE (cumulative monthly) ─────────────────────
         double annualAvailable = annualLeaveBalanceService
                 .getAvailableForMonth(employeeId, year, currentMonth);
         double annualUsed      = getUsed(employeeId, year, LeaveType.ANNUAL_LEAVE);
         double annualAllocated = PolicyConstants.ANNUAL_LEAVE_YEARLY_ALLOCATION;
+        Long pendingCounta = (long) pendingByType
+                .getOrDefault(LeaveType.ANNUAL_LEAVE, List.of())
+                .size();
         breakdown.add(new LeaveTypeBreakdown(
                 LeaveType.ANNUAL_LEAVE,
                 (Double) annualAllocated,
                 (Double) annualUsed,
                 (Double) annualAvailable,
-                0));
+                0,
+                pendingCounta));
 
         // ── MATERNITY (female only) ───────────────────────────────
         EmployeePersonalDetails details = personalDetailsRepository
@@ -90,12 +103,16 @@ public class LeaveBalanceService {
             double maternityAllocated = (double) PolicyConstants.MATERNITY_DAYS;
             double maternityUsed      = getUsed(employeeId, year, LeaveType.MATERNITY);
             double maternityRemaining = maternityUsed > 0 ? 0.0 : maternityAllocated;
+            Long pendingCountm = (long) pendingByType
+                    .getOrDefault(LeaveType.MATERNITY, List.of())
+                    .size();
             breakdown.add(new LeaveTypeBreakdown(
                     LeaveType.MATERNITY,
                     (Double) maternityAllocated,
                     (Double) maternityUsed,
                     (Double) maternityRemaining,
-                    0));
+                    0,
+                    pendingCountm));
         }
 
         // ── PATERNITY (male only) ─────────────────────────────────
@@ -103,12 +120,16 @@ public class LeaveBalanceService {
             double paternityAllocated = (double) PolicyConstants.PATERNITY_DAYS;
             double paternityUsed      = getUsed(employeeId, year, LeaveType.PATERNITY);
             double paternityRemaining = paternityUsed > 0 ? 0.0 : paternityAllocated;
+            Long pendingCountp = (long) pendingByType
+                    .getOrDefault(LeaveType.PATERNITY, List.of())
+                    .size();
             breakdown.add(new LeaveTypeBreakdown(
                     LeaveType.PATERNITY,
                     (Double) paternityAllocated,
                     (Double) paternityUsed,
                     (Double) paternityRemaining,
-                    0));
+                    0,
+                    pendingCountp));
         }
 
         // ── COMP_OFF ──────────────────────────────────────────────
@@ -117,12 +138,16 @@ public class LeaveBalanceService {
         double compOffEarned    = compOffBalance != null ? compOffBalance.getEarned()  : 0.0;
         double compOffUsed      = compOffBalance != null ? compOffBalance.getUsed()    : 0.0;
         double compOffAvailable = compOffBalance != null ? compOffBalance.getBalance() : 0.0;
+        Long pendingCountc = (long) pendingByType
+                .getOrDefault(LeaveType.COMP_OFF, List.of())
+                .size();
         breakdown.add(new LeaveTypeBreakdown(
                 LeaveType.COMP_OFF,
                 (Double) compOffEarned,
                 (Double) compOffUsed,
                 (Double) compOffAvailable,
-                0));
+                0,
+                pendingCountc));
 
         // ── CARRY FORWARD (from previous year, used in current year) ─
         CarryForwardBalance carryForward = carryForwardBalanceRepository

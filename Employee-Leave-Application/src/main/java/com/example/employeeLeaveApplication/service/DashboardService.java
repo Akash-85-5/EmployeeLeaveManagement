@@ -130,6 +130,10 @@ public class DashboardService {
 
         Map<LeaveType, List<LeaveApplication>> byType = approvedLeaves.stream()
                 .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
+        List<LeaveApplication> pendingLeaves = applicationRepository
+                .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.PENDING, currentYear);
+        Map<LeaveType, List<LeaveApplication>> pendingByType = pendingLeaves.stream()
+                .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
 
         List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
 
@@ -151,12 +155,16 @@ public class DashboardService {
                     .filter(l -> l.getDays().compareTo(new BigDecimal("0.5")) == 0)
                     .count();
 
+            Long pendingCount = (long) pendingByType
+                    .getOrDefault(type, List.of())
+                    .size();
             breakdown.add(new LeaveTypeBreakdown(
                     type,
                     (Double) allocated,
                     (Double) used,
                     (Double) remaining,
-                    halfDays));
+                    halfDays,
+                    pendingCount));
         }
 
         // CompOff in breakdown
@@ -166,13 +174,17 @@ public class DashboardService {
         double coEarned = compOff != null ? compOff.getEarned()  : 0.0;
         double coUsed   = compOff != null ? compOff.getUsed()    : 0.0;
         double coBal    = compOff != null ? compOff.getBalance() : 0.0;
+        Long pendingCount = (long) pendingByType
+                .getOrDefault(LeaveType.COMP_OFF, List.of())
+                .size();
 
         breakdown.add(new LeaveTypeBreakdown(
                 LeaveType.COMP_OFF,
                 (Double) coEarned,
                 (Double) coUsed,
                 (Double) coBal,
-                0));
+                0,
+                pendingCount));
 
         response.setBreakdown(breakdown);
         response.setCompoffBalance(coBal);
@@ -187,12 +199,9 @@ public class DashboardService {
                 .countByStatus(employeeId, currentYear, LeaveStatus.APPROVED);
         Integer rejectedCount = applicationRepository
                 .countByStatus(employeeId, currentYear, LeaveStatus.REJECTED);
-        Integer pendingCount  = applicationRepository
-                .countByStatus(employeeId, currentYear, LeaveStatus.PENDING);
 
         response.setApprovedCount(approvedCount != null ? approvedCount : 0);
         response.setRejectedCount(rejectedCount != null ? rejectedCount : 0);
-        response.setPendingCount(pendingCount   != null ? pendingCount  : 0);
 
         log.info("✅ [DASHBOARD] Employee dashboard complete: allocated={}, used={}", yearlyAllocated, yearlyUsed);
         return response;
@@ -327,8 +336,8 @@ public class DashboardService {
     private void processODsIntoCalendar(Map<String, List<TeamMemberBalance>> calendar,
                                         Employee member, List<ODRequest> ods) {
         for (ODRequest od : ods) {
-            LocalDate date = od.getFromDate();
-            while (!date.isAfter(od.getToDate())) {
+            LocalDate date = od.getStartDate();
+            while (!date.isAfter(od.getEndDate())) {
                 addToCalendar(calendar, date, member, "OD");
                 date = date.plusDays(1);
             }

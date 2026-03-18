@@ -10,7 +10,7 @@ public class LeaveResponse {
     public LeaveResponse(LeaveApplication leaveApplication, String warning) {
         this.leaveApplication = leaveApplication;
         this.warning = warning;
-    }
+    }   
 
     public LeaveApplication getLeaveApplication() {
         return leaveApplication;

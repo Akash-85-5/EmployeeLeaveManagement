@@ -25,7 +25,16 @@ public class NotificationMessageBuilder {
                 return new EmailMessage("Reminder: Pending Leave Approval Required", reason);
             case LEAVE_IN_PROGRESS:
                 return new EmailMessage("Leave Application Progress", reason);
-
+            case OD_APPROVED:
+                return new EmailMessage("OD Approved", reason);
+            case OD_REJECTED:
+                return new EmailMessage("OD Rejected", reason);
+            case OD_APPLIED:
+                return new EmailMessage("OD Approval Pending", reason);
+            case OD_CANCELLED:
+                return new EmailMessage("OD Cancelled", "Your leave request has been cancelled.");
+            case OD_IN_PROGRESS:
+                return new EmailMessage("OD Application Progress", reason);
             // ── NEW: profile verification events ──────────────────
             case PROFILE_SUBMITTED:
                 // reason = employee name, sent to HR
