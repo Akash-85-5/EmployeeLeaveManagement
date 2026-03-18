@@ -1,17 +1,18 @@
 package com.example.employeeLeaveApplication.controller;
 
-import com.example.employeeLeaveApplication.dto.CreateUserRequest;
-import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
-import com.example.employeeLeaveApplication.dto.UserDropdownResponse;
+import com.example.employeeLeaveApplication.dto.*;
 import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
+import com.example.employeeLeaveApplication.enums.EmployeeType;
 import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.service.AdminService;
 import com.example.employeeLeaveApplication.service.CarryForwardService;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -32,33 +33,27 @@ public class AdminController {
         this.employeeService = employeeService;
     }
 
-    // ── Existing endpoints (unchanged) ───────────────────────────
-
+    // ── UNCHANGED ─────────────────────────────────────────────────
     @PostMapping("/carry-forward")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> processCarryForward(@RequestParam Integer fromYear) {
         try {
             carryForwardService.processYearEndCarryForward(fromYear);
-            return ResponseEntity.ok(
-                    "Carry forward processed successfully for year " + fromYear);
+            return ResponseEntity.ok("Carry forward processed successfully for year " + fromYear);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body("Carry forward failed: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
         }
     }
 
     @PostMapping("/carry-forward/{employeeId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> processEmployeeCarryForward(
-            @PathVariable Long employeeId,
-            @RequestParam Integer fromYear) {
+            @PathVariable Long employeeId, @RequestParam Integer fromYear) {
         try {
             carryForwardService.processEmployeeCarryForward(employeeId, fromYear);
-            return ResponseEntity.ok(
-                    "Carry forward processed for employee " + employeeId);
+            return ResponseEntity.ok("Carry forward processed for employee " + employeeId);
         } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body("Carry forward failed: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
         }
     }
 
@@ -82,23 +77,55 @@ public class AdminController {
         return adminService.getEligibleManagers(role);
     }
 
-    // ── Admin/HR edits personal details (NO LOCK CHECK) ──────────
-    // Uses adminUpdatePersonalDetails → bypasses lock
-    @PostMapping("/employees/{employeeId}/personal-details")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
-    public ResponseEntity<EmployeePersonalDetails> addPersonalDetails(
+    // ── NEW: Admin sets PF number after employee profile is verified
+    /**
+     * PUT /api/admin/employees/{employeeId}/pf-number
+     * Body: { "pfNumber": "PF001234" }
+     * Employee does NOT fill this — admin fills after verification.
+     */
+    @PutMapping("/employees/{employeeId}/pf-number")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> updatePfNumber(
             @PathVariable Long employeeId,
-            @RequestBody PersonalDetailsRequest request) {
-        return ResponseEntity.ok(
-                employeeService.adminUpdatePersonalDetails(employeeId, request));
+            @RequestBody PfUpdateRequest request) {
+        return ResponseEntity.ok(employeeService.updatePfNumber(employeeId, request));
     }
 
-    @PutMapping("/employees/{employeeId}/personal-details")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
-    public ResponseEntity<EmployeePersonalDetails> updatePersonalDetails(
+    // ── NEW: Admin override for personal details (multipart) ──────
+    /**
+     * PUT /api/admin/employees/{employeeId}/personal-details?employeeType=FRESHER
+     *
+     * Admin can update any employee's personal details bypassing lock.
+     * Sends same multipart format as employee submit.
+     * Sets verificationStatus = VERIFIED directly.
+     *
+     * Parts:
+     *   data        → JSON string
+     *   aadhaarCard → file (optional if not replacing)
+     *   doc1        → tc OR experienceCertificate (optional)
+     *   doc2        → offerLetter OR leavingLetter (optional)
+     */
+    @PutMapping(value = "/employees/{employeeId}/personal-details",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> adminUpdatePersonalDetails(
             @PathVariable Long employeeId,
-            @RequestBody PersonalDetailsRequest request) {
+            @RequestParam EmployeeType employeeType,
+            @RequestPart("data") String dataJson,
+            @RequestPart(value = "aadhaarCard", required = false) MultipartFile aadhaarCard,
+            @RequestPart(value = "doc1", required = false) MultipartFile doc1,
+            @RequestPart(value = "doc2", required = false) MultipartFile doc2) {
+
         return ResponseEntity.ok(
-                employeeService.adminUpdatePersonalDetails(employeeId, request));
+                employeeService.adminUpdatePersonalDetails(
+                        employeeId, dataJson, aadhaarCard, doc1, doc2, employeeType));
+    }
+
+    // ── UNCHANGED: view personal details ─────────────────────────
+    @GetMapping("/employees/{employeeId}/personal-details")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+            @PathVariable Long employeeId) {
+        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 }
