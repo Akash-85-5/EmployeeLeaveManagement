@@ -1,15 +1,13 @@
 package com.example.employeeLeaveApplication.dto;
 
-import com.example.employeeLeaveApplication.enums.BloodGroup;
-import com.example.employeeLeaveApplication.enums.Gender;
-import com.example.employeeLeaveApplication.enums.MaritalStatus;
+import com.example.employeeLeaveApplication.enums.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class ProfileResponse {
 
-    // ── From User/Employee ───────────────────────────────────────
+    // ── From User/Employee — UNCHANGED ────────────────────────────
     private Long id;
     private String name;
     private String email;
@@ -27,8 +25,27 @@ public class ProfileResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ── Personal details status — UNCHANGED ───────────────────────
+    private boolean personalDetailsComplete;
+    private boolean personalDetailsLocked;
+
+    // ── NEW: verification status shown on profile page ────────────
+    // null = not submitted yet
+    // PENDING = submitted, waiting for HR
+    // VERIFIED = HR approved
+    // REJECTED = HR rejected, employee can resubmit
+    private VerificationStatus verificationStatus;
+
+    // ── NEW: shown only when REJECTED ─────────────────────────────
+    private String hrRemarks;
+
+    // ── NEW: FRESHER or EXPERIENCED ───────────────────────────────
+    private EmployeeType employeeType;
+
+    // ── UNCHANGED personal fields ─────────────────────────────────
     private String contactNumber;
     private Gender gender;
+    private MaritalStatus maritalStatus;
     private String aadharNumber;
     private String personalEmail;
     private LocalDate dateOfBirth;
@@ -41,15 +58,30 @@ public class ProfileResponse {
     private String designation;
     private List<String> skillSet;
 
-    private boolean personalDetailsComplete;
+    // ── NEW fields ────────────────────────────────────────────────
+    private String fullName;
+    private String lastName;
+    private String surName;
+    private String accountNumber;
+    private String bankName;
+    private String pfNumber;      // admin-filled, shown in profile
+    private String unaNumber;     // experienced only
 
-    private boolean personalDetailsLocked;
+    // ── NEW: document paths (shown as download links in profile) ──
+    private String aadhaarDocPath;
+    private String tcDocPath;               // fresher only
+    private String offerLetterDocPath;      // fresher only
+    private String experienceCertDocPath;   // experienced only
+    private String leavingLetterDocPath;    // experienced only
+
+    // ── NEW: experienced-only text fields ─────────────────────────
+    private String previousRole;
+    private String oldCompanyName;
+    private LocalDate oldCompanyFromDate;
+    private LocalDate oldCompanyEndDate;
 
     // Getters & Setters
-    public boolean isPersonalDetailsLocked() { return personalDetailsLocked; }
-    public void setPersonalDetailsLocked(boolean personalDetailsLocked) {
-        this.personalDetailsLocked = personalDetailsLocked;
-    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -74,6 +106,9 @@ public class ProfileResponse {
     public String getTeamLeaderName() { return teamLeaderName; }
     public void setTeamLeaderName(String teamLeaderName) { this.teamLeaderName = teamLeaderName; }
 
+    public String getHrname() { return hrname; }
+    public void setHrname(String hrname) { this.hrname = hrname; }
+
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 
@@ -95,11 +130,29 @@ public class ProfileResponse {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
+    public boolean isPersonalDetailsComplete() { return personalDetailsComplete; }
+    public void setPersonalDetailsComplete(boolean personalDetailsComplete) { this.personalDetailsComplete = personalDetailsComplete; }
+
+    public boolean isPersonalDetailsLocked() { return personalDetailsLocked; }
+    public void setPersonalDetailsLocked(boolean personalDetailsLocked) { this.personalDetailsLocked = personalDetailsLocked; }
+
+    public VerificationStatus getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(VerificationStatus verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public String getHrRemarks() { return hrRemarks; }
+    public void setHrRemarks(String hrRemarks) { this.hrRemarks = hrRemarks; }
+
+    public EmployeeType getEmployeeType() { return employeeType; }
+    public void setEmployeeType(EmployeeType employeeType) { this.employeeType = employeeType; }
+
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
 
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
+
+    public MaritalStatus getMaritalStatus() { return maritalStatus; }
+    public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
     public String getAadharNumber() { return aadharNumber; }
     public void setAadharNumber(String aadharNumber) { this.aadharNumber = aadharNumber; }
@@ -134,14 +187,51 @@ public class ProfileResponse {
     public List<String> getSkillSet() { return skillSet; }
     public void setSkillSet(List<String> skillSet) { this.skillSet = skillSet; }
 
-    public boolean isPersonalDetailsComplete() { return personalDetailsComplete; }
-    public void setPersonalDetailsComplete(boolean personalDetailsComplete) { this.personalDetailsComplete = personalDetailsComplete; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
-    public String getHrname() {
-        return hrname;
-    }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public void setHrname(String hrname) {
-        this.hrname = hrname;
-    }
+    public String getSurName() { return surName; }
+    public void setSurName(String surName) { this.surName = surName; }
+
+    public String getAccountNumber() { return accountNumber; }
+    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
+
+    public String getBankName() { return bankName; }
+    public void setBankName(String bankName) { this.bankName = bankName; }
+
+    public String getPfNumber() { return pfNumber; }
+    public void setPfNumber(String pfNumber) { this.pfNumber = pfNumber; }
+
+    public String getUnaNumber() { return unaNumber; }
+    public void setUnaNumber(String unaNumber) { this.unaNumber = unaNumber; }
+
+    public String getAadhaarDocPath() { return aadhaarDocPath; }
+    public void setAadhaarDocPath(String aadhaarDocPath) { this.aadhaarDocPath = aadhaarDocPath; }
+
+    public String getTcDocPath() { return tcDocPath; }
+    public void setTcDocPath(String tcDocPath) { this.tcDocPath = tcDocPath; }
+
+    public String getOfferLetterDocPath() { return offerLetterDocPath; }
+    public void setOfferLetterDocPath(String offerLetterDocPath) { this.offerLetterDocPath = offerLetterDocPath; }
+
+    public String getExperienceCertDocPath() { return experienceCertDocPath; }
+    public void setExperienceCertDocPath(String experienceCertDocPath) { this.experienceCertDocPath = experienceCertDocPath; }
+
+    public String getLeavingLetterDocPath() { return leavingLetterDocPath; }
+    public void setLeavingLetterDocPath(String leavingLetterDocPath) { this.leavingLetterDocPath = leavingLetterDocPath; }
+
+    public String getPreviousRole() { return previousRole; }
+    public void setPreviousRole(String previousRole) { this.previousRole = previousRole; }
+
+    public String getOldCompanyName() { return oldCompanyName; }
+    public void setOldCompanyName(String oldCompanyName) { this.oldCompanyName = oldCompanyName; }
+
+    public LocalDate getOldCompanyFromDate() { return oldCompanyFromDate; }
+    public void setOldCompanyFromDate(LocalDate oldCompanyFromDate) { this.oldCompanyFromDate = oldCompanyFromDate; }
+
+    public LocalDate getOldCompanyEndDate() { return oldCompanyEndDate; }
+    public void setOldCompanyEndDate(LocalDate oldCompanyEndDate) { this.oldCompanyEndDate = oldCompanyEndDate; }
 }

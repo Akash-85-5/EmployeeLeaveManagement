@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface LeaveApplicationRepository extends JpaRepository<LeaveApplication, Long> {
 
@@ -314,4 +315,16 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             LeaveStatus status,
             ApprovalLevel currentApprovalLevel
     );
+
+    @Query("""
+        SELECT l FROM LeaveApplication l
+        WHERE  l.employeeId = :empId
+          AND  l.status     = :status
+          AND  l.startDate  <= :date
+          AND  l.endDate    >= :date
+    """)
+    Optional<LeaveApplication> findApprovedLeaveForEmployeeOnDate(
+            @Param("empId")  Long        employeeId,
+            @Param("date")   LocalDate   date,
+            @Param("status") LeaveStatus status);
 }

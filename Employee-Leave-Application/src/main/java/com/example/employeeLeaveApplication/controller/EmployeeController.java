@@ -1,17 +1,19 @@
 package com.example.employeeLeaveApplication.controller;
 
-import com.example.employeeLeaveApplication.dto.PersonalDetailsRequest;
 import com.example.employeeLeaveApplication.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
+import com.example.employeeLeaveApplication.enums.EmployeeType;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,27 +28,74 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ── View own profile (READ ONLY for employee) ─────────────────
+    // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/profile/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<ProfileResponse> getProfile(
-            @PathVariable Long employeeId) {
-        System.out.println(employeeId);
+    public ResponseEntity<ProfileResponse> getProfile(@PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
-    // ── Employee submits personal details ONCE ────────────────────
-    // After submit → locked → this endpoint will throw error if called again
-    @PostMapping("/personal-details/{employeeId}")
+    /**
+     * FRESHER personal details + documents in one multipart request.
+     *
+     * Content-Type: multipart/form-data
+     *
+     * Parts:
+     *   data         → JSON string of FresherPersonalDetailsRequest
+     *   aadhaarCard  → file (PDF/JPG/PNG, max 5MB)
+     *   tc           → file (Transfer Certificate)
+     *   offerLetter  → file (Offer Letter)
+     *
+     * Example (Postman / Axios):
+     *   const form = new FormData();
+     *   form.append('data', JSON.stringify({ fullName: '...', ... }));
+     *   form.append('aadhaarCard', aadhaarFile);
+     *   form.append('tc', tcFile);
+     *   form.append('offerLetter', offerLetterFile);
+     *   axios.post('/api/employees/personal-details/42/fresher', form);
+     */
+    @PostMapping(value = "/personal-details/{employeeId}/fresher",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<EmployeePersonalDetails> submitPersonalDetails(
+    public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
             @PathVariable Long employeeId,
-            @RequestBody PersonalDetailsRequest request) {
+            @RequestPart("data") String dataJson,
+            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
+            @RequestPart("tc") MultipartFile tc,
+            @RequestPart("offerLetter") MultipartFile offerLetter) {
+
         return ResponseEntity.ok(
-                employeeService.submitPersonalDetails(employeeId, request));
+                employeeService.submitFresherDetails(
+                        employeeId, dataJson, aadhaarCard, tc, offerLetter));
     }
 
-    // ── HR/Admin views full personal details ──────────────────────
+    /**
+     * EXPERIENCED personal details + documents in one multipart request.
+     *
+     * Content-Type: multipart/form-data
+     *
+     * Parts:
+     *   data                  → JSON string of ExperiencedPersonalDetailsRequest
+     *   aadhaarCard           → file
+     *   experienceCertificate → file
+     *   leavingLetter         → file
+     */
+    @PostMapping(value = "/personal-details/{employeeId}/experienced",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
+            @PathVariable Long employeeId,
+            @RequestPart("data") String dataJson,
+            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
+            @RequestPart("experienceCertificate") MultipartFile experienceCertificate,
+            @RequestPart("leavingLetter") MultipartFile leavingLetter) {
+
+        return ResponseEntity.ok(
+                employeeService.submitExperiencedDetails(
+                        employeeId, dataJson, aadhaarCard, experienceCertificate, leavingLetter));
+    }
+
+    // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/personal-details/{employeeId}")
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
@@ -54,10 +103,8 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
-    // ── Existing endpoints ────────────────────────────────────────
-
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('HR','CFO')")
+    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -65,25 +112,15 @@ public class EmployeeController {
             @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+            @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.getAllEmployees(
-                name, email, role, managerId, active, pageable);
+        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
     }
 
-    // ==================== GET TEAM MEMBERS (REPORTEES)  ====================
     @GetMapping("/manager/{managerId}/team")
     @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
-    }
-
-    // ==================== GET CURRENT EMPLOYEE (SELF)  ====================
-    @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ProfileResponse getCurrentEmployee(@PathVariable Long employeeId) {
-        return employeeService.getProfile(employeeId);
     }
 
     @GetMapping("/teamleader/{teamLeaderId}/team")
@@ -92,10 +129,8 @@ public class EmployeeController {
         return employeeService.getTeamLeaderMembers(teamLeaderId);
     }
 
-    // ==================== SEARCH EMPLOYEES ====================
-
     @GetMapping("/search")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') ")
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }

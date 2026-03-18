@@ -757,56 +757,60 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public AdminDashboardResponse getAdminDashboard(Long adminId) {
-
-        Employee admin = employeeRepository.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Admin not found: " + adminId));
-
-        int currentYear = LocalDate.now().getYear();
-        AdminDashboardResponse response = new AdminDashboardResponse();
-        response.setCurrentYear(currentYear);
-        response.setAdminId(adminId);
-        response.setAdminName(admin.getName());
-
+        // 1. Get Admin's Personal Data (The same way the Manager does)
         EmployeeDashboardResponse ownStats = getDashboard(adminId);
-        response.setYearlyBalance(ownStats.getYearlyBalance());
-        response.setCarryForwardBalance(ownStats.getCarryForwardRemaining());
-        response.setCompOffBalance(ownStats.getCompoffBalance());
-        response.setApprovedLeaveCount(ownStats.getApprovedCount());
-        response.setPendingLeaveCount(ownStats.getPendingCount());
 
+        AdminDashboardResponse response = new AdminDashboardResponse();
+        response.setPersonalStats(ownStats); // Use the nested DTO
+        response.setCurrentYear(LocalDate.now().getYear());
+        response.setLastUpdated(LocalDateTime.now());
+
+        // 2. Global Employee Counts
         List<Employee> allEmployees = employeeRepository.findByActiveTrue();
         response.setTotalEmployees(allEmployees.size());
         response.setTotalManagers(employeeRepository.findByRole(Role.MANAGER).size());
         response.setNewEmployeesPendingOnboarding(employeeRepository.findOnboardingPending().size());
+
+        // 3. Global Leave Counts
         response.setTotalPendingLeaves(applicationRepository.findByStatus(LeaveStatus.PENDING).size());
         response.setTotalRejectedLeaves(applicationRepository.findByStatus(LeaveStatus.REJECTED).size());
 
-        double totalUsedYTD = 0, totalCFBalance = 0, totalCompOffBalance = 0, totalLOP = 0;
-        int lopCount = 0;
-        for (Employee emp : allEmployees) {
-            Double used = applicationRepository.getTotalUsedDays(emp.getId(), LeaveStatus.APPROVED, currentYear);
-            if (used != null) totalUsedYTD += used;
-            CarryForwardBalance cf = carryForwardRepository
-                    .findByEmployeeIdAndYear(emp.getId(), currentYear).orElse(null);
-            if (cf != null) totalCFBalance += cf.getRemaining();
-            CompOffBalance compOff = compOffRepository
-                    .findByEmployeeIdAndYear(emp.getId(), currentYear).orElse(null);
-            if (compOff != null) totalCompOffBalance += compOff.getBalance();
-            Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(emp.getId(), currentYear);
-            if (lop != null && lop > 0) { totalLOP += lop; lopCount++; }
-        }
+        // 4. Global Financial/Compliance Metrics
+        // (Your existing loop logic for YTD, CarryForward, and LOP averages)
+        calculateGlobalMetrics(response, allEmployees);
 
-        response.setTotalLeaveDaysUsedYTD(totalUsedYTD);
-        response.setTotalCarryForwardBalance(totalCFBalance);
-        response.setTotalCompOffBalance(totalCompOffBalance);
-        response.setAverageLossOfPayPercentage(lopCount > 0 ? totalLOP / lopCount : 0.0);
-        response.setLastUpdated(LocalDateTime.now());
         return response;
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // UTILITY
-    // ═══════════════════════════════════════════════════════════════
+    private void calculateGlobalMetrics(AdminDashboardResponse response, List<Employee> allEmployees) {
+        int currentYear = response.getCurrentYear();
+        double totalUsedYTD = 0, totalCFBalance = 0, totalCompOffBalance = 0, totalLOP = 0;
+        int lopCount = 0;
+
+        for (Employee emp : allEmployees) {
+            // Total Approved Days
+            Double used = applicationRepository.getTotalUsedDays(emp.getId(), LeaveStatus.APPROVED, currentYear);
+            if (used != null) totalUsedYTD += used;
+
+            // Total Carry Forward Remaining
+            carryForwardRepository.findByEmployeeIdAndYear(emp.getId(), currentYear)
+                    .ifPresent(cf -> response.setTotalCarryForwardBalance(response.getTotalCarryForwardBalance() + cf.getRemaining()));
+
+            // Total Comp Off Balance
+            compOffRepository.findByEmployeeIdAndYear(emp.getId(), currentYear)
+                    .ifPresent(co -> response.setTotalCompOffBalance(response.getTotalCompOffBalance() + co.getBalance()));
+
+            // Average LOP calculation
+            Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(emp.getId(), currentYear);
+            if (lop != null && lop > 0) {
+                totalLOP += lop;
+                lopCount++;
+            }
+        }
+
+        response.setTotalLeaveDaysUsedYTD(totalUsedYTD);
+        response.setAverageLossOfPayPercentage(lopCount > 0 ? totalLOP / lopCount : 0.0);
+    }
 
     public Map<LeaveStatus, Long> getLeaveCountsByStatus(Long employeeId, Integer year) {
         return applicationRepository.findByEmployeeIdAndYear(employeeId, year).stream()
