@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface LopRecordRepository extends JpaRepository<LopRecord, Long> {
 
@@ -191,4 +192,5 @@ public interface LopRecordRepository extends JpaRepository<LopRecord, Long> {
     Double sumLopDaysForYear(
             @Param("empId") Long employeeId,
             @Param("year")  int  year);
+
 }

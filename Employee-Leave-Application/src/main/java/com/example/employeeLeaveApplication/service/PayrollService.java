@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.dto.LopSummaryResponse;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
+import com.example.employeeLeaveApplication.repository.LopRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +16,12 @@ import java.util.Optional;
 public class PayrollService {
 
     private final PayslipRepository payslipRepository;
-    private final LopService lopService;
+    private final LopRecordRepository lopRepository;
 
     public PayrollService(PayslipRepository payslipRepository,
-                          LopService lopService){
+                          LopRecordRepository lopRepository){
         this.payslipRepository = payslipRepository;
-        this.lopService = lopService;
+        this.lopRepository = lopRepository;
     }
 
     // GENERATE PAYROLL
