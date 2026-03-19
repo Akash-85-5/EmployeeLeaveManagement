@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -30,6 +31,7 @@ public class LeaveAttachment {
     private LocalDateTime uploadedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinColumn(name = "leave_application_id", insertable = false, updatable = false)
     private LeaveApplication leaveApplication;
 

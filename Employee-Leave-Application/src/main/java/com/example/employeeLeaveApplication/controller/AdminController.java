@@ -132,7 +132,7 @@ public class AdminController {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
-    @GetMapping("/onboarding/pendding")
+    @GetMapping("/onboarding/pending")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Employee>> getOnboardingPending(){
         return ResponseEntity.ok(employeeService.getOnboardingPending());

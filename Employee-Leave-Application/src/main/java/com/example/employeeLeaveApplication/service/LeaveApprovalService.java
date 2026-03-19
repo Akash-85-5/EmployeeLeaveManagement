@@ -1,15 +1,18 @@
 package com.example.employeeLeaveApplication.service;
 
 import com.example.employeeLeaveApplication.dto.BulkLeaveDecisionRequest;
+import com.example.employeeLeaveApplication.dto.LeaveApplicationWithAttachmentsDto;
 import com.example.employeeLeaveApplication.dto.LeaveDecisionRequest;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveApproval;
+import com.example.employeeLeaveApplication.entity.LeaveAttachment;
 import com.example.employeeLeaveApplication.enums.*;
 import com.example.employeeLeaveApplication.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApprovalRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
+import com.example.employeeLeaveApplication.repository.LeaveAttachmentRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class LeaveApprovalService {
@@ -27,21 +32,146 @@ public class LeaveApprovalService {
     private final NotificationService notificationService;
     private final LeaveApprovalRepository leaveApprovalRepository;
     private final LeaveApplicationService leaveApplicationService;
+    private final LeaveAttachmentRepository leaveAttachmentRepository;
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
                                 LeaveApplicationRepository leaveApplicationRepository,
                                 NotificationService notificationService,
                                 LeaveApprovalRepository leaveApprovalRepository,
-                                LeaveApplicationService leaveApplicationService) {
+                                LeaveApplicationService leaveApplicationService,
+                                LeaveAttachmentRepository leaveAttachmentRepository) {
         this.employeeRepository        = employeeRepository;
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService        = notificationService;
         this.leaveApprovalRepository    = leaveApprovalRepository;
         this.leaveApplicationService    = leaveApplicationService;
+        this.leaveAttachmentRepository  = leaveAttachmentRepository;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PENDING LEAVES — per role
+    // PENDING LEAVES WITH ATTACHMENTS — per role
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Fetch pending leaves for Team Leader WITH attachments.
+     * Optimized: Single query for leaves + batch fetch attachments.
+     */
+    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
+            Long teamLeaderId, Pageable pageable) {
+
+        List<LeaveApplication> all = leaveApplicationRepository
+                .findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
+                        teamLeaderId, LeaveStatus.PENDING, ApprovalLevel.TEAM_LEADER);
+
+        // Convert to DTOs with attachments
+        List<LeaveApplicationWithAttachmentsDto> dtos =
+                convertToDto(all);
+
+        return toPageDto(dtos, pageable);
+    }
+
+    /**
+     * Fetch pending leaves for Manager WITH attachments.
+     */
+    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
+            Long managerId, Pageable pageable) {
+
+        List<LeaveApplication> all = leaveApplicationRepository
+                .findByManagerIdAndStatusAndCurrentApprovalLevel(
+                        managerId, LeaveStatus.PENDING, ApprovalLevel.MANAGER);
+
+        List<LeaveApplicationWithAttachmentsDto> dtos =
+                convertToDto(all);
+
+        return toPageDto(dtos, pageable);
+    }
+
+    /**
+     * Fetch pending leaves for HR WITH attachments.
+     */
+    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
+            Pageable pageable) {
+
+        List<LeaveApplication> all = leaveApplicationRepository
+                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
+
+        List<LeaveApplicationWithAttachmentsDto> dtos =
+                convertToDto(all);
+
+        return toPageDto(dtos, pageable);
+    }
+
+    /**
+     * Get single leave application with attachments by ID.
+     * Used when approver clicks to view a specific leave.
+     */
+    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
+        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                .orElseThrow(() -> new BadRequestException("Leave not found with ID: " + leaveId));
+
+        return new LeaveApplicationWithAttachmentsDto(
+                leave,
+                leaveAttachmentRepository.findByLeaveApplicationId(leaveId)
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // HELPER: Convert List<LeaveApplication> to List<DTO with Attachments>
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Converts a list of LeaveApplications to DTOs with attachments.
+     * Optimized approach:
+     *  1. Get all leave IDs
+     *  2. Batch fetch all attachments for those leave IDs
+     *  3. Create DTOs by matching attachments to leaves
+     *
+     * This avoids N+1 queries (1 query per leave for attachments).
+     */
+    private List<LeaveApplicationWithAttachmentsDto> convertToDto(
+            List<LeaveApplication> leaves) {
+
+        if (leaves.isEmpty()) {
+            return List.of();
+        }
+
+        // Extract leave IDs
+        List<Long> leaveIds = leaves.stream()
+                .map(LeaveApplication::getId)
+                .collect(Collectors.toList());
+
+        // Batch fetch ALL attachments for these leaves in ONE query
+        List<LeaveAttachment> allAttachments =
+                leaveAttachmentRepository.findByLeaveApplicationIdIn(leaveIds);
+
+        // Group attachments by leaveId (for fast lookup)
+        Map<Long, List<LeaveAttachment>> attachmentsByLeaveId = leaveAttachmentRepository
+                .findByLeaveApplicationIdIn(leaveIds)
+                .stream()
+                .collect(Collectors.groupingBy(att -> att.getLeaveApplicationId()));
+
+        // Create DTOs
+        return leaves.stream()
+                .map(leave -> {
+                    List<LeaveAttachment> attachments =
+                            attachmentsByLeaveId.getOrDefault(leave.getId(), List.of());
+                    return new LeaveApplicationWithAttachmentsDto(leave, attachments);
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to convert List to Page.
+     */
+    private <T> Page<T> toPageDto(List<T> list, Pageable pageable) {
+        int start = (int) pageable.getOffset();
+        int end   = Math.min(start + pageable.getPageSize(), list.size());
+        List<T> content = (start > list.size()) ? List.of() : list.subList(start, end);
+        return new PageImpl<>(content, pageable, list.size());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ORIGINAL METHODS (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long teamLeaderId, Pageable pageable) {
@@ -65,7 +195,7 @@ public class LeaveApprovalService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // CORE DECISION
+    // CORE DECISION (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
@@ -99,8 +229,6 @@ public class LeaveApprovalService {
         }
     }
 
-    // ── Convenience wrappers ──────────────────────────────────────
-
     @Transactional
     public void approveLeave(Long leaveId, Long approverId, String comments) {
         LeaveDecisionRequest req = new LeaveDecisionRequest();
@@ -120,8 +248,6 @@ public class LeaveApprovalService {
         req.setComments(comments);
         decideLeave(req);
     }
-
-    // ── Bulk decision ─────────────────────────────────────────────
 
     @Transactional
     public String bulkDecision(BulkLeaveDecisionRequest request, boolean isHr) {
@@ -159,10 +285,6 @@ public class LeaveApprovalService {
         return "Bulk decision completed successfully";
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // HISTORY
-    // ═══════════════════════════════════════════════════════════════
-
     public Page<LeaveApproval> getApprovalHistory(Long leaveId, Pageable pageable) {
         return leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, pageable);
     }
@@ -176,7 +298,7 @@ public class LeaveApprovalService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PRIVATE HELPERS
+    // PRIVATE HELPERS (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
@@ -212,16 +334,6 @@ public class LeaveApprovalService {
         }
     }
 
-    /**
-     * Finalizes leave as APPROVED or REJECTED.
-     *
-     * On APPROVAL:
-     *  - Deducts from the appropriate leave balance.
-     *  - No automatic LOP calculation — LOP is handled manually by CFO.
-     *
-     * On REJECTION:
-     *  - No balance change needed.
-     */
     private void finalizeLeave(LeaveApplication leave,
                                LeaveStatus finalStatus,
                                Employee finalApprover) {
@@ -232,7 +344,6 @@ public class LeaveApprovalService {
         leave.setEscalated(false);
 
         if (finalStatus == LeaveStatus.APPROVED) {
-            // Deduct balance (ANNUAL_LEAVE cumulative, COMP_OFF, SICK — see service)
             leaveApplicationService.applyBalanceDeduction(leave);
         }
 

@@ -3,14 +3,12 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.entity.CompOff;
 import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
-import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.enums.CompOffStatus;
 import com.example.employeeLeaveApplication.enums.LeaveStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.repository.CompOffRepository;
 import com.example.employeeLeaveApplication.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.repository.LeaveApplicationRepository;
-import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,16 +24,13 @@ public class ReportsService {
     private final LeaveApplicationRepository leaveApplicationRepository;
     private final EmployeeRepository employeeRepository;
     private final CompOffRepository compOffRepository;
-    private final LossOfPayRecordRepository lossOfPayRepository;
 
     public ReportsService(LeaveApplicationRepository leaveApplicationRepository,
                           EmployeeRepository employeeRepository,
-                          CompOffRepository compOffRepository,
-                          LossOfPayRecordRepository lossOfPayRepository) {
+                          CompOffRepository compOffRepository) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.employeeRepository = employeeRepository;
         this.compOffRepository = compOffRepository;
-        this.lossOfPayRepository = lossOfPayRepository;
     }
 
     /**
@@ -84,12 +79,6 @@ public class ReportsService {
                 .mapToDouble(c -> c.getDays() != null ? c.getDays().doubleValue() : 0.0)
                 .sum();
 
-        // Employees with LOP
-        long employeesWithLOP = lossOfPayRepository.findAll().stream()
-                .filter(l -> l.getYear().equals(finalYear))
-                .map(LossOfPayRecord::getEmployeeId)
-                .distinct()
-                .count();
 
         // Monthly breakdown
         List<Map<String, Object>> monthlyBreakdown = new ArrayList<>();
@@ -116,7 +105,6 @@ public class ReportsService {
         report.put("averageDaysPerEmployee", Math.round(avgDaysPerEmployee * 100.0) / 100.0);
         report.put("mostUsedLeaveType", mostUsedType != null ? mostUsedType.toString() : "N/A");
         report.put("totalCompOffDays", totalCompOffDays);
-        report.put("employeesWithLOP", employeesWithLOP);
         report.put("byMonth", monthlyBreakdown);
         report.put("leaveTypeDistribution", leaveTypeCount);
 
@@ -214,59 +202,6 @@ public class ReportsService {
 
         return summary;
     }
-
-//    /**
-//     * 4. Department Leave Report
-//     * GET /api/reports/department/{deptId}/leaves
-//     */
-//    public Map<String, Object> getDepartmentLeaveReport(Long managerId, Integer year) {
-//        if (year == null) {
-//            year = Year.now().getValue();
-//        }
-//
-//        List<Employee> teamMembers = employeeRepository.findByManagerId(managerId);
-//        List<Long> teamIds = teamMembers.stream()
-//                .map(Employee::getId)
-//                .toList();
-//
-//        final Integer finalYear = year;
-//        List<LeaveApplication> allTeamLeaves = new ArrayList<>();
-//        for (Long empId : teamIds) {
-//            List<LeaveApplication> empLeaves = leaveApplicationRepository.findByEmployeeId(empId)
-//                    .stream()
-//                    .filter(l -> l.getYear() != null && l.getYear().equals(finalYear))
-//                    .toList();
-//            allTeamLeaves.addAll(empLeaves);
-//        }
-//
-//        long totalLeaves = allTeamLeaves.stream()
-//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-//                .count();
-//
-//        double totalDays = allTeamLeaves.stream()
-//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-//                .mapToDouble(l -> l.getDays().doubleValue())
-//                .sum();
-//
-//        // Group by leave type
-//        Map<LeaveType, Long> typeDistribution = allTeamLeaves.stream()
-//                .filter(l -> l.getStatus() == LeaveStatus.APPROVED)
-//                .collect(Collectors.groupingBy(
-//                        LeaveApplication::getLeaveType,
-//                        Collectors.counting()
-//                ));
-//
-//        Map<String, Object> report = new HashMap<>();
-//        report.put("departmentId", managerId);
-//        report.put("year", year);
-//        report.put("teamSize", teamMembers.size());
-//        report.put("totalLeavesApproved", totalLeaves);
-//        report.put("totalDaysUsed", totalDays);
-//        report.put("leaveTypeDistribution", typeDistribution);
-//        report.put("leaves", allTeamLeaves);
-//
-//        return report;
-//    }
 
     /**
      * 5. Manager Team Report
@@ -486,79 +421,6 @@ public class ReportsService {
         report.put("peakDay", peakDay);
         report.put("dailyDistribution", dailyDistribution);
         report.put("leaves", monthLeaves);
-
-        return report;
-    }
-
-    /**
-     * 9. Loss of Pay Report
-     * GET /api/reports/lop/{year}
-     */
-    public Map<String, Object> getLossOfPayReport(Integer year) {
-        List<LossOfPayRecord> lopRecords = lossOfPayRepository.findAll().stream()
-                .filter(l -> l.getYear().equals(year))
-                .sorted(Comparator.comparing(LossOfPayRecord::getMonth))
-                .toList();
-
-        double totalLopPercentage = lopRecords.stream()
-                .mapToDouble(LossOfPayRecord::getLossPercentage)
-                .sum();
-
-        long employeesAffected = lopRecords.stream()
-                .map(LossOfPayRecord::getEmployeeId)
-                .distinct()
-                .count();
-
-        // Group by month
-        Map<Integer, Long> monthlyDistribution = lopRecords.stream()
-                .collect(Collectors.groupingBy(
-                        LossOfPayRecord::getMonth,
-                        Collectors.counting()
-                ));
-
-        // Group by month - sum of LOP percentage
-        Map<Integer, Double> monthlyLopPercentage = lopRecords.stream()
-                .collect(Collectors.groupingBy(
-                        LossOfPayRecord::getMonth,
-                        Collectors.summingDouble(LossOfPayRecord::getLossPercentage)
-                ));
-
-        // Employee-wise breakdown
-        Map<Long, List<LossOfPayRecord>> employeeBreakdown = lopRecords.stream()
-                .collect(Collectors.groupingBy(LossOfPayRecord::getEmployeeId));
-
-        List<Map<String, Object>> employeeDetails = new ArrayList<>();
-        for (Map.Entry<Long, List<LossOfPayRecord>> entry : employeeBreakdown.entrySet()) {
-            Long empId = entry.getKey();
-            List<LossOfPayRecord> empRecords = entry.getValue();
-
-            Employee emp = employeeRepository.findById(empId).orElse(null);
-
-            double empTotalLop = empRecords.stream()
-                    .mapToDouble(LossOfPayRecord::getLossPercentage)
-                    .sum();
-
-            Map<String, Object> empData = new HashMap<>();
-            empData.put("employeeId", empId);
-            empData.put("employeeName", emp != null ? emp.getName() : "Unknown");
-            empData.put("totalLopPercentage", empTotalLop);
-            empData.put("violationCount", empRecords.size());
-            empData.put("records", empRecords);
-
-            employeeDetails.add(empData);
-        }
-
-        Map<String, Object> report = new HashMap<>();
-        report.put("year", year);
-        report.put("totalRecords", lopRecords.size());
-        report.put("employeesAffected", employeesAffected);
-        report.put("totalLopPercentage", totalLopPercentage);
-        report.put("averageLopPerEmployee", employeesAffected > 0 ?
-                Math.round((totalLopPercentage / employeesAffected) * 100.0) / 100.0 : 0);
-        report.put("monthlyDistribution", monthlyDistribution);
-        report.put("monthlyLopPercentage", monthlyLopPercentage);
-        report.put("employeeDetails", employeeDetails);
-        report.put("records", lopRecords);
 
         return report;
     }

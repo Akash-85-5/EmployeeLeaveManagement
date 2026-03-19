@@ -87,11 +87,11 @@ public class ReportsController {
         return ResponseEntity.ok(reportService.getMonthlyReport(year, month));
     }
 
-    // ==================== LOSS OF PAY REPORT ====================
-    @GetMapping("/lop/{year}")
-    public ResponseEntity<?> getLossOfPayReport(@PathVariable Integer year) {
-        return ResponseEntity.ok(reportService.getLossOfPayReport(year));
-    }
+//    // ==================== LOSS OF PAY REPORT ====================
+//    @GetMapping("/lop/{year}")
+//    public ResponseEntity<?> getLossOfPayReport(@PathVariable Integer year) {
+//        return ResponseEntity.ok(reportService.getLossOfPayReport(year));
+//    }
 
     // ==================== COMP-OFF UTILIZATION REPORT ====================
     @GetMapping("/compoff/utilization")

@@ -3,11 +3,10 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.dto.CreatePayslipRequest;
 import com.example.employeeLeaveApplication.dto.PayslipResponse;
 import com.example.employeeLeaveApplication.dto.YearlySummaryResponse;
-import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.mapper.PayslipMapper;
-import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
+import com.example.employeeLeaveApplication.repository.LopRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +20,18 @@ public class PayslipService {
 
     private final PayslipRepository payslipRepository;
     private final PayslipPdfService pdfService;
-    private final LossOfPayRecordRepository lopRepository;
+    private final LopRecordRepository lopRepository;
+    private final LopService lopService;
 
     public PayslipService(PayslipRepository payslipRepository,
                           PayslipPdfService pdfService,
-                          LossOfPayRecordRepository lopRepository
+                          LopRecordRepository lopRepository,
+                          LopService lopService
                           ) {
         this.payslipRepository = payslipRepository;
         this.pdfService = pdfService;
         this.lopRepository = lopRepository;
+        this.lopService = lopService;
     }
 
     private BigDecimal safe(BigDecimal v){
@@ -97,7 +99,7 @@ public class PayslipService {
         return PayslipMapper.toResponse(saved);
     }
 
-    private void fillPayslip(Payslip p,CreatePayslipRequest req){
+    private void fillPayslip(Payslip p, CreatePayslipRequest req){
 
         p.setEmployeeId(req.getEmployeeId());
         p.setYear(req.getYear());
@@ -117,20 +119,24 @@ public class PayslipService {
         p.setEsi(safe(req.getEsi()));
         p.setProfessionalTax(safe(req.getProfessionalTax()));
         p.setTds(safe(req.getTds()));
+
+        // ✅ CFO enters this manually
         p.setLop(safe(req.getLop()));
+
         p.setVariablePay(safe(req.getVariablePay()));
 
-        Optional<LossOfPayRecord> lopRecord =
-                lopRepository.findByEmployeeIdAndYearAndMonth(
-                        req.getEmployeeId(),
-                        req.getYear(),
-                        req.getMonth());
+        // 🔥 GET PREVIOUS MONTH LOP DAYS
+        int prevMonth = req.getMonth() == 1 ? 12 : req.getMonth() - 1;
+        int prevYear  = req.getMonth() == 1 ? req.getYear() - 1 : req.getYear();
 
-        if(lopRecord.isPresent()){
-            p.setLopDays(lopRecord.get().getExcessDays());
-        }else{
-            p.setLopDays(0.0);
-        }
+        Double lopDays = lopService.getMyMonthlyLopTotal(
+                req.getEmployeeId(),
+                prevYear,
+                prevMonth
+        );
+
+        // ✅ Set LOP days from backend
+        p.setLopDays(lopDays != null ? lopDays : 0.0);
 
         calculatePayroll(p);
     }
@@ -304,5 +310,51 @@ public class PayslipService {
                 .filter(p -> p.getYear().equals(year))
                 .map(PayslipMapper::toResponse)
                 .toList();
+    }
+    public PayslipResponse getPrefillData(Long employeeId, Integer year, Integer month){
+
+        int prevMonth = month == 1 ? 12 : month - 1;
+        int prevYear = month == 1 ? year - 1 : year;
+
+        Optional<Payslip> prevPayslip =
+                payslipRepository.findByEmployeeIdAndYearAndMonth(
+                        employeeId, prevYear, prevMonth);
+
+        Payslip p = new Payslip();
+
+        p.setEmployeeId(employeeId);
+        p.setYear(year);
+        p.setMonth(month);
+
+        if(prevPayslip.isPresent()){
+            Payslip prev = prevPayslip.get();
+
+            // COPY EVERYTHING
+            p.setBasicSalary(prev.getBasicSalary());
+            p.setHra(prev.getHra());
+            p.setConveyance(prev.getConveyance());
+            p.setMedical(prev.getMedical());
+            p.setOtherAllowance(prev.getOtherAllowance());
+
+            p.setBonus(prev.getBonus());
+            p.setIncentive(prev.getIncentive());
+            p.setStipend(prev.getStipend());
+
+            p.setPf(prev.getPf());
+            p.setEsi(prev.getEsi());
+            p.setProfessionalTax(prev.getProfessionalTax());
+            p.setTds(prev.getTds());
+        }
+
+        // ❗ IMPORTANT
+        p.setLop(BigDecimal.ZERO);
+
+        // ✅ GET PREVIOUS MONTH LOP DAYS
+        Double lopDays = lopService.getMyMonthlyLopTotal(employeeId, prevYear, prevMonth);
+        p.setLopDays(lopDays != null ? lopDays : 0.0);
+
+        calculatePayroll(p);
+
+        return PayslipMapper.toResponse(p);
     }
 }
