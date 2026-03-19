@@ -610,4 +610,24 @@ public class EmployeeService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }
+
+    public List<Employee> getOnboardingPending(){
+        return employeeRepository.findOnboardingPending();
+    }
+    public void decideBio (Long employeeId, BiometricVpnStatus decision){
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(()->new RuntimeException("Employee not Found"));
+        if (employee.getVpnStatus()== BiometricVpnStatus.PROVIDED){
+            employee.setOnboardingCompletedAt(LocalDateTime.now());
+        }
+        employee.setBiometricStatus(decision);
+    }
+    public void decideVpn (Long employeeId, BiometricVpnStatus decision){
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(()->new RuntimeException("Employee not Found"));
+        if (employee.getBiometricStatus()== BiometricVpnStatus.PROVIDED){
+            employee.setOnboardingCompletedAt(LocalDateTime.now());
+        }
+        employee.setVpnStatus(decision);
+    }
 }

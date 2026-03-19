@@ -9,30 +9,33 @@ public class LeaveTypeBreakdown {
     private Double usedDays;
     private Double remainingDays;   // ← ADD
     private Integer halfDayCount;
-
-    // ✅ EXISTING constructor (3 args) — keep for backward compatibility
-    public LeaveTypeBreakdown(LeaveType leaveType,
-                              Double usedDays,
-                              Integer halfDayCount) {
-        this.leaveType    = leaveType;
-        this.usedDays     = usedDays;
-        this.halfDayCount = halfDayCount;
-    }
+    private Long pendingCount;
 
     // ✅ NEW constructor (5 args) — used by DashboardService
     public LeaveTypeBreakdown(LeaveType leaveType,
                               Double allocatedDays,
                               Double usedDays,
                               Double remainingDays,
-                              Integer halfDayCount) {
+                              Integer halfDayCount,
+                              Long pendingCount) {
         this.leaveType     = leaveType;
         this.allocatedDays = allocatedDays;
         this.usedDays      = usedDays;
         this.remainingDays = remainingDays;
         this.halfDayCount  = halfDayCount;
+        this.pendingCount = pendingCount;
     }
 
     // Getters & Setters
+
+    public Long getPendingCount() {
+        return pendingCount;
+    }
+
+    public void setPendingCount(Long pendingCount) {
+        this.pendingCount = pendingCount;
+    }
+
     public LeaveType getLeaveType() { return leaveType; }
     public void setLeaveType(LeaveType leaveType) { this.leaveType = leaveType; }
 

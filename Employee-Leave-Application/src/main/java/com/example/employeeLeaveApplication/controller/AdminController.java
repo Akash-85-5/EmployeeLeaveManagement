@@ -1,13 +1,16 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.*;
+import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
+import com.example.employeeLeaveApplication.enums.BiometricVpnStatus;
 import com.example.employeeLeaveApplication.enums.EmployeeType;
 import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.service.AdminService;
 import com.example.employeeLeaveApplication.service.CarryForwardService;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -127,5 +130,26 @@ public class AdminController {
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+    }
+
+    @GetMapping("/onboarding/pendding")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Employee>> getOnboardingPending(){
+        return ResponseEntity.ok(employeeService.getOnboardingPending());
+    }
+
+    @PatchMapping("/onBoarding/bio/decision/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> bioDecide(@PathVariable Long employeeId,
+                                                         @RequestParam BiometricVpnStatus decision){
+        employeeService.decideBio(employeeId, decision);
+        return ResponseEntity.ok("Decision recorder " + decision);
+    }
+    @PatchMapping("/onBoarding/vpn/decision/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> vpnDecide(@PathVariable Long employeeId,
+                                                       @RequestParam BiometricVpnStatus decision){
+        employeeService.decideVpn(employeeId, decision);
+        return ResponseEntity.ok("Decision recorder " + decision);
     }
 }

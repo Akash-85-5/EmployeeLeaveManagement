@@ -163,10 +163,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     );
 
     @Query(
-            "SELECT l FROM LeaveApplication l " +
-                    "WHERE l.managerId = :managerId " +
-                    "AND l.startDate <= :weekEnd " +
-                    "AND l.endDate >= :weekStart"
+            "SELECT l FROM LeaveApplication l WHERE l.managerId = :managerId OR l.teamLeaderId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
     )
     List<LeaveApplication> findTeamLeavesForWeek(
             @Param("managerId") Long managerId,
@@ -197,10 +194,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             Pageable pageable
     );
 
-    @Query("SELECT COUNT(la) FROM LeaveApplication la " +
-            "WHERE la.employeeId = :employeeId " +
-            "AND la.year = :year " +
-            "AND la.status = :status")
+    @Query("SELECT COUNT(la) FROM LeaveApplication la WHERE la.employeeId = :employeeId AND la.year = :year AND la.status = :status")
     Integer countByStatus(
             @Param("employeeId") Long employeeId,
             @Param("year") Integer year,
