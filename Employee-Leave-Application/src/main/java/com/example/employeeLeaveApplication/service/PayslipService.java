@@ -3,11 +3,9 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.dto.CreatePayslipRequest;
 import com.example.employeeLeaveApplication.dto.PayslipResponse;
 import com.example.employeeLeaveApplication.dto.YearlySummaryResponse;
-import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.mapper.PayslipMapper;
-import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +19,12 @@ public class PayslipService {
 
     private final PayslipRepository payslipRepository;
     private final PayslipPdfService pdfService;
-    private final LossOfPayRecordRepository lopRepository;
 
     public PayslipService(PayslipRepository payslipRepository,
-                          PayslipPdfService pdfService,
-                          LossOfPayRecordRepository lopRepository
+                          PayslipPdfService pdfService
                           ) {
         this.payslipRepository = payslipRepository;
         this.pdfService = pdfService;
-        this.lopRepository = lopRepository;
     }
 
     private BigDecimal safe(BigDecimal v){
@@ -120,17 +115,17 @@ public class PayslipService {
         p.setLop(safe(req.getLop()));
         p.setVariablePay(safe(req.getVariablePay()));
 
-        Optional<LossOfPayRecord> lopRecord =
-                lopRepository.findByEmployeeIdAndYearAndMonth(
-                        req.getEmployeeId(),
-                        req.getYear(),
-                        req.getMonth());
+//        Optional<LossOfPayRecord> lopRecord =
+//                lopRepository.findByEmployeeIdAndYearAndMonth(
+//                        req.getEmployeeId(),
+//                        req.getYear(),
+//                        req.getMonth());
 
-        if(lopRecord.isPresent()){
-            p.setLopDays(lopRecord.get().getExcessDays());
-        }else{
-            p.setLopDays(0.0);
-        }
+//        if(lopRecord.isPresent()){
+//            p.setLopDays(lopRecord.get().getExcessDays());
+//        }else{
+//            p.setLopDays(0.0);
+//        }
 
         calculatePayroll(p);
     }

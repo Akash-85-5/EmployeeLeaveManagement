@@ -36,7 +36,7 @@ public class DashboardService {
     private final LeaveApplicationRepository applicationRepository;
     private final CompOffBalanceRepository compOffRepository;
     private final CarryForwardBalanceRepository carryForwardRepository;
-    private final LossOfPayRecordRepository lopRepository;
+    private final LopRecordRepository lopRepository;
     private final ODRequestRepository odRepository;
     private final AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository;
     private final EmployeePersonalDetailsRepository employeePersonalDetailsRepository;
@@ -190,8 +190,7 @@ public class DashboardService {
         response.setCompoffBalance(coBal);
 
         // ── 5. LOSS OF PAY (manual — just read stored value) ──────
-        Double totalLOP = lopRepository
-                .getTotalLossPercentageByEmployeeIdAndYear(employeeId, currentYear);
+        Double totalLOP = lopRepository.sumLopDaysForYear(employeeId, currentYear);
         response.setLossOfPayPercentage(totalLOP != null ? totalLOP : 0.0);
 
         // ── 6. LEAVE STATUS COUNTS ────────────────────────────────
@@ -266,7 +265,7 @@ public class DashboardService {
                     .findByEmployeeIdAndYear(member.getId(), year).orElse(null);
             balance.setCompOffBalance(compOff != null ? compOff.getBalance() : 0.0);
 
-            Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(member.getId(), year);
+            Double lop = lopRepository.sumLopDaysForYear(member.getId(), year);
             balance.setLopPercentage(lop != null ? lop : 0.0);
 
             balances.add(balance);
@@ -438,8 +437,7 @@ public class DashboardService {
 
             CompOffBalance compOff = compOffRepository
                     .findByEmployeeIdAndYear(member.getId(), currentYear).orElse(null);
-            Double lop = lopRepository
-                    .getTotalLossPercentageByEmployeeIdAndYear(member.getId(), currentYear);
+            Double lop = lopRepository.sumLopDaysForYear(member.getId(), currentYear);
 
             balanceSummaries.add(new TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO(
                     member.getId(), member.getName(), allocated, used, allocated - used,
@@ -473,7 +471,7 @@ public class DashboardService {
         double totalLOP = 0.0;
         int lopCount = 0;
         for (Employee emp : activeEmployees) {
-            Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(emp.getId(), year);
+            Double lop = lopRepository.sumLopDaysForYear(emp.getId(), year);
             if (lop != null && lop > 0) { totalLOP += lop; lopCount++; }
         }
         stats.put("totalLopPercentage", lopCount > 0 ? totalLOP / lopCount : 0.0);
@@ -541,7 +539,7 @@ public class DashboardService {
     public List<TeamMemberBalance> getEmployeesWithHighLOP(Integer year, Double threshold) {
         return employeeRepository.findActiveEmployees().stream()
                 .map(emp -> {
-                    Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(emp.getId(), year);
+                    Double lop = lopRepository.sumLopDaysForYear(emp.getId(), year);
                     if (lop != null && lop > threshold) {
                         TeamMemberBalance b = new TeamMemberBalance();
                         b.setEmployeeId(emp.getId()); b.setEmployeeName(emp.getName());
@@ -810,7 +808,7 @@ public class DashboardService {
                     .ifPresent(co -> response.setTotalCompOffBalance(response.getTotalCompOffBalance() + co.getBalance()));
 
             // Average LOP calculation
-            Double lop = lopRepository.getTotalLossPercentageByEmployeeIdAndYear(emp.getId(), currentYear);
+            Double lop = lopRepository.sumLopDaysForYear(emp.getId(), currentYear);
             if (lop != null && lop > 0) {
                 totalLOP += lop;
                 lopCount++;
