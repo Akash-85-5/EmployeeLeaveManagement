@@ -519,7 +519,7 @@ public class EmployeeService {
 
     private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
         r.setEmployeeType(pd.getEmployeeType());
-        r.setFullName(pd.getFullName());
+        r.setFirstName(pd.getFullName());
         r.setLastName(pd.getLastName());
         r.setSurName(pd.getSurName());
         r.setContactNumber(pd.getContactNumber());
