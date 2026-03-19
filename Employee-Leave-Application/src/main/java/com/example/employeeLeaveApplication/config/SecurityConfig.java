@@ -51,7 +51,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/hr/**").hasRole("HR")
                         .requestMatchers("/api/manager/**").hasRole("MANAGER")
                         .requestMatchers("/api/employee/**").hasRole("EMPLOYEE")
-                        .requestMatchers("api/payslip").hasRole("CFO)")
                         .requestMatchers("/api/flash-news/**").permitAll() // allow flash news APIs
                         .requestMatchers("/api/wfh/**").permitAll()
                         .requestMatchers("/debug/**").permitAll()

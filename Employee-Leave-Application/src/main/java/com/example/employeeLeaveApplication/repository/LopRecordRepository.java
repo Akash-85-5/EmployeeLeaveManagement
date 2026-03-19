@@ -1,12 +1,14 @@
 package com.example.employeeLeaveApplication.repository;
 
 import com.example.employeeLeaveApplication.entity.LopRecord;
+import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface LopRecordRepository extends JpaRepository<LopRecord, Long> {
 
@@ -191,4 +193,5 @@ public interface LopRecordRepository extends JpaRepository<LopRecord, Long> {
     Double sumLopDaysForYear(
             @Param("empId") Long employeeId,
             @Param("year")  int  year);
+
 }

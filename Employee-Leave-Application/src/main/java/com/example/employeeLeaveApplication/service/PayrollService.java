@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.entity.LossOfPayRecord;
 import com.example.employeeLeaveApplication.entity.Payslip;
 import com.example.employeeLeaveApplication.enums.PayrollStatus;
+import com.example.employeeLeaveApplication.repository.LopRecordRepository;
 import com.example.employeeLeaveApplication.repository.LossOfPayRecordRepository;
 import com.example.employeeLeaveApplication.repository.PayslipRepository;
 import org.springframework.stereotype.Service;
@@ -16,10 +17,10 @@ import java.util.Optional;
 public class PayrollService {
 
     private final PayslipRepository payslipRepository;
-    private final LossOfPayRecordRepository lopRepository;
+    private final LopRecordRepository lopRepository;
 
     public PayrollService(PayslipRepository payslipRepository,
-                          LossOfPayRecordRepository lopRepository){
+                          LopRecordRepository lopRepository){
         this.payslipRepository = payslipRepository;
         this.lopRepository = lopRepository;
     }
@@ -86,15 +87,15 @@ public class PayrollService {
             p.setLop(BigDecimal.ZERO);
 
             // FETCH LOP DAYS FROM LOP SERVICE
-            Optional<LossOfPayRecord> lop =
-                    lopRepository.findByEmployeeIdAndYearAndMonth(
-                            prev.getEmployeeId(), previousYear, previousMonth);
-
-            if(lop.isPresent()){
-                p.setLopDays(lop.get().getExcessDays());
-            }else{
-                p.setLopDays(0.0);
-            }
+//            Optional<LossOfPayRecord> lop =
+//                    lopRepository.findByEmployeeIdAndYearAndMonth(
+//                            prev.getEmployeeId(), previousYear, previousMonth);
+//
+//            if(lop.isPresent()){
+//                p.setLopDays(lop.get().getExcessDays());
+//            }else{
+//                p.setLopDays(0.0);
+//            }
 
             p.setStatus(PayrollStatus.DRAFT);
 

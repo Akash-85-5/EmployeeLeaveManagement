@@ -158,4 +158,22 @@ public class PayslipController {
 
         return payslipService.yearlySummary(employeeId, year);
     }
+
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/employee/{employeeId}/{year}")
+    public List<PayslipResponse> getEmployeeYearlyPayslips(
+            @PathVariable Long employeeId,
+            @PathVariable Integer year){
+
+        return payslipService.getEmployeeHistory(employeeId, year);
+    }
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/prefill")
+    public PayslipResponse prefill(
+            @RequestParam Long employeeId,
+            @RequestParam Integer year,
+            @RequestParam Integer month){
+
+        return payslipService.getPrefillData(employeeId, year, month);
+    }
 }
