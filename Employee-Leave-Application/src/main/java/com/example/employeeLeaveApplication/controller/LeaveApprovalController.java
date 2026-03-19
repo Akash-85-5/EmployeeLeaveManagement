@@ -1,16 +1,21 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.BulkLeaveDecisionRequest;
+import com.example.employeeLeaveApplication.dto.LeaveApplicationWithAttachmentsDto;
 import com.example.employeeLeaveApplication.dto.LeaveDecisionRequest;
 import com.example.employeeLeaveApplication.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.entity.LeaveApproval;
 import com.example.employeeLeaveApplication.service.LeaveApprovalService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/leave-approvals")
@@ -22,37 +27,51 @@ public class LeaveApprovalController {
         this.leaveApprovalService = leaveApprovalService;
     }
 
-    // ── Pending per role ──────────────────────────────────────────
+    // ── Pending per role (WITH ATTACHMENTS) ─────────────────────
 
     @GetMapping("/pending/team-leader/{teamLeaderId}")
     @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
-    public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForTeamLeader(
+    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForTeamLeader(
             @PathVariable Long teamLeaderId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(
-                leaveApprovalService.getPendingLeavesForTeamLeader(teamLeaderId, pageable));
+        Page<LeaveApplicationWithAttachmentsDto> result =
+                leaveApprovalService.getPendingLeavesForTeamLeaderWithAttachments(teamLeaderId, pageable);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/pending/manager/{managerId}")
     @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
-    public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForManager(
+    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForManager(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(
-                leaveApprovalService.getPendingLeavesForManager(managerId, pageable));
+        Page<LeaveApplicationWithAttachmentsDto> result =
+                leaveApprovalService.getPendingLeavesForManagerWithAttachments(managerId, pageable);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/pending/hr")
     @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<Page<LeaveApplication>> getPendingLeavesForHr(
+    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForHr(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(leaveApprovalService.getPendingLeavesForHr(pageable));
+        Page<LeaveApplicationWithAttachmentsDto> result =
+                leaveApprovalService.getPendingLeavesForHrWithAttachments(pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    // ── Get single leave with attachments ────────────────────────
+
+    @GetMapping("/{leaveId}/with-attachments")
+    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
+            @PathVariable Long leaveId) {
+        LeaveApplicationWithAttachmentsDto dto =
+                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
+        return ResponseEntity.ok(dto);
     }
 
     // ── Core decision ─────────────────────────────────────────────
