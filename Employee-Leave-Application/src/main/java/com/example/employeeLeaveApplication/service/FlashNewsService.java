@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.service;
 import com.example.employeeLeaveApplication.dto.FlashNewsRequest;
 import com.example.employeeLeaveApplication.entity.FlashNews;
 import com.example.employeeLeaveApplication.repository.FlashNewsRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,7 +19,7 @@ public class FlashNewsService {
     }
     public List<FlashNews> getAllFlashNews() {
         return repository.findAll(
-                org.springframework.data.domain.Sort.by("createdAt").descending()
+                Sort.by("createdAt").descending()
         );
     }
 

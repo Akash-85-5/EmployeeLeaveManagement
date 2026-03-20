@@ -59,7 +59,7 @@ public class ProfileResponse {
     private List<String> skillSet;
 
     // ── NEW fields ────────────────────────────────────────────────
-    private String fullName;
+    private String firstName;
     private String lastName;
     private String surName;
     private String accountNumber;
@@ -81,6 +81,14 @@ public class ProfileResponse {
     private LocalDate oldCompanyEndDate;
 
     // Getters & Setters
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -187,8 +195,6 @@ public class ProfileResponse {
     public List<String> getSkillSet() { return skillSet; }
     public void setSkillSet(List<String> skillSet) { this.skillSet = skillSet; }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
 
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }

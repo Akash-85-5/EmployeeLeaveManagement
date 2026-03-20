@@ -437,7 +437,7 @@ public class EmployeeService {
     /** Fills all common text fields from either fresher or experienced request */
     private void fillCommonFields(EmployeePersonalDetails pd, Object request) {
         if (request instanceof FresherPersonalDetailsRequest r) {
-            pd.setFullName(r.getFullName());
+            pd.setFirstName(r.getFirstName());
             pd.setLastName(r.getLastName());
             pd.setSurName(r.getSurName());
             pd.setContactNumber(r.getContactNumber());
@@ -463,7 +463,7 @@ public class EmployeeService {
             pd.setMotherOccupation(r.getMotherOccupation());
             pd.setMotherAlive(r.getMotherAlive());
         } else if (request instanceof ExperiencedPersonalDetailsRequest r) {
-            pd.setFullName(r.getFullName());
+            pd.setFirstName(r.getFirstName());
             pd.setLastName(r.getLastName());
             pd.setSurName(r.getSurName());
             pd.setContactNumber(r.getContactNumber());
@@ -519,7 +519,7 @@ public class EmployeeService {
 
     private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
         r.setEmployeeType(pd.getEmployeeType());
-        r.setFullName(pd.getFullName());
+        r.setFirstName(pd.getFirstName());
         r.setLastName(pd.getLastName());
         r.setSurName(pd.getSurName());
         r.setContactNumber(pd.getContactNumber());

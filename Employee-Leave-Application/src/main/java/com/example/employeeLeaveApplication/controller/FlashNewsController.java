@@ -17,9 +17,8 @@ public class FlashNewsController {
     public FlashNewsController(FlashNewsService service) {
         this.service = service;
     }
-    // Admin creates flash news
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
+    @PostMapping("/create")
     public FlashNews createFlashNews(@RequestBody FlashNewsRequest request) {
         return service.createFlashNews(request);
     }

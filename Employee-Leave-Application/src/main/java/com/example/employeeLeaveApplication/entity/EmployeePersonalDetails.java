@@ -40,8 +40,8 @@ public class EmployeePersonalDetails {
     private LocalDateTime submittedAt;
 
     // ── NEW: name fields ──────────────────────────────────────────
-    @Column(name = "full_name", length = 100)
-    private String fullName;
+    @Column(name = "first_name", length = 100)
+    private String firstName;
 
     @Column(name = "last_name", length = 100)
     private String lastName;
@@ -206,8 +206,13 @@ public class EmployeePersonalDetails {
     public LocalDateTime getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
