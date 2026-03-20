@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.entity;
 
+import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.example.employeeLeaveApplication.enums.ODStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,6 +28,8 @@ public class ODRequest {
     private LocalDate startDate;
 
     private LocalDate endDate;
+
+    private LeaveType leaveType = LeaveType.ON_DUTY;
 
     @Enumerated(EnumType.STRING)
     private ODStatus status;

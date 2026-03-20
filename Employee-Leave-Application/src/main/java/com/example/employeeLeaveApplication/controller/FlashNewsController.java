@@ -3,6 +3,7 @@ package com.example.employeeLeaveApplication.controller;
 import com.example.employeeLeaveApplication.dto.FlashNewsRequest;
 import com.example.employeeLeaveApplication.entity.FlashNews;
 import com.example.employeeLeaveApplication.service.FlashNewsService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -19,13 +20,13 @@ public class FlashNewsController {
     }
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
-    public FlashNews createFlashNews(@RequestBody FlashNewsRequest request) {
-        return service.createFlashNews(request);
+    public ResponseEntity<FlashNews> createFlashNews(@RequestBody FlashNewsRequest request) {
+        return ResponseEntity.ok(service.createFlashNews(request));
     }
 
     // Employees see all flash news
     @GetMapping
-    public List<FlashNews> getFlashNews() {
+     public List<FlashNews> getFlashNews() {
         return service.getActiveFlashNews();
     }
     @GetMapping("/history")

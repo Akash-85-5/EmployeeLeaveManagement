@@ -10,7 +10,6 @@ public class NotificationMessageBuilder {
     public EmailMessage buildmessage(EventType eventType, String reason) {
         switch (eventType) {
 
-            // ── Existing leave events — UNCHANGED ─────────────────
             case LEAVE_APPROVED:
                 return new EmailMessage("Leave Approved", reason);
             case LEAVE_REJECTED:
@@ -35,23 +34,38 @@ public class NotificationMessageBuilder {
                 return new EmailMessage("OD Cancelled", "Your leave request has been cancelled.");
             case OD_IN_PROGRESS:
                 return new EmailMessage("OD Application Progress", reason);
-            // ── NEW: profile verification events ──────────────────
             case PROFILE_SUBMITTED:
-                // reason = employee name, sent to HR
                 return new EmailMessage(
                         "New Profile Pending Your Verification",
                         reason);
             case PROFILE_VERIFIED:
-                // reason = employee name, sent to employee
                 return new EmailMessage(
                         "Your Profile Has Been Verified",
                         reason);
             case PROFILE_REJECTED:
-                // reason = rejection remarks, sent to employee
                 return new EmailMessage(
                         "Your Profile Submission Was Rejected",
                         reason);
-
+            case ACCESS_REQUEST_SUBMITTED:
+                return new EmailMessage(
+                        "New Access Request Pending Your Approval",
+                        reason);
+            case ACCESS_REQUEST_MANAGER_APPROVED:
+                return new EmailMessage(
+                        "Your Access Request Approved by Manager",
+                        reason);
+            case ACCESS_REQUEST_MANAGER_REJECTED:
+                return new EmailMessage(
+                        "Your Access Request Was Rejected by Manager",
+                        reason);
+            case ACCESS_REQUEST_ADMIN_APPROVED:
+                return new EmailMessage(
+                        "Your Access Request Approved – Access Granted!",
+                        reason);
+            case ACCESS_REQUEST_ADMIN_REJECTED:
+                return new EmailMessage(
+                        "Your Access Request Was Rejected by Admin",
+                        reason);
             default:
                 return new EmailMessage("Notification", "You have a new notification.");
         }

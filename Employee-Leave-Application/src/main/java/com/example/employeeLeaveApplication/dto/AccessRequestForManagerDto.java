@@ -1,0 +1,25 @@
+package com.example.employeeLeaveApplication.dto;
+
+import com.example.employeeLeaveApplication.enums.LeaveType;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class AccessRequestForManagerDto {
+    private Long id;
+    private Long employeeId;
+    private String employeeName;
+    private String employeeEmail;
+    private LeaveType accessType;
+    private String status;
+    private String reason;
+    private LocalDateTime submittedAt;
+    private LocalDateTime createdAt;
+}
