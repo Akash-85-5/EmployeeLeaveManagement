@@ -21,7 +21,7 @@ public class DocumentController {
     @Value("${app.document.upload-dir:uploads/profile-documents}")
     private String uploadDir;
     @GetMapping("/view")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<Resource> viewDocument(@RequestParam String path) {
 
         // Prevent path traversal attacks (e.g. ../../etc/passwd)
@@ -52,7 +52,7 @@ public class DocumentController {
     }
 
     @GetMapping("/download")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<Resource> downloadDocument(@RequestParam String path) {
 
         if (path.contains("..")) {

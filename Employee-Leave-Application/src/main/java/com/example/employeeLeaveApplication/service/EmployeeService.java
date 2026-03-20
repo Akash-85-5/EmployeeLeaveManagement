@@ -621,6 +621,7 @@ public class EmployeeService {
             employee.setOnboardingCompletedAt(LocalDateTime.now());
         }
         employee.setBiometricStatus(decision);
+        employeeRepository.save(employee);
     }
     public void decideVpn (Long employeeId, BiometricVpnStatus decision){
         Employee employee = employeeRepository.findById(employeeId)
@@ -629,5 +630,6 @@ public class EmployeeService {
             employee.setOnboardingCompletedAt(LocalDateTime.now());
         }
         employee.setVpnStatus(decision);
+        employeeRepository.save(employee);
     }
 }

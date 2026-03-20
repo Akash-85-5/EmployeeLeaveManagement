@@ -5,5 +5,8 @@ public enum LeaveType {
     ANNUAL_LEAVE,
     MATERNITY,
     PATERNITY,
-    COMP_OFF
+    COMP_OFF,
+    ON_DUTY,
+    VPN,
+    BIOMETRIC
 }
