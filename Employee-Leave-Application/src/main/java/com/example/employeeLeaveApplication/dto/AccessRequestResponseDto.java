@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.dto;
 
+import com.example.employeeLeaveApplication.enums.AccessRequestStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -16,7 +17,7 @@ public class AccessRequestResponseDto {
     private Long id;
     private Long employeeId;
     private LeaveType accessType;          // VPN or BIOMETRIC
-    private String status;              // Current status
+    private AccessRequestStatus status;              // Current status
     private String reason;              // Employee's reason
     private LocalDateTime submittedAt;
 

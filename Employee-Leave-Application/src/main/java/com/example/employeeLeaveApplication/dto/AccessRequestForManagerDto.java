@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.dto;
 
+import com.example.employeeLeaveApplication.enums.AccessRequestStatus;
 import com.example.employeeLeaveApplication.enums.LeaveType;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
@@ -18,7 +19,7 @@ public class AccessRequestForManagerDto {
     private String employeeName;
     private String employeeEmail;
     private LeaveType accessType;
-    private String status;
+    private AccessRequestStatus status;
     private String reason;
     private LocalDateTime submittedAt;
     private LocalDateTime createdAt;

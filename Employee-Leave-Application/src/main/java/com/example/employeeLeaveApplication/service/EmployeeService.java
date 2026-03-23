@@ -67,19 +67,19 @@ public class EmployeeService {
         ProfileResponse response = new ProfileResponse();
 
         // ── Unchanged block ───────────────────────────────────────
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setEmail(user.getEmail());
-        response.setRole(user.getRole().name());
-        response.setManagerId(user.getManagerId());
+        response.setId(employee.getId());
+        response.setName(employee.getName());
+        response.setEmail(employee.getEmail());
+        response.setRole(employee.getRole().name());
+        response.setManagerId(employee.getManagerId());
         response.setHrname(hrName);
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
-        response.setJoiningDate(user.getJoiningDate());
-        response.setBiometricStatus(user.getBiometricStatus().name());
-        response.setVpnStatus(user.getVpnStatus().name());
-        response.setCreatedAt(user.getCreatedAt());
-        response.setUpdatedAt(user.getUpdatedAt());
+        response.setJoiningDate(employee.getJoiningDate());
+        response.setBiometricStatus(employee.getBiometricStatus().name());
+        response.setVpnStatus(employee.getVpnStatus().name());
+        response.setCreatedAt(employee.getCreatedAt());
+        response.setUpdatedAt(employee.getUpdatedAt());
 
         if (employee.getManagerId() != null) {
             employeeRepository.findById(employee.getManagerId())

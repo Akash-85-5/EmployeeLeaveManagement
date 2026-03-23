@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 /**
  * Service for managing Access Requests (VPN & Biometric)
- *
+ * <p>
  * Flow:
  * 1. Employee submits request (status: SUBMITTED)
  * 2. Manager approves/rejects (status: MANAGER_APPROVED/MANAGER_REJECTED)
@@ -69,6 +69,16 @@ public class AccessRequestService {
 
         if (employee.getManagerId() == null) {
             throw new BadRequestException("No manager assigned to your profile");
+        }
+        if(request.getAccessType()==LeaveType.BIOMETRIC){
+            if(employee.getBiometricStatus()== BiometricVpnStatus.PROVIDED){
+                throw new BadRequestException("You already have biometric access");
+            }
+        }
+        if(request.getAccessType()==LeaveType.VPN){
+            if(employee.getVpnStatus()==BiometricVpnStatus.PROVIDED){
+                throw new BadRequestException("You already have Vpn access");
+            }
         }
 
         // Check if already has pending request of same type
@@ -257,7 +267,7 @@ public class AccessRequestService {
         dto.setId(request.getId());
         dto.setEmployeeId(request.getEmployeeId());
         dto.setAccessType(request.getAccessType());
-        dto.setStatus(request.getStatus().getDescription());
+        dto.setStatus(request.getStatus());
         dto.setReason(request.getReason());
         dto.setSubmittedAt(request.getSubmittedAt());
         dto.setManagerDecision(request.getManagerDecision());
@@ -280,7 +290,7 @@ public class AccessRequestService {
         dto.setEmployeeName(employee != null ? employee.getName() : "Unknown");
         dto.setEmployeeEmail(employee != null ? employee.getEmail() : "Unknown");
         dto.setAccessType(request.getAccessType());
-        dto.setStatus(request.getStatus().getDescription());
+        dto.setStatus(request.getStatus());
         dto.setReason(request.getReason());
         dto.setSubmittedAt(request.getSubmittedAt());
         dto.setCreatedAt(request.getCreatedAt());
@@ -304,7 +314,7 @@ public class AccessRequestService {
         }
 
         dto.setAccessType(request.getAccessType());
-        dto.setStatus(request.getStatus().getDescription());
+        dto.setStatus(request.getStatus());
         dto.setReason(request.getReason());
         dto.setSubmittedAt(request.getSubmittedAt());
         dto.setManagerDecision(request.getManagerDecision());

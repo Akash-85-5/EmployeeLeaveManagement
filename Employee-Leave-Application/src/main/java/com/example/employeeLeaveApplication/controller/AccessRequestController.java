@@ -113,7 +113,6 @@ public class AccessRequestController {
     public ResponseEntity<AccessRequestResponseDto> managerDecision(
             @PathVariable Long requestId,
             @RequestBody ManagerAccessDecisionDto decision) {
-
         log.info("Manager {} made decision on access request {}: {}",
                 decision.getManagerId(), requestId, decision.getDecision());
 

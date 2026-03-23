@@ -1,9 +1,7 @@
 package com.example.employeeLeaveApplication.controller;
 
 import com.example.employeeLeaveApplication.dto.*;
-import com.example.employeeLeaveApplication.entity.Employee;
 import com.example.employeeLeaveApplication.entity.EmployeePersonalDetails;
-import com.example.employeeLeaveApplication.enums.BiometricVpnStatus;
 import com.example.employeeLeaveApplication.enums.EmployeeType;
 import com.example.employeeLeaveApplication.enums.Role;
 import com.example.employeeLeaveApplication.service.AccessRequestService;
@@ -11,7 +9,6 @@ import com.example.employeeLeaveApplication.service.AdminService;
 import com.example.employeeLeaveApplication.service.CarryForwardService;
 import com.example.employeeLeaveApplication.service.EmployeeService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -116,127 +113,5 @@ public class AdminController {
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
-    }
-
-    @GetMapping("/onboarding/pending")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Employee>> getOnboardingPending(){
-        return ResponseEntity.ok(employeeService.getOnboardingPending());
-    }
-
-    @PatchMapping("/onboarding/bio/decision/{employeeId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> bioDecide(@PathVariable Long employeeId,
-                                            @RequestParam BiometricVpnStatus decision){
-        System.out.println(decision);
-        employeeService.decideBio(employeeId, decision);
-        return ResponseEntity.ok("Decision recorded: " + decision);
-    }
-
-    @PatchMapping("/onboarding/vpn/decision/{employeeId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> vpnDecide(@PathVariable Long employeeId,
-                                            @RequestParam BiometricVpnStatus decision){
-        employeeService.decideVpn(employeeId, decision);
-        return ResponseEntity.ok("Decision recorded: " + decision);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // NEW: ACCESS REQUEST MANAGEMENT ENDPOINTS
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Get all pending access requests (manager-approved, waiting for admin)
-     * GET /api/admin/access-requests/pending
-     *
-     * Shows:
-     * - Employee details (name, email, designation)
-     * - Access type (VPN/BIOMETRIC)
-     * - Original reason
-     * - Manager's decision and remarks
-     * - Manager name
-     */
-    @GetMapping("/access-requests/pending")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AccessRequestForAdminDto>> getPendingAccessRequests() {
-        log.info("Admin viewing pending access request approvals");
-        List<AccessRequestForAdminDto> requests =
-                accessRequestService.getPendingAdminApprovals();
-        return ResponseEntity.ok(requests);
-    }
-
-    /**
-     * Admin approves or rejects access request
-     * PATCH /api/admin/access-requests/{requestId}/decision
-     *
-     * Request body:
-     * {
-     *   "decision": "APPROVED",  // or "REJECTED"
-     *   "remarks": "Access provisioned"  (optional)
-     * }
-     *
-     * If APPROVED:
-     * - Request status = ADMIN_APPROVED
-     * - Employee.vpnStatus or Employee.biometricStatus = PROVIDED
-     * - Access is IMMEDIATELY GRANTED
-     *
-     * If REJECTED:
-     * - Request status = ADMIN_REJECTED
-     * - adminRemarks stored
-     * - No access granted
-     */
-    @PatchMapping("/access-requests/{requestId}/decision")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AccessRequestResponseDto> approveAccessRequest(
-            @PathVariable Long requestId,
-            @RequestBody AdminAccessDecisionDto decision) {
-
-        log.info("Admin making decision on access request {}: {}",
-                requestId, decision.getDecision());
-
-        AccessRequestResponseDto response =
-                accessRequestService.adminDecision(requestId, decision);
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Get access request details for admin review
-     * GET /api/admin/access-requests/{requestId}
-     */
-    @GetMapping("/access-requests/{requestId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AccessRequestForAdminDto> getAccessRequestDetails(
-            @PathVariable Long requestId) {
-
-        log.info("Admin viewing access request details: {}", requestId);
-
-        // Note: This requires adding a new method to service
-        // For now, use the list and find - better to add dedicated method
-        List<AccessRequestForAdminDto> all =
-                accessRequestService.getPendingAdminApprovals();
-
-        AccessRequestForAdminDto request = all.stream()
-                .filter(r -> r.getId().equals(requestId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Request not found or not pending"));
-
-        return ResponseEntity.ok(request);
-    }
-
-    /**
-     * Get all access requests (all statuses, for audit trail)
-     * GET /api/admin/access-requests/all
-     *
-     * Returns requests in all statuses for historical view
-     */
-    @GetMapping("/access-requests/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AccessRequestResponseDto>> getAllAccessRequests() {
-        log.info("Admin viewing all access requests");
-        // Note: This requires adding a new method to service - getAllAccessRequests()
-        // Currently the service has methods for specific statuses
-        // You may want to add: service.getAllAccessRequests()
-        return ResponseEntity.ok(List.of());
     }
 }
