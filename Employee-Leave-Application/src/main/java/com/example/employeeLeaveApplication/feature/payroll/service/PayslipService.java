@@ -9,6 +9,7 @@ import com.example.employeeLeaveApplication.shared.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.feature.payroll.mapper.PayslipMapper;
 import com.example.employeeLeaveApplication.feature.leave.lop.repository.LopRecordRepository;
 import com.example.employeeLeaveApplication.feature.payroll.repository.PayslipRepository;
+import com.example.employeeLeaveApplication.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -189,7 +190,7 @@ public class PayslipService {
         Payslip p =
                 payslipRepository.findByEmployeeIdAndYearAndMonth(
                                 employeeId,year,month)
-                        .orElseThrow(() -> new RuntimeException("Payslip not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
         if(p.getStatus()!=PayrollStatus.GENERATED){
             throw new RuntimeException("Payslip not generated yet");

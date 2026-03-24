@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.feature.auth.service;
 
+import com.example.employeeLeaveApplication.feature.auth.entity.RefreshToken;
 import com.example.employeeLeaveApplication.security.JwtTokenProvider;
 import com.example.employeeLeaveApplication.feature.auth.dto.ChangePasswordRequest;
 import com.example.employeeLeaveApplication.feature.auth.dto.LoginRequest;
@@ -20,18 +21,23 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(AuthenticationManager authenticationManager,
                        JwtTokenProvider jwtTokenProvider,
                        UserRepository userRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenService = refreshTokenService;
     }
 
-    public LoginResponse login(LoginRequest request) {
+    // ─── LOGIN ───────────────────────────────────────────────────────────────
+
+    public Object[] login(LoginRequest request) {
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -43,21 +49,47 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 🔴 BLOCK INACTIVE USERS HERE
         if (user.getStatus() != Status.ACTIVE) {
             throw new RuntimeException("Account is disabled. Contact admin.");
         }
 
-        String token = jwtTokenProvider.generateToken(user);
+        String accessToken = jwtTokenProvider.generateToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
-        return new LoginResponse(
+        LoginResponse loginResponse = new LoginResponse(
                 user.getId(),
-                token,
+                accessToken,
                 user.getRole().name(),
                 user.isForcePwdChange()
         );
+
+        return new Object[]{loginResponse, refreshToken.getToken()};
     }
 
+    // ─── REFRESH ACCESS TOKEN ─────────────────────────────────────────────────
+
+    public Object[] refreshAccessToken(String rawRefreshToken) {
+
+        RefreshToken validated = refreshTokenService.validateRefreshToken(rawRefreshToken);
+        User user = validated.getUser();
+
+        String newAccessToken = jwtTokenProvider.generateToken(user);
+        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
+
+        return new Object[]{newAccessToken, newRefreshToken.getToken()};
+    }
+
+    // ─── LOGOUT ──────────────────────────────────────────────────────────────
+
+    public void logout(String rawRefreshToken) {
+        if (rawRefreshToken != null) {
+            // Single validate — get the token object, then revoke all for that user
+            RefreshToken rt = refreshTokenService.validateRefreshToken(rawRefreshToken);
+            refreshTokenService.revokeAllTokensForUser(rt.getUser());
+        }
+    }
+
+    // ─── CHANGE PASSWORD ─────────────────────────────────────────────────────
 
     public void changePassword(ChangePasswordRequest request) {
 
@@ -69,13 +101,11 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!passwordEncoder.matches(request.getOldPassword(),
-                user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Old password incorrect");
         }
 
-        user.setPasswordHash(
-                passwordEncoder.encode(request.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setForcePwdChange(false);
 
         userRepository.save(user);

@@ -82,38 +82,26 @@ public class LeaveApplication {
     @Column(name = "required_approval_levels")
     private Integer requiredApprovalLevels;
 
-    @Column(name = "team_leader_id")
-    private Long teamLeaderId;
+    @Column(name = "first_approver_id")
+    private Long firstApproverId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "team_leader_decision")
-    private LeaveStatus teamLeaderDecision;
+    @Column(name = "first_approver_decision")
+    private LeaveStatus firstApproverDecision;
 
-    @Column(name = "team_leader_decided_at")
-    private LocalDateTime teamLeaderDecidedAt;
+    @Column(name = "first_approver_decided_at")
+    private LocalDateTime firstApproverDecidedAt;
 
-    @Column(name = "manager_id")
-    private Long managerId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "manager_decision")
-    private LeaveStatus managerDecision;
-
-    @Column(name = "manager_decided_at")
-    private LocalDateTime managerDecidedAt;
-
-    @Column(name = "hr_id")
-    private Long hrId;
+    @Column(name = "second_approver_id")
+    private Long secondApproverId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "hr_decision")
-    private LeaveStatus hrDecision;
+    @Column(name = "second_approver_decision")
+    private LeaveStatus secondApproverDecision;
 
-    @Column(name = "hr_decided_at")
-    private LocalDateTime hrDecidedAt;
+    @Column(name = "second_approver_decided_at")
+    private LocalDateTime secondApproverDecidedAt;
 
-    @Column(name = "hr_decided_by")
-    private Long hrDecidedBy;
 
     @Column(name = "approved_by")
     private Long approvedBy;
@@ -180,14 +168,6 @@ public class LeaveApplication {
         isAppointment = appointment;
     }
 
-    public Long getHrId() {
-        return hrId;
-    }
-
-    public void setHrId(Long hrId) {
-        this.hrId = hrId;
-    }
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -246,38 +226,35 @@ public class LeaveApplication {
         this.requiredApprovalLevels = requiredApprovalLevels;
     }
 
-    public Long getTeamLeaderId() { return teamLeaderId; }
-    public void setTeamLeaderId(Long teamLeaderId) { this.teamLeaderId = teamLeaderId; }
 
-    public LeaveStatus getTeamLeaderDecision() { return teamLeaderDecision; }
-    public void setTeamLeaderDecision(LeaveStatus teamLeaderDecision) {
-        this.teamLeaderDecision = teamLeaderDecision;
+    public LeaveStatus getFirstApproverDecision() { return firstApproverDecision; }
+    public void setFirstApproverDecision(LeaveStatus firstApproverDecision) {
+        this.firstApproverDecision = firstApproverDecision;
     }
 
-    public LocalDateTime getTeamLeaderDecidedAt() { return teamLeaderDecidedAt; }
-    public void setTeamLeaderDecidedAt(LocalDateTime teamLeaderDecidedAt) {
-        this.teamLeaderDecidedAt = teamLeaderDecidedAt;
+    public LocalDateTime getFirstApproverDecidedAt() { return firstApproverDecidedAt; }
+    public void setFirstApproverDecidedAt(LocalDateTime firstApproverDecidedAt) {
+        this.firstApproverDecidedAt = firstApproverDecidedAt;
     }
 
-    public Long getManagerId() { return managerId; }
-    public void setManagerId(Long managerId) { this.managerId = managerId; }
+    public Long getFirstApproverId() {
+        return firstApproverId;
+    }
 
-    public LeaveStatus getManagerDecision() { return managerDecision; }
-    public void setManagerDecision(LeaveStatus managerDecision) { this.managerDecision = managerDecision; }
+    public void setFirstApproverId(Long firstApproverId) {
+        this.firstApproverId = firstApproverId;
+    }
 
-    public LocalDateTime getManagerDecidedAt() { return managerDecidedAt; }
+    public Long getSecondApproverId() { return secondApproverId; }
+    public void setSecondApproverId(Long secondApproverId) { this.secondApproverId = secondApproverId; }
+
+    public LeaveStatus getManagerDecision() { return secondApproverDecision; }
+    public void setManagerDecision(LeaveStatus managerDecision) { this.secondApproverDecision = managerDecision; }
+
+    public LocalDateTime getManagerDecidedAt() { return secondApproverDecidedAt; }
     public void setManagerDecidedAt(LocalDateTime managerDecidedAt) {
-        this.managerDecidedAt = managerDecidedAt;
+        this.secondApproverDecidedAt = managerDecidedAt;
     }
-
-    public LeaveStatus getHrDecision() { return hrDecision; }
-    public void setHrDecision(LeaveStatus hrDecision) { this.hrDecision = hrDecision; }
-
-    public LocalDateTime getHrDecidedAt() { return hrDecidedAt; }
-    public void setHrDecidedAt(LocalDateTime hrDecidedAt) { this.hrDecidedAt = hrDecidedAt; }
-
-    public Long getHrDecidedBy() { return hrDecidedBy; }
-    public void setHrDecidedBy(Long hrDecidedBy) { this.hrDecidedBy = hrDecidedBy; }
 
     public Long getApprovedBy() { return approvedBy; }
     public void setApprovedBy(Long approvedBy) { this.approvedBy = approvedBy; }

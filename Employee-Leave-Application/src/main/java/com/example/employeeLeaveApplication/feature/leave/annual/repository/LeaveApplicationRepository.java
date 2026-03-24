@@ -34,12 +34,9 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<LeaveApplication> findByManagerId(Long managerId);
+    List<LeaveApplication> findByFirstApproverId(Long managerId);
 
-    List<LeaveApplication> findByManagerIdAndStatus(
-            Long managerId,
-            LeaveStatus status
-    );
+
 
     List<LeaveApplication> findByEscalatedTrueAndStatus(LeaveStatus status);
 
@@ -162,8 +159,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("endDate") LocalDate endDate
     );
 
-    @Query(
-            "SELECT l FROM LeaveApplication l WHERE l.managerId = :managerId OR l.teamLeaderId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
+    @Query("SELECT l FROM LeaveApplication l WHERE l.firstApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
     )
     List<LeaveApplication> findTeamLeavesForWeek(
             @Param("managerId") Long managerId,
@@ -293,13 +289,13 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("status") LeaveStatus status
     );
 
-    List<LeaveApplication> findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
+    List<LeaveApplication> findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
             Long teamLeaderId,
             LeaveStatus status,
             ApprovalLevel currentApprovalLevel
     );
 
-    List<LeaveApplication> findByManagerIdAndStatusAndCurrentApprovalLevel(
+    List<LeaveApplication> findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
             Long managerId,
             LeaveStatus status,
             ApprovalLevel currentApprovalLevel

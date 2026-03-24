@@ -30,321 +30,257 @@ public class ODService {
         this.notificationService = notificationService;
     }
 
+    // ───────────────────────────────────────────────
+    // CREATE
+    // ───────────────────────────────────────────────
     public ODRequest createOD(Long employeeId, ODRequest request) {
 
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
-        List<ODRequest> overlappingODs = odRepository.findOverlappingODs(
-                employeeId,
-                request.getStartDate(),
-                request.getEndDate()
-        );
-        if (!overlappingODs.isEmpty()) {
+        // HR role cannot apply OD
+        if (employee.getRole() == Role.HR) {
+            throw new BadRequestException("HR cannot create an OD request");
+        }
+
+        // Employee must have a manager to route the request
+        if (employee.getManagerId() == null) {
+            throw new BadRequestException("No manager assigned; cannot submit OD request");
+        }
+
+        // Overlap check
+        List<ODRequest> overlapping = odRepository.findOverlappingODs(
+                employeeId, request.getStartDate(), request.getEndDate());
+        if (!overlapping.isEmpty()) {
             throw new BadRequestException(
                     "You already have an active OD request that overlaps with these dates.");
         }
 
+        Employee level1Manager = employeeRepository.findById(employee.getManagerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+
         request.setEmployeeId(employeeId);
-
-        switch (employee.getRole()) {
-            case EMPLOYEE ->    request.setStatus(ODStatus.PENDING_TEAM_LEADER);
-            case TEAM_LEADER -> request.setStatus(ODStatus.PENDING_MANAGER);
-            case MANAGER,
-                 ADMIN ->       request.setStatus(ODStatus.PENDING_HR);
-            default -> throw new BadRequestException("HR cannot create OD request");
-        }
-
         request.setEmployeeName(employee.getName());
+        request.setStatus(ODStatus.PENDING);
+        request.setCurrentApproverId(level1Manager.getId());
+        request.setApprovalLevel(1);
+
         ODRequest saved = odRepository.save(request);
 
-        notifyFirstApprover(saved, employee);
+        // Notify level-1 manager
+        notify(level1Manager.getId(),
+                employee.getEmail(),
+                level1Manager.getEmail(),
+                EventType.OD_APPLIED,
+                level1Manager.getRole(),
+                employee.getName() + " submitted an OD request from "
+                        + saved.getStartDate() + " to " + saved.getEndDate()
+                        + ". Please review and approve.");
 
         return saved;
     }
 
+    // ───────────────────────────────────────────────
+    // APPROVE
+    // ───────────────────────────────────────────────
     public ODRequest approveOD(Long odId, Long approverId) {
 
-        Employee approver = employeeRepository.findById(approverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Approver not found"));
-
         ODRequest od = odRepository.findById(odId)
                 .orElseThrow(() -> new ResourceNotFoundException("OD not found"));
+
+        if (od.getStatus() != ODStatus.PENDING) {
+            throw new BadRequestException("OD is already finalized");
+        }
+
+        // Only the designated current approver can approve
+        if (!od.getCurrentApproverId().equals(approverId)) {
+            throw new BadRequestException("You are not the designated approver for this OD");
+        }
+
+        Employee approver = employeeRepository.findById(approverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Approver not found"));
 
         Employee employee = employeeRepository.findById(od.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
-        switch (od.getStatus()) {
+        if (od.getApprovalLevel() == 1) {
+            // Check if level-1 manager has a manager above them (level-2)
+            if (approver.getManagerId() != null) {
+                Employee level2Manager = employeeRepository.findById(approver.getManagerId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Level-2 manager not found"));
 
-            case PENDING_TEAM_LEADER -> {
-                if (approver.getRole() != Role.TEAM_LEADER)
-                    throw new BadRequestException("Only Team Leader can approve");
-
-                od.setStatus(ODStatus.PENDING_MANAGER);
+                od.setApprovalLevel(2);
+                od.setCurrentApproverId(level2Manager.getId());
                 odRepository.save(od);
 
-                notifyEmployeeProgress(od, employee, approver,
+                // Notify employee of progress
+                notify(employee.getId(),
+                        approver.getEmail(),
+                        employee.getEmail(),
+                        EventType.OD_IN_PROGRESS,
+                        employee.getRole(),
                         "Your OD request from " + od.getStartDate() + " to " + od.getEndDate()
-                                + " has been approved by Team Leader. Pending Manager approval.");
+                                + " was approved by " + approver.getName()
+                                + " and is now pending final approval.");
 
-                notifyNextApprover(od, employee, approver, ODStatus.PENDING_MANAGER);
+                // Notify level-2 manager
+                notify(level2Manager.getId(),
+                        approver.getEmail(),
+                        level2Manager.getEmail(),
+                        EventType.OD_APPLIED,
+                        level2Manager.getRole(),
+                        employee.getName() + "'s OD request from "
+                                + od.getStartDate() + " to " + od.getEndDate()
+                                + " has been approved by " + approver.getName()
+                                + ". Awaiting your final approval.");
+
+            } else {
+                // No level-2 manager → single approval is enough
+                finalizeApproval(od, employee, approver);
             }
 
-            case PENDING_MANAGER -> {
-                if (approver.getRole() != Role.MANAGER)
-                    throw new BadRequestException("Only Manager can approve");
+        } else if (od.getApprovalLevel() == 2) {
+            finalizeApproval(od, employee, approver);
 
-                od.setStatus(ODStatus.APPROVED);
-                odRepository.save(od);
-
-                notifyEmployeeFinal(od, employee, approver, true, null);
-            }
-
-            case PENDING_HR -> {
-                if (approver.getRole() != Role.HR)
-                    throw new BadRequestException("Only HR can approve");
-
-                od.setStatus(ODStatus.APPROVED);
-                odRepository.save(od);
-
-                notifyEmployeeFinal(od, employee, approver, true, null);
-            }
-
-            default -> throw new BadRequestException("OD already processed");
+        } else {
+            throw new BadRequestException("Unexpected approval level");
         }
 
         return od;
     }
 
+    // ───────────────────────────────────────────────
+    // REJECT
+    // ───────────────────────────────────────────────
     public ODRequest rejectOD(Long odId, Long approverId, String reason) {
 
-        Employee approver = employeeRepository.findById(approverId)
-                .orElseThrow(() -> new ResourceNotFoundException("Approver not found"));
-
         ODRequest od = odRepository.findById(odId)
                 .orElseThrow(() -> new ResourceNotFoundException("OD not found"));
+
+        if (od.getStatus() != ODStatus.PENDING) {
+            throw new BadRequestException("OD is already finalized");
+        }
+
+        if (!od.getCurrentApproverId().equals(approverId)) {
+            throw new BadRequestException("You are not the designated approver for this OD");
+        }
+
+        Employee approver = employeeRepository.findById(approverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Approver not found"));
 
         Employee employee = employeeRepository.findById(od.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
-        if (od.getStatus() == ODStatus.APPROVED ||
-                od.getStatus() == ODStatus.REJECTED ||
-                od.getStatus() == ODStatus.CANCELLED) {
-            throw new BadRequestException("OD already finalized");
-        }
-
         od.setStatus(ODStatus.REJECTED);
+        od.setCurrentApproverId(null);
         odRepository.save(od);
 
-        notifyEmployeeFinal(od, employee, approver, false, reason);
+        notify(employee.getId(),
+                approver.getEmail(),
+                employee.getEmail(),
+                EventType.OD_REJECTED,
+                employee.getRole(),
+                "Your OD request from " + od.getStartDate() + " to " + od.getEndDate()
+                        + " has been rejected by " + approver.getName()
+                        + (reason != null ? ". Reason: " + reason : "."));
 
         return od;
     }
 
+    // ───────────────────────────────────────────────
+    // CANCEL
+    // ───────────────────────────────────────────────
     public ODRequest cancelOD(Long odId, Long userId) {
+
+        ODRequest od = odRepository.findById(odId)
+                .orElseThrow(() -> new ResourceNotFoundException("OD not found"));
 
         Employee user = employeeRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        ODRequest od = odRepository.findById(odId)
-                .orElseThrow(() -> new ResourceNotFoundException("OD not found"));
-
         Employee employee = employeeRepository.findById(od.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
-        if (od.getStatus() == ODStatus.REJECTED ||
-                od.getStatus() == ODStatus.CANCELLED) {
-            throw new BadRequestException("OD already finalized");
+        if (od.getStatus() == ODStatus.REJECTED || od.getStatus() == ODStatus.CANCELLED) {
+            throw new BadRequestException("OD is already finalized");
         }
 
+        // Approved OD can only be cancelled by HR
         if (od.getStatus() == ODStatus.APPROVED) {
             if (user.getRole() != Role.HR) {
-                throw new BadRequestException("Only HR can cancel approved OD");
+                throw new BadRequestException("Only HR can cancel an approved OD");
             }
-            od.setStatus(ODStatus.CANCELLED);
-            odRepository.save(od);
-            notifyEmployeeCancel(od, employee, user);
-            return od;
+            return doCancel(od, employee, user);
         }
 
-        if (od.getEmployeeId().equals(userId)) {
-            od.setStatus(ODStatus.CANCELLED);
-            odRepository.save(od);
-            return od;
-        }
+        // PENDING: employee cancels their own, or the current approver cancels it
+        boolean isOwner = od.getEmployeeId().equals(userId);
+        boolean isCurrentApprover = od.getCurrentApproverId().equals(userId);
 
-        boolean allowed =
-                (user.getRole() == Role.TEAM_LEADER &&
-                        od.getStatus() == ODStatus.PENDING_TEAM_LEADER) ||
-                        (user.getRole() == Role.MANAGER &&
-                                od.getStatus() == ODStatus.PENDING_MANAGER) ||
-                        (user.getRole() == Role.HR &&
-                                od.getStatus() == ODStatus.PENDING_HR);
-
-        if (!allowed) {
+        if (!isOwner && !isCurrentApprover) {
             throw new BadRequestException("You are not allowed to cancel this OD request");
         }
 
-        od.setStatus(ODStatus.CANCELLED);
-        odRepository.save(od);
-
-        notifyEmployeeCancel(od, employee, user);
-
-        return od;
+        return doCancel(od, employee, user);
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // NOTIFICATION HELPERS
-    // ═══════════════════════════════════════════════════════════════
-
-    private void notifyFirstApprover(ODRequest od, Employee employee) {
-
-        String context = employee.getName() + " has submitted an OD request from "
-                + od.getStartDate() + " to " + od.getEndDate()
-                + ". Please review and approve.";
-
-        switch (od.getStatus()) {
-
-            case PENDING_TEAM_LEADER -> {
-                if (employee.getTeamLeaderId() == null) return;
-                Employee tl = employeeRepository
-                        .findById(employee.getTeamLeaderId()).orElse(null);
-                if (tl == null) return;
-
-                notificationService.createNotification(
-                        tl.getId(),
-                        employee.getEmail(),
-                        tl.getEmail(),
-                        EventType.OD_APPLIED,
-                        tl.getRole(),
-                        Channel.EMAIL,
-                        context
-                );
-            }
-
-            case PENDING_MANAGER -> {
-                if (employee.getManagerId() == null) return;
-                Employee manager = employeeRepository
-                        .findById(employee.getManagerId()).orElse(null);
-                if (manager == null) return;
-
-                notificationService.createNotification(
-                        manager.getId(),
-                        employee.getEmail(),
-                        manager.getEmail(),
-                        EventType.OD_APPLIED,
-                        manager.getRole(),
-                        Channel.EMAIL,
-                        context
-                );
-            }
-
-            case PENDING_HR -> {
-                List<Employee> hrList = employeeRepository.findAllHr();
-                for (Employee hr : hrList) {
-                    notificationService.createNotification(
-                            hr.getId(),
-                            employee.getEmail(),
-                            hr.getEmail(),
-                            EventType.OD_APPLIED,
-                            hr.getRole(),
-                            Channel.EMAIL,
-                            context
-                    );
-                }
-            }
-        }
-    }
-
-    private void notifyNextApprover(ODRequest od, Employee employee,
-                                    Employee currentApprover, ODStatus nextStatus) {
-        if (nextStatus != ODStatus.PENDING_MANAGER) return;
-
-        if (employee.getManagerId() == null) return;
-        Employee manager = employeeRepository
-                .findById(employee.getManagerId()).orElse(null);
-        if (manager == null) return;
-
-        notificationService.createNotification(
-                manager.getId(),
-                currentApprover.getEmail(),
-                manager.getEmail(),
-                EventType.OD_APPLIED,
-                manager.getRole(),
-                Channel.EMAIL,
-                employee.getName() + "'s OD request from "
-                        + od.getStartDate() + " to " + od.getEndDate()
-                        + " has been approved by Team Leader. Awaiting your approval."
-        );
-    }
-
-    private void notifyEmployeeProgress(ODRequest od, Employee employee,
-                                        Employee approver, String message) {
-        notificationService.createNotification(
-                employee.getId(),
-                approver.getEmail(),
-                employee.getEmail(),
-                EventType.OD_IN_PROGRESS,
-                employee.getRole(),
-                Channel.EMAIL,
-                message
-        );
-    }
-
-    private void notifyEmployeeFinal(ODRequest od, Employee employee,
-                                     Employee approver, boolean approved,
-                                     String reason) {
-        String context;
-        EventType eventType;
-
-        if (approved) {
-            context = "Your OD request from " + od.getStartDate()
-                    + " to " + od.getEndDate() + " has been fully approved.";
-            eventType = EventType.OD_APPROVED;
-        } else {
-            context = "Your OD request from " + od.getStartDate()
-                    + " to " + od.getEndDate() + " has been rejected."
-                    + (reason != null ? " Reason: " + reason : "");
-            eventType = EventType.OD_REJECTED;
-        }
-
-        notificationService.createNotification(
-                employee.getId(),
-                approver.getEmail(),
-                employee.getEmail(),
-                eventType,
-                employee.getRole(),
-                Channel.EMAIL,
-                context
-        );
-    }
-
-    private void notifyEmployeeCancel(ODRequest od, Employee employee, Employee cancelledBy) {
-        notificationService.createNotification(
-                employee.getId(),
-                cancelledBy.getEmail(),
-                employee.getEmail(),
-                EventType.OD_CANCELLED,
-                employee.getRole(),
-                Channel.EMAIL,
-                "Your OD request from " + od.getStartDate()
-                        + " to " + od.getEndDate()
-                        + " has been cancelled by " + cancelledBy.getName() + "."
-        );
-    }
+    // ───────────────────────────────────────────────
+    // QUERIES
+    // ───────────────────────────────────────────────
 
     public List<ODRequest> getMyODRequests(Long employeeId) {
         return odRepository.findByEmployeeId(employeeId);
     }
 
-    public List<ODRequest> getPendingForTeamLeader(Long tlId) {
-        return odRepository.findPendingForTeamLeader(tlId);
+    /** Returns all PENDING ODs currently waiting on this manager */
+    public List<ODRequest> getPendingForApprover(Long managerId) {
+        return odRepository.findByCurrentApproverIdAndStatus(managerId, ODStatus.PENDING);
     }
 
-    public List<ODRequest> getPendingForHR() {
-        return odRepository.findByStatus(ODStatus.PENDING_HR);
+    public List<ODRequest> getAllPendingODs() {
+        return odRepository.findByStatus(ODStatus.PENDING);
     }
-    public List<ODRequest> getPendingForManager(Long managerId) {
-        return odRepository.findPendingForManager(managerId);
+
+    // ───────────────────────────────────────────────
+    // PRIVATE HELPERS
+    // ───────────────────────────────────────────────
+
+    private void finalizeApproval(ODRequest od, Employee employee, Employee approver) {
+        od.setStatus(ODStatus.APPROVED);
+        od.setCurrentApproverId(null);
+        odRepository.save(od);
+
+        notify(employee.getId(),
+                approver.getEmail(),
+                employee.getEmail(),
+                EventType.OD_APPROVED,
+                employee.getRole(),
+                "Your OD request from " + od.getStartDate() + " to " + od.getEndDate()
+                        + " has been fully approved.");
+    }
+
+    private ODRequest doCancel(ODRequest od, Employee employee, Employee cancelledBy) {
+        od.setStatus(ODStatus.CANCELLED);
+        od.setCurrentApproverId(null);
+        odRepository.save(od);
+
+        // Don't notify if the employee cancelled their own
+        if (!cancelledBy.getId().equals(employee.getId())) {
+            notify(employee.getId(),
+                    cancelledBy.getEmail(),
+                    employee.getEmail(),
+                    EventType.OD_CANCELLED,
+                    employee.getRole(),
+                    "Your OD request from " + od.getStartDate() + " to " + od.getEndDate()
+                            + " has been cancelled by " + cancelledBy.getName() + ".");
+        }
+
+        return od;
+    }
+
+    private void notify(Long recipientId, String fromEmail, String toEmail,
+                        EventType eventType, Role role, String context) {
+        notificationService.createNotification(
+                recipientId, fromEmail, toEmail, eventType, role, Channel.EMAIL, context);
     }
 }

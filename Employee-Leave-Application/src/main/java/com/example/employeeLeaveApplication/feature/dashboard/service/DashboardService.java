@@ -388,81 +388,81 @@ public class DashboardService {
     // TEAM LEADER DASHBOARD
     // ═══════════════════════════════════════════════════════════════
 
-    @Transactional(readOnly = true)
-    public TeamLeaderDashboardResponse getTeamLeaderDashboard(Long teamLeaderId) {
-
-        Employee teamLeader = employeeRepository.findById(teamLeaderId)
-                .orElseThrow(() -> new RuntimeException("Team Leader not found: " + teamLeaderId));
-
-        if (teamLeader.getRole() != Role.TEAM_LEADER) {
-            throw new RuntimeException("Employee " + teamLeaderId + " is not a Team Leader");
-        }
-
-        EmployeeDashboardResponse ownStats = getDashboard(teamLeaderId);
-        TeamLeaderDashboardResponse response = new TeamLeaderDashboardResponse();
-        response.setPersonalStats(ownStats);
-
-        List<Employee> teamMembers = employeeRepository.findActiveTeamMembersByTeamLeader(teamLeaderId);
-        response.setTeamSize(teamMembers.size());
-
-        List<TeamLeaderDashboardResponse.TeamPendingLeaveDTO> pendingDTOs = new ArrayList<>();
-        for (Employee member : teamMembers) {
-            for (LeaveApplication leave : applicationRepository
-                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.PENDING)) {
-                pendingDTOs.add(new TeamLeaderDashboardResponse.TeamPendingLeaveDTO(
-                        leave.getId(), leave.getEmployeeId(), member.getName(),
-                        leave.getLeaveType(), leave.getReason(), leave.getStatus(),
-                        leave.getStartDate(), leave.getEndDate(),
-                        leave.getDays().doubleValue(), leave.getCreatedAt()));
-            }
-        }
-        pendingDTOs.sort(Comparator.comparing(
-                TeamLeaderDashboardResponse.TeamPendingLeaveDTO::getAppliedAt,
-                Comparator.nullsLast(Comparator.naturalOrder())));
-
-        response.setPendingTeamRequests(pendingDTOs);
-        response.setTeamPendingRequestCount(pendingDTOs.size());
-
-        LocalDate today = LocalDate.now();
-        List<TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO> onLeaveDTOs = new ArrayList<>();
-        for (Employee member : teamMembers) {
-            applicationRepository.findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
-                    .stream()
-                    .filter(la -> !today.isBefore(la.getStartDate()) && !today.isAfter(la.getEndDate()))
-                    .forEach(leave -> {
-                        long daysRemaining = ChronoUnit.DAYS.between(today, leave.getEndDate());
-                        onLeaveDTOs.add(new TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO(
-                                member.getId(), member.getName(), leave.getLeaveType().name(),
-                                leave.getStartDate(), leave.getEndDate(),
-                                (double) Math.max(0, daysRemaining)));
-                    });
-        }
-        response.setTeamOnLeaveToday(onLeaveDTOs);
-        response.setTeamOnLeaveCount(onLeaveDTOs.size());
-
-        int currentYear = LocalDate.now().getYear();
-        List<TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO> balanceSummaries = new ArrayList<>();
-
-        for (Employee member : teamMembers) {
-            Double allocated = allocationRepository.getTotalAllocatedDays(member.getId(), currentYear);
-            Double used      = applicationRepository.getTotalUsedDays(member.getId(), LeaveStatus.APPROVED, currentYear);
-            if (allocated == null) allocated = 0.0;
-            if (used == null)      used      = 0.0;
-
-            CompOffBalance compOff = compOffRepository
-                    .findByEmployeeIdAndYear(member.getId(), currentYear).orElse(null);
-            Double lop = lopRepository.sumLopDaysForYear(member.getId(), currentYear);
-
-            balanceSummaries.add(new TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO(
-                    member.getId(), member.getName(), allocated, used, allocated - used,
-                    compOff != null ? compOff.getBalance() : 0.0,
-                    lop != null ? lop : 0.0));
-        }
-
-        response.setTeamBalances(balanceSummaries);
-        response.setLastUpdated(LocalDateTime.now());
-        return response;
-    }
+//    @Transactional(readOnly = true)
+//    public TeamLeaderDashboardResponse getTeamLeaderDashboard(Long teamLeaderId) {
+//
+//        Employee teamLeader = employeeRepository.findById(teamLeaderId)
+//                .orElseThrow(() -> new RuntimeException("Team Leader not found: " + teamLeaderId));
+//
+//        if (teamLeader.getRole() != Role.TEAM_LEADER) {
+//            throw new RuntimeException("Employee " + teamLeaderId + " is not a Team Leader");
+//        }
+//
+//        EmployeeDashboardResponse ownStats = getDashboard(teamLeaderId);
+//        TeamLeaderDashboardResponse response = new TeamLeaderDashboardResponse();
+//        response.setPersonalStats(ownStats);
+//
+//        List<Employee> teamMembers = employeeRepository.findActiveTeamMembersByTeamLeader(teamLeaderId);
+//        response.setTeamSize(teamMembers.size());
+//
+//        List<TeamLeaderDashboardResponse.TeamPendingLeaveDTO> pendingDTOs = new ArrayList<>();
+//        for (Employee member : teamMembers) {
+//            for (LeaveApplication leave : applicationRepository
+//                    .findByEmployeeIdAndStatus(member.getId(), LeaveStatus.PENDING)) {
+//                pendingDTOs.add(new TeamLeaderDashboardResponse.TeamPendingLeaveDTO(
+//                        leave.getId(), leave.getEmployeeId(), member.getName(),
+//                        leave.getLeaveType(), leave.getReason(), leave.getStatus(),
+//                        leave.getStartDate(), leave.getEndDate(),
+//                        leave.getDays().doubleValue(), leave.getCreatedAt()));
+//            }
+//        }
+//        pendingDTOs.sort(Comparator.comparing(
+//                TeamLeaderDashboardResponse.TeamPendingLeaveDTO::getAppliedAt,
+//                Comparator.nullsLast(Comparator.naturalOrder())));
+//
+//        response.setPendingTeamRequests(pendingDTOs);
+//        response.setTeamPendingRequestCount(pendingDTOs.size());
+//
+//        LocalDate today = LocalDate.now();
+//        List<TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO> onLeaveDTOs = new ArrayList<>();
+//        for (Employee member : teamMembers) {
+//            applicationRepository.findByEmployeeIdAndStatus(member.getId(), LeaveStatus.APPROVED)
+//                    .stream()
+//                    .filter(la -> !today.isBefore(la.getStartDate()) && !today.isAfter(la.getEndDate()))
+//                    .forEach(leave -> {
+//                        long daysRemaining = ChronoUnit.DAYS.between(today, leave.getEndDate());
+//                        onLeaveDTOs.add(new TeamLeaderDashboardResponse.TeamMemberOnLeaveDTO(
+//                                member.getId(), member.getName(), leave.getLeaveType().name(),
+//                                leave.getStartDate(), leave.getEndDate(),
+//                                (double) Math.max(0, daysRemaining)));
+//                    });
+//        }
+//        response.setTeamOnLeaveToday(onLeaveDTOs);
+//        response.setTeamOnLeaveCount(onLeaveDTOs.size());
+//
+//        int currentYear = LocalDate.now().getYear();
+//        List<TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO> balanceSummaries = new ArrayList<>();
+//
+//        for (Employee member : teamMembers) {
+//            Double allocated = allocationRepository.getTotalAllocatedDays(member.getId(), currentYear);
+//            Double used      = applicationRepository.getTotalUsedDays(member.getId(), LeaveStatus.APPROVED, currentYear);
+//            if (allocated == null) allocated = 0.0;
+//            if (used == null)      used      = 0.0;
+//
+//            CompOffBalance compOff = compOffRepository
+//                    .findByEmployeeIdAndYear(member.getId(), currentYear).orElse(null);
+//            Double lop = lopRepository.sumLopDaysForYear(member.getId(), currentYear);
+//
+//            balanceSummaries.add(new TeamLeaderDashboardResponse.TeamMemberBalanceSummaryDTO(
+//                    member.getId(), member.getName(), allocated, used, allocated - used,
+//                    compOff != null ? compOff.getBalance() : 0.0,
+//                    lop != null ? lop : 0.0));
+//        }
+//
+//        response.setTeamBalances(balanceSummaries);
+//        response.setLastUpdated(LocalDateTime.now());
+//        return response;
+//    }
 
     // ═══════════════════════════════════════════════════════════════
     // HR DASHBOARD

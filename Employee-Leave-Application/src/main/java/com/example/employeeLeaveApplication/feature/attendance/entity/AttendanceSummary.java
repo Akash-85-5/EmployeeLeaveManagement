@@ -5,17 +5,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-/*
- * attendance_status values:
- *   PRESENT   — biometric punch found
- *   ABSENT    — no punch, no leave, no WFH → LOP inserted
- *   ON_LEAVE  — approved leave covers this date
- *   WFH       — approved WFH covers this date
- *   HOLIDAY   — date is in holiday_calendar
- *   WEEKEND   — Saturday or Sunday
- *   NOT_JOINED — date is before employee joining_date
- *   RELIEVED  — date is after employee relieving_date
- */
 @Entity
 @Table(
         name = "attendance_summary",

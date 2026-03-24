@@ -34,7 +34,7 @@ public class LeaveAllocationService {
             LeaveType.ANNUAL_LEAVE
     };
     private static final double[] DEFAULT_DAYS = {
-            PolicyConstants.SICK_YEARLY_ALLOCATION,       // 12
+            PolicyConstants.SICK_LEAVE_YEARLY_ALLOCATION,       // 12
             PolicyConstants.ANNUAL_LEAVE_YEARLY_ALLOCATION // 18
     };
 

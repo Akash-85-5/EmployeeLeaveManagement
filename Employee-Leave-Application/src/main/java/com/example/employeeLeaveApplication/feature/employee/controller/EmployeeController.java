@@ -122,11 +122,11 @@ public class EmployeeController {
         return employeeService.getTeamMembers(managerId);
     }
 
-    @GetMapping("/teamleader/{teamLeaderId}/team")
-    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
-    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
-        return employeeService.getTeamLeaderMembers(teamLeaderId);
-    }
+//    @GetMapping("/teamleader/{teamLeaderId}/team")
+//    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
+//    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
+//        return employeeService.getTeamLeaderMembers(teamLeaderId);
+//    }
 
     @GetMapping("/search")
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')")

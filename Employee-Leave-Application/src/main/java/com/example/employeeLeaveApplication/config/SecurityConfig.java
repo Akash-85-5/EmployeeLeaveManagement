@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/flash-news/**").permitAll() // allow flash news APIs
                         .requestMatchers("/api/wfh/**").permitAll()
                         .requestMatchers("/debug/**").permitAll()
-
+                        .requestMatchers("/api/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter,

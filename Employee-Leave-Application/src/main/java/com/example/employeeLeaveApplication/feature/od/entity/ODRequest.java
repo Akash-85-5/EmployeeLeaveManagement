@@ -31,6 +31,10 @@ public class ODRequest {
 
     private LeaveType leaveType = LeaveType.ON_DUTY;
 
+    private Long currentApproverId;
+
+    private int approvalLevel;
+
     @Enumerated(EnumType.STRING)
     private ODStatus status;
 
@@ -45,6 +49,7 @@ public class ODRequest {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
+
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();

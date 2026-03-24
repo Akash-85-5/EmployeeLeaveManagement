@@ -33,7 +33,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/leaves")
-public class LeaveApplicationController {
+public class    LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
     private final LeaveAttachmentService  leaveAttachmentService;
