@@ -39,8 +39,8 @@ public class AccessRequest {
     private String reason; // Employee's reason for requesting access
 
     // ─── MANAGER DECISION ──────────────────────────────────────
-    @Column(name = "manager_id")
-    private Long managerId; // Manager who will review
+    @Column(name = "reporting_id")
+    private Long reportingId; // Manager who will review
 
     @Column(name = "manager_decision")
     private String managerDecision; // APPROVED / REJECTED
@@ -123,13 +123,7 @@ public class AccessRequest {
         this.reason = reason;
     }
 
-    public Long getManagerId() {
-        return managerId;
-    }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
-    }
 
     public String getManagerDecision() {
         return managerDecision;
@@ -189,6 +183,14 @@ public class AccessRequest {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getReportingId() {
+        return reportingId;
+    }
+
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
     }
 
     public void setUpdatedAt(LocalDateTime updatedAt) {

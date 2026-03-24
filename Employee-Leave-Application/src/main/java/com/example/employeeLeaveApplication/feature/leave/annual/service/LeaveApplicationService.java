@@ -124,7 +124,7 @@ public class LeaveApplicationService {
     // ═══════════════════════════════════════════════════════════════
 
     private void setupApprovalChain(LeaveApplication leave, Employee employee) {
-        Long firstApproverId = employee.getManagerId();
+        Long firstApproverId = employee.getReportingId();
 
         if (firstApproverId == null) {
             // Top of hierarchy — auto-approve
@@ -143,7 +143,7 @@ public class LeaveApplicationService {
                 .orElseThrow(() -> new RuntimeException(
                         "First approver not found: " + firstApproverId));
 
-        Long secondApproverId = firstApprover.getManagerId();
+        Long secondApproverId = firstApprover.getReportingId();
 
         if (secondApproverId == null) {
             // Level-1 approver is top of chain → only 1 level

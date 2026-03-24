@@ -15,7 +15,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     Optional<Employee> findByEmail(String email);
 
-    List<Employee> findByManagerId(Long managerId);
+    List<Employee> findByreportingId(Long reportingId);
 
 //    // NEW: find employees under a team leader
 //    List<Employee> findByTeamLeaderId(Long teamLeaderId);
@@ -28,7 +28,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     List<Employee> findByActiveTrue();
 
-    @Query("SELECT e FROM Employee e WHERE e.managerId = :id AND e.active = true")
+    @Query("SELECT e FROM Employee e WHERE e.reportingId = :id AND e.active = true")
     List<Employee> findActiveTeamMembers(@Param("id") Long id);
 
     @Query("SELECT e FROM Employee e WHERE e.active = true")
@@ -46,8 +46,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
     @Query("SELECT COUNT(e) FROM Employee e WHERE e.vpnStatus = 'PENDING' AND e.active = true")
     Integer countPendingVPN();
 
-    @Query("SELECT e FROM Employee e WHERE e.managerId = :managerId AND e.active = true ORDER BY e.name ASC")
-    List<Employee> findTeamMembersByManager(@Param("managerId") Long managerId);
+    @Query("SELECT e FROM Employee e WHERE e.reportingId = :reportingId AND e.active = true ORDER BY e.name ASC")
+    List<Employee> findTeamMembersByManager(@Param("reportingId") Long reportingId);
 
     @Query("SELECT DISTINCT e FROM Employee e WHERE e.role = 'MANAGER' AND e.active = true")
     List<Employee> findAllManagers();

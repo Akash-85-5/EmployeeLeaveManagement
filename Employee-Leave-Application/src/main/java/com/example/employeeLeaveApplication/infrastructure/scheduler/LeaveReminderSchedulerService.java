@@ -193,7 +193,7 @@ public class LeaveReminderSchedulerService {
             Employee employee = employeeRepository.findById(leave.getEmployeeId())
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-            Employee manager = employeeRepository.findById(employee.getManagerId())
+            Employee manager = employeeRepository.findById(employee.getReportingId())
                     .orElseThrow(() -> new RuntimeException("Manager not found"));
 
             String urgencyLevel = getUrgencyLevel(daysUntilLeave);
@@ -245,7 +245,7 @@ public class LeaveReminderSchedulerService {
         Employee manager = employeeRepository.findById(leave.getSecondApproverId())
                 .orElseThrow(() -> new RuntimeException("Manager not found: " + leave.getSecondApproverId()));
 
-        Long higherManagerId = manager.getManagerId();
+        Long higherManagerId = manager.getReportingId();
 
         if (higherManagerId == null) {
             // Top-level manager — escalate to HR instead

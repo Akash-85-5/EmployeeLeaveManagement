@@ -114,7 +114,7 @@ public class AccessRequestController {
             @PathVariable Long requestId,
             @RequestBody ManagerAccessDecisionDto decision) {
         log.info("Manager {} made decision on access request {}: {}",
-                decision.getManagerId(), requestId, decision.getDecision());
+                decision.getReportingId(), requestId, decision.getDecision());
 
         AccessRequestResponseDto response =
                 accessRequestService.managerDecision(requestId, decision);

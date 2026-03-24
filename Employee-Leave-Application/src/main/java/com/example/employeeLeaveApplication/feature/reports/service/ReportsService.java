@@ -213,7 +213,7 @@ public class ReportsService {
             year = Year.now().getValue();
         }
 
-        List<Employee> teamMembers = employeeRepository.findByManagerId(managerId);
+        List<Employee> teamMembers = employeeRepository.findByreportingId(managerId);
 
         List<Map<String, Object>> teamData = new ArrayList<>();
         double totalTeamDays = 0;

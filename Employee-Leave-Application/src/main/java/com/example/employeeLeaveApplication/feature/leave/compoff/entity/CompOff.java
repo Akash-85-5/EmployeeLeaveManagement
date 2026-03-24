@@ -15,11 +15,19 @@ public class CompOff {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    public Long getReportingId() {
+        return reportingId;
+    }
+
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
+    }
+
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
-    @Column(name = "manager_id", nullable = false)
-    private Long managerId;
+    @Column(name = "reporting_id", nullable = false)
+    private Long reportingId;
 
     // The holiday/weekend the employee actually worked
     @Column(name = "worked_date", nullable = false)
@@ -81,13 +89,7 @@ public class CompOff {
         this.createdAt = createdAt;
     }
 
-    public Long getManagerId() {
-        return managerId;
-    }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
-    }
 
     public Integer getYear() {
         return year;

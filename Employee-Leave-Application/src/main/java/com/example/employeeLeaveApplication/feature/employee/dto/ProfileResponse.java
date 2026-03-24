@@ -13,11 +13,9 @@ public class ProfileResponse {
     private String name;
     private String email;
     private String role;
-    private Long managerId;
-    private String managerName;
-    private Long teamLeaderId;
-    private String teamLeaderName;
-    private String hrname;
+    private Long reportingId;
+    private String reportingName;
+
     private boolean active;
     private boolean mustChangePassword;
     private LocalDate joiningDate;
@@ -103,20 +101,21 @@ public class ProfileResponse {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
-    public Long getManagerId() { return managerId; }
-    public void setManagerId(Long managerId) { this.managerId = managerId; }
+    public Long getReportingId() {
+        return reportingId;
+    }
 
-    public String getManagerName() { return managerName; }
-    public void setManagerName(String managerName) { this.managerName = managerName; }
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
+    }
 
-    public Long getTeamLeaderId() { return teamLeaderId; }
-    public void setTeamLeaderId(Long teamLeaderId) { this.teamLeaderId = teamLeaderId; }
+    public String getReportingName() {
+        return reportingName;
+    }
 
-    public String getTeamLeaderName() { return teamLeaderName; }
-    public void setTeamLeaderName(String teamLeaderName) { this.teamLeaderName = teamLeaderName; }
-
-    public String getHrname() { return hrname; }
-    public void setHrname(String hrname) { this.hrname = hrname; }
+    public void setReportingName(String reportingName) {
+        this.reportingName = reportingName;
+    }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }

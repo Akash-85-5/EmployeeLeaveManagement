@@ -67,7 +67,7 @@ public class AccessRequestService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
 
-        if (employee.getManagerId() == null) {
+        if (employee.getReportingId() == null) {
             throw new BadRequestException("No manager assigned to your profile");
         }
         if(request.getAccessType()== LeaveType.BIOMETRIC){
@@ -97,7 +97,7 @@ public class AccessRequestService {
         accessRequest.setEmployeeId(employeeId);
         accessRequest.setAccessType(request.getAccessType());
         accessRequest.setReason(request.getReason());
-        accessRequest.setManagerId(employee.getManagerId());
+        accessRequest.setReportingId(employee.getReportingId());
         accessRequest.setStatus(AccessRequestStatus.SUBMITTED);
         accessRequest.setSubmittedAt(LocalDateTime.now());
 
@@ -146,7 +146,7 @@ public class AccessRequestService {
                 .orElseThrow(() -> new BadRequestException("Request not found"));
 
         // Verify manager owns this request
-        if (!request.getManagerId().equals(decision.getManagerId())) {
+        if (!request.getReportingId().equals(decision.getReportingId())) {
             throw new BadRequestException("Unauthorized - this is not your request");
         }
 
@@ -164,7 +164,7 @@ public class AccessRequestService {
             request.setStatus(AccessRequestStatus.MANAGER_APPROVED);
             notifyEmployeeManagerApproved(employee, request);
             log.info("Manager {} approved {} request for employee {}",
-                    decision.getManagerId(), request.getAccessType(), employee.getId());
+                    decision.getReportingId(), request.getAccessType(), employee.getId());
         } else {
             if (decision.getRemarks() == null || decision.getRemarks().isBlank()) {
                 throw new BadRequestException("Remarks are required when rejecting");
@@ -173,7 +173,7 @@ public class AccessRequestService {
             request.setManagerRemarks(decision.getRemarks());
             notifyEmployeeManagerRejected(employee, request);
             log.info("Manager {} rejected {} request for employee {}",
-                    decision.getManagerId(), request.getAccessType(), employee.getId());
+                    decision.getReportingId(), request.getAccessType(), employee.getId());
         }
 
         request.setManagerDecision(isApproved ? "APPROVED" : "REJECTED");
@@ -299,8 +299,7 @@ public class AccessRequestService {
 
     private AccessRequestForAdminDto mapToAdminDto(AccessRequest request) {
         Employee employee = employeeRepository.findById(request.getEmployeeId()).orElse(null);
-        Employee manager = employeeRepository.findById(request.getManagerId()).orElse(null);
-
+        Employee manager = employeeRepository.findById(request.getReportingId()).orElse(null);
         AccessRequestForAdminDto dto = new AccessRequestForAdminDto();
         dto.setId(request.getId());
         dto.setEmployeeId(request.getEmployeeId());
@@ -329,7 +328,7 @@ public class AccessRequestService {
     // ─── NOTIFICATIONS ────────────────────────────────────────────────────
 
     private void notifyManager(Employee employee, AccessRequest request) {
-        Employee manager = employeeRepository.findById(request.getManagerId()).orElse(null);
+        Employee manager = employeeRepository.findById(request.getReportingId()).orElse(null);
         if (manager == null) return;
 
         String message = "Employee " + employee.getName() + " has requested " +
@@ -337,7 +336,7 @@ public class AccessRequestService {
                 request.getReason() + ". Please review and approve/reject.";
 
         notificationService.createNotification(
-                request.getManagerId(),
+                request.getReportingId(),
                 "noreply@company.com",
                 manager.getEmail(),
                 EventType.ACCESS_REQUEST_SUBMITTED,

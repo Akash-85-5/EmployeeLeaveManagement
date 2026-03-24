@@ -26,7 +26,7 @@ public interface CompOffRepository extends JpaRepository<CompOff, Long> {
     List<CompOff> findByUsedLeaveApplicationId(Long applicationId);
 
 
-    Page<CompOff> findByManagerIdAndStatus(Long managerId,CompOffStatus status, Pageable pageable);
+    Page<CompOff> findByreportingIdAndStatus(Long reportingId,CompOffStatus status, Pageable pageable);
 
     Page<CompOff> findByEmployeeIdAndStatus(Long employeeId, CompOffStatus status, Pageable pageable);
 
@@ -40,11 +40,11 @@ public interface CompOffRepository extends JpaRepository<CompOff, Long> {
     SELECT c
     FROM CompOff c
     JOIN Employee e ON e.id = c.employeeId
-    WHERE e.managerId = :managerId
+    WHERE e.reportingId = :reportingId
     AND c.status = :status
 """)
     Page<CompOff> findPendingByManager(
-            Long managerId,
+            Long reportingId,
             CompOffStatus status,
             Pageable pageable
     );

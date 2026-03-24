@@ -711,8 +711,8 @@ public class DashboardService {
         for (LeaveApplication leave : leavesInRange) {
             Employee emp      = employeeRepository.findById(leave.getEmployeeId()).orElse(null);
             if (emp == null) continue;
-            Employee manager  = emp.getManagerId() != null
-                    ? employeeRepository.findById(emp.getManagerId()).orElse(null) : null;
+            Employee manager  = emp.getReportingId() != null
+                    ? employeeRepository.findById(emp.getReportingId()).orElse(null) : null;
             Employee approver = leave.getApprovedBy() != null
                     ? employeeRepository.findById(leave.getApprovedBy()).orElse(null) : null;
             onLeaveDTOs.add(new HRDashboardResponse.EmployeeOnLeaveDTO(

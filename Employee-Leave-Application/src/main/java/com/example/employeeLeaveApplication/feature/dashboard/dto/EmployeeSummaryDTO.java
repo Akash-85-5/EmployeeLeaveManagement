@@ -9,7 +9,7 @@ public class EmployeeSummaryDTO {
     private String name;
     private String email;
     private Role role;
-    private Long managerId;
+    private Long reportingId;
 
     public EmployeeSummaryDTO() {}
 
@@ -20,13 +20,16 @@ public class EmployeeSummaryDTO {
         dto.name = e.getName();
         dto.email = e.getEmail();
         dto.role = e.getRole();
-        dto.managerId = e.getManagerId();
+        dto.reportingId = e.getReportingId();
         return dto;
+    }
+
+    public Long getReportingId() {
+        return reportingId;
     }
 
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public Role getRole() { return role; }
-    public Long getManagerId() { return managerId; }
 }

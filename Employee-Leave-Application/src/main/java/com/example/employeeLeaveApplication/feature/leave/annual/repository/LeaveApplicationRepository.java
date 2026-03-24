@@ -34,7 +34,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<LeaveApplication> findByFirstApproverId(Long managerId);
+    List<LeaveApplication> findByFirstApproverId(Long reportingId);
 
 
 
@@ -159,10 +159,10 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("endDate") LocalDate endDate
     );
 
-    @Query("SELECT l FROM LeaveApplication l WHERE l.firstApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
+    @Query("SELECT l FROM LeaveApplication l WHERE l.firstApproverId = :reportingId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
     )
     List<LeaveApplication> findTeamLeavesForWeek(
-            @Param("managerId") Long managerId,
+            @Param("reportingId") Long reportingId,
             @Param("weekStart") LocalDate weekStart,
             @Param("weekEnd") LocalDate weekEnd
     );
@@ -211,10 +211,10 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     @Query("SELECT la FROM LeaveApplication la " +
             "WHERE la.employeeId IN " +
-            "(SELECT e.id FROM Employee e WHERE e.managerId = :managerId) " +
+            "(SELECT e.id FROM Employee e WHERE e.reportingId = :reportingId) " +
             "AND la.status = 'PENDING' " +
             "ORDER BY la.createdAt ASC")
-    List<LeaveApplication> findPendingTeamRequests(@Param("managerId") Long managerId);
+    List<LeaveApplication> findPendingTeamRequests(@Param("reportingId") Long reportingId);
 
     @Query("SELECT DISTINCT la.employeeId FROM LeaveApplication la " +
             "WHERE la.status = 'APPROVED' " +
@@ -245,11 +245,11 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     @Query("SELECT la FROM LeaveApplication la " +
             "WHERE la.status = 'APPROVED' " +
-            "AND la.approvedBy = :managerId " +
+            "AND la.approvedBy = :reportingId " +
             "AND la.year = :year " +
             "ORDER BY la.approvedAt DESC")
     List<LeaveApplication> findLeavesApprovedByManager(
-            @Param("managerId") Long managerId,
+            @Param("reportingId") Long reportingId,
             @Param("year") Integer year
     );
 
@@ -296,7 +296,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     );
 
     List<LeaveApplication> findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
-            Long managerId,
+            Long reportingId,
             LeaveStatus status,
             ApprovalLevel currentApprovalLevel
     );

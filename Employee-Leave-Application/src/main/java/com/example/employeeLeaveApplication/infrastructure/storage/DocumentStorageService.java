@@ -29,8 +29,8 @@ public class DocumentStorageService {
      * Saves a file to: {uploadDir}/{subFolder}/{employeeId}-{uuid}.{ext}
      * Returns the saved file path string (stored in DB).
      *
-     * @param file      the uploaded file
-     * @param subFolder e.g. "aadhaar", "tc", "offer-letter"
+     * @param file       the uploaded file
+     * @param subFolder  e.g. "aadhaar", "tc", "offer-letter"
      * @param employeeId used to prefix the filename
      */
     public String save(MultipartFile file, String subFolder, Long employeeId) {

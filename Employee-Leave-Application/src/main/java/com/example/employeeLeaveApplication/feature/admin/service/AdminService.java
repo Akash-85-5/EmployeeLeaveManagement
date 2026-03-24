@@ -49,7 +49,7 @@ public class AdminService {
         user.setPasswordHash(passwordEncoder.encode("1234"));
         user.setForcePwdChange(true);
         user.setStatus(Status.ACTIVE);
-        user.setManagerId(request.getManagerId());
+        user.setReportingId(request.getReportingId());
 
         Role role = request.getRole();
 
@@ -58,12 +58,12 @@ public class AdminService {
         emp.setEmail(request.getEmail());
         emp.setRole(request.getRole());
         emp.setJoiningDate(request.getJoiningDate());
-        emp.setManagerId(request.getManagerId());
+        emp.setReportingId(request.getReportingId());
 
         Employee savedEmp = employeeRepository.save(emp);
         userRepository.save(user);
 
-        if (role != Role.CEO || role != Role.CFO) {
+        if ((role != Role.CEO) || (role != Role.CFO)) {
             try {
                 leaveAllocationService.allocateForNewEmployee(savedEmp.getId());
             } catch (Exception e) {

@@ -43,8 +43,8 @@ public class Employee {
     @Column(nullable = false)
     private Role role;
 
-    @Column(name = "manager_id")
-    private Long managerId;
+    @Column(name = "reporting_id")
+    private Long reportingId;
 
     @Column(name = "active")
     private boolean active = true;
@@ -140,12 +140,12 @@ public class Employee {
         this.role = role;
     }
 
-    public Long getManagerId() {
-        return managerId;
+    public Long getReportingId() {
+        return reportingId;
     }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
     }
 
     public boolean isActive() {

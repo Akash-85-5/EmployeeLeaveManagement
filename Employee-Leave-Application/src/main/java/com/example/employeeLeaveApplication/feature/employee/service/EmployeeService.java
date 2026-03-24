@@ -65,7 +65,7 @@ public class EmployeeService {
 
         String hrName = null;
         if (employee.getRole() == Role.MANAGER || employee.getRole() == Role.ADMIN) {
-            Employee hr = employeeRepository.findById(employee.getManagerId())
+            Employee hr = employeeRepository.findById(employee.getReportingId())
                     .orElseThrow(() -> new RuntimeException("HR not found"));
             hrName = hr.getName();
         }
@@ -77,8 +77,7 @@ public class EmployeeService {
         response.setName(employee.getName());
         response.setEmail(employee.getEmail());
         response.setRole(employee.getRole().name());
-        response.setManagerId(employee.getManagerId());
-        response.setHrname(hrName);
+        response.setReportingId(employee.getReportingId());
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
         response.setJoiningDate(employee.getJoiningDate());
@@ -87,9 +86,9 @@ public class EmployeeService {
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
 
-        if (employee.getManagerId() != null) {
-            employeeRepository.findById(employee.getManagerId())
-                    .ifPresent(m -> response.setManagerName(m.getName()));
+        if (employee.getReportingId() != null) {
+            employeeRepository.findById(employee.getReportingId())
+                    .ifPresent(m -> response.setReportingName(m.getName()));
         }
 //        if (employee.getTeamLeaderId() != null) {
 //            response.setTeamLeaderId(employee.getTeamLeaderId());
@@ -410,7 +409,7 @@ public class EmployeeService {
         if (employee.getName() != null)      existing.setName(employee.getName());
         if (employee.getEmail() != null)     existing.setEmail(employee.getEmail());
         if (employee.getRole() != null)      existing.setRole(employee.getRole());
-        if (employee.getManagerId() != null) existing.setManagerId(employee.getManagerId());
+        if (employee.getReportingId() != null) existing.setReportingId(employee.getReportingId());
         return employeeRepository.save(existing);
     }
 
@@ -423,7 +422,7 @@ public class EmployeeService {
     }
 
     public List<Employee> getTeamMembers(Long managerId) {
-        return employeeRepository.findByManagerId(managerId);
+        return employeeRepository.findByreportingId(managerId);
     }
 
 //    public List<Employee> getTeamLeaderMembers(Long teamLeaderId) {

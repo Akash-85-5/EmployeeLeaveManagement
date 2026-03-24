@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class ManagerAccessDecisionDto {
     private String decision;
     private String remarks;
-    private Long managerId;
+    private Long reportingId;
 }

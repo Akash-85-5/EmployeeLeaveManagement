@@ -68,7 +68,7 @@ public class CompOffService {
                     .findById(request.getEmployeeId())
                     .orElseThrow(() ->
                             new RuntimeException("Employee Not found"));
-            compOff.setManagerId(employee.getManagerId());
+            compOff.setReportingId(employee.getReportingId());
             compOff.setDays(entry.getDays());
             compOffRepository.save(compOff);
         }
@@ -275,7 +275,7 @@ public class CompOffService {
             Long managerId, Pageable pageable) {
 
         return compOffRepository
-                .findByManagerIdAndStatus(
+                .findByreportingIdAndStatus(
                         managerId, CompOffStatus.PENDING, pageable)
                 .map(compOff -> {
                     CompOffPendingDTO dto = new CompOffPendingDTO();

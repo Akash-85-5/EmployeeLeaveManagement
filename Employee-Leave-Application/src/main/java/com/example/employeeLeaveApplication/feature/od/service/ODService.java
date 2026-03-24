@@ -44,7 +44,7 @@ public class ODService {
         }
 
         // Employee must have a manager to route the request
-        if (employee.getManagerId() == null) {
+        if (employee.getReportingId() == null) {
             throw new BadRequestException("No manager assigned; cannot submit OD request");
         }
 
@@ -56,7 +56,7 @@ public class ODService {
                     "You already have an active OD request that overlaps with these dates.");
         }
 
-        Employee level1Manager = employeeRepository.findById(employee.getManagerId())
+        Employee level1Manager = employeeRepository.findById(employee.getReportingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
 
         request.setEmployeeId(employeeId);
@@ -105,8 +105,8 @@ public class ODService {
 
         if (od.getApprovalLevel() == 1) {
             // Check if level-1 manager has a manager above them (level-2)
-            if (approver.getManagerId() != null) {
-                Employee level2Manager = employeeRepository.findById(approver.getManagerId())
+            if (approver.getReportingId() != null) {
+                Employee level2Manager = employeeRepository.findById(approver.getReportingId())
                         .orElseThrow(() -> new ResourceNotFoundException("Level-2 manager not found"));
 
                 od.setApprovalLevel(2);

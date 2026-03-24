@@ -33,9 +33,9 @@ public interface AccessRequestRepository extends JpaRepository<AccessRequest, Lo
      * Find submitted requests for a specific manager
      */
     @Query("SELECT ar FROM AccessRequest ar " +
-            "WHERE ar.status = 'SUBMITTED' AND ar.managerId = :managerId " +
+            "WHERE ar.status = 'SUBMITTED' AND ar.reportingId = :reportingId " +
             "ORDER BY ar.submittedAt ASC")
-    List<AccessRequest> findPendingForManager(@Param("managerId") Long managerId);
+    List<AccessRequest> findPendingForManager(@Param("reportingId") Long reportingId);
 
     /**
      * Find manager-approved requests waiting for admin (MANAGER_APPROVED status)
@@ -49,16 +49,16 @@ public interface AccessRequestRepository extends JpaRepository<AccessRequest, Lo
      * Find all requests by manager ID (for manager's dashboard)
      */
     @Query("SELECT ar FROM AccessRequest ar " +
-            "WHERE ar.managerId = :managerId " +
+            "WHERE ar.reportingId = :reportingId " +
             "ORDER BY ar.createdAt DESC")
-    List<AccessRequest> findByManagerId(@Param("managerId") Long managerId);
+    List<AccessRequest> findByreportingId(@Param("reportingId") Long reportingId);
 
     /**
      * Count pending requests for a manager
      */
     @Query("SELECT COUNT(ar) FROM AccessRequest ar " +
-            "WHERE ar.status = 'SUBMITTED' AND ar.managerId = :managerId")
-    Long countPendingForManager(@Param("managerId") Long managerId);
+            "WHERE ar.status = 'SUBMITTED' AND ar.reportingId = :reportingId")
+    Long countPendingForManager(@Param("reportingId") Long reportingId);
 
     /**
      * Count pending admin approvals (manager approved, waiting for admin)

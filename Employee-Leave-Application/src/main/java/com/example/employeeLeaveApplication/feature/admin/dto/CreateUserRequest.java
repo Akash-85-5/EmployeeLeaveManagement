@@ -9,7 +9,7 @@ public class CreateUserRequest {
     private String name;
     private String email;
     private Role role;
-    private Long managerId;
+    private Long reportingId;
     private LocalDate joiningDate;
 
 
@@ -45,11 +45,12 @@ public class CreateUserRequest {
         this.role = role;
     }
 
-    public Long getManagerId() {
-        return managerId;
+
+    public Long getReportingId() {
+        return reportingId;
     }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
     }
 }

@@ -39,8 +39,8 @@ public class User {
     @Column(nullable = false)
     private Status status;
 
-    @Column(name = "manager_id")
-    private Long managerId;
+    @Column(name = "reporting_id")
+    private Long reportingId;
 
 
     @Column(name = "joining_date")
@@ -170,11 +170,11 @@ public class User {
         this.status = status;
     }
 
-    public Long getManagerId() {
-        return managerId;
+    public Long getReportingId() {
+        return reportingId;
     }
 
-    public void setManagerId(Long managerId) {
-        this.managerId = managerId;
+    public void setReportingId(Long reportingId) {
+        this.reportingId = reportingId;
     }
 }
