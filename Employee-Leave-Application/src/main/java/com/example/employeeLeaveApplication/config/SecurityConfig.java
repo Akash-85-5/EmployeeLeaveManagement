@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.config;
 
 import java.util.List;
 
+import com.example.employeeLeaveApplication.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
