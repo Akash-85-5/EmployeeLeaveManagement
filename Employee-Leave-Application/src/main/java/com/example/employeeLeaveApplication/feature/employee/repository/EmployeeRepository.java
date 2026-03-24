@@ -2,6 +2,7 @@
 package com.example.employeeLeaveApplication.feature.employee.repository;
 
 import com.example.employeeLeaveApplication.feature.employee.entity.Employee;
+import com.example.employeeLeaveApplication.feature.workfromhome.entity.WorkFromHome;
 import com.example.employeeLeaveApplication.shared.enums.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,7 @@ import java.util.Optional;
 public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
 
     Optional<Employee> findByEmail(String email);
-
+    List<Employee> findByTeamId(Long teamId);
     List<Employee> findByManagerId(Long managerId);
 
     // NEW: find employees under a team leader

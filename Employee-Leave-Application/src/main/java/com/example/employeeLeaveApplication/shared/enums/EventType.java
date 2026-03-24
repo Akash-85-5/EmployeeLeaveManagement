@@ -22,5 +22,6 @@ public enum EventType {
     OD_APPROVED,
     OD_REJECTED,
     OD_CANCELLED,
-    OD_IN_PROGRESS
+    OD_IN_PROGRESS,
+    ANNOUNCEMENT
 }
