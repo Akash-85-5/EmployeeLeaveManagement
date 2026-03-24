@@ -28,12 +28,12 @@ import java.util.stream.Collectors;
 @Service
 public class LeaveApprovalService {
 
-    private final EmployeeRepository employeeRepository;
-    private final LeaveApplicationRepository leaveApplicationRepository;
-    private final NotificationService notificationService;
-    private final LeaveApprovalRepository leaveApprovalRepository;
-    private final LeaveApplicationService leaveApplicationService;
-    private final LeaveAttachmentRepository leaveAttachmentRepository;
+    private final EmployeeRepository            employeeRepository;
+    private final LeaveApplicationRepository    leaveApplicationRepository;
+    private final NotificationService           notificationService;
+    private final LeaveApprovalRepository       leaveApprovalRepository;
+    private final LeaveApplicationService       leaveApplicationService;
+    private final LeaveAttachmentRepository     leaveAttachmentRepository;
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
                                 LeaveApplicationRepository leaveApplicationRepository,
@@ -41,7 +41,7 @@ public class LeaveApprovalService {
                                 LeaveApprovalRepository leaveApprovalRepository,
                                 LeaveApplicationService leaveApplicationService,
                                 LeaveAttachmentRepository leaveAttachmentRepository) {
-        this.employeeRepository        = employeeRepository;
+        this.employeeRepository         = employeeRepository;
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService        = notificationService;
         this.leaveApprovalRepository    = leaveApprovalRepository;
@@ -50,153 +50,58 @@ public class LeaveApprovalService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PENDING LEAVES WITH ATTACHMENTS — per role
+    // PENDING LEAVES WITH ATTACHMENTS
+    // TEAM_LEADER = level-1 approver (employee's direct manager)
+    // MANAGER     = level-2 approver (level-1's manager)
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * Fetch pending leaves for Team Leader WITH attachments.
-     * Optimized: Single query for leaves + batch fetch attachments.
-     */
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
-            Long teamLeaderId, Pageable pageable) {
-
+            Long approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
-                        teamLeaderId, LeaveStatus.PENDING, ApprovalLevel.TEAM_LEADER);
-
-        // Convert to DTOs with attachments
-        List<LeaveApplicationWithAttachmentsDto> dtos =
-                convertToDto(all);
-
-        return toPageDto(dtos, pageable);
+                .findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+                        approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER);
+        return toPageDto(convertToDto(all), pageable);
     }
 
-    /**
-     * Fetch pending leaves for Manager WITH attachments.
-     */
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
-            Long managerId, Pageable pageable) {
-
+            Long approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findByManagerIdAndStatusAndCurrentApprovalLevel(
-                        managerId, LeaveStatus.PENDING, ApprovalLevel.MANAGER);
-
-        List<LeaveApplicationWithAttachmentsDto> dtos =
-                convertToDto(all);
-
-        return toPageDto(dtos, pageable);
+                .findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
+                        approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER);
+        return toPageDto(convertToDto(all), pageable);
     }
 
-    /**
-     * Fetch pending leaves for HR WITH attachments.
-     */
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
             Pageable pageable) {
-
         List<LeaveApplication> all = leaveApplicationRepository
                 .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
-
-        List<LeaveApplicationWithAttachmentsDto> dtos =
-                convertToDto(all);
-
-        return toPageDto(dtos, pageable);
+        return toPageDto(convertToDto(all), pageable);
     }
 
-    /**
-     * Get single leave application with attachments by ID.
-     * Used when approver clicks to view a specific leave.
-     */
     public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
         LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
                 .orElseThrow(() -> new BadRequestException("Leave not found with ID: " + leaveId));
-
         return new LeaveApplicationWithAttachmentsDto(
-                leave,
-                leaveAttachmentRepository.findByLeaveApplicationId(leaveId)
-        );
+                leave, leaveAttachmentRepository.findByLeaveApplicationId(leaveId));
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // HELPER: Convert List<LeaveApplication> to List<DTO with Attachments>
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * Converts a list of LeaveApplications to DTOs with attachments.
-     * Optimized approach:
-     *  1. Get all leave IDs
-     *  2. Batch fetch all attachments for those leave IDs
-     *  3. Create DTOs by matching attachments to leaves
-     *
-     * This avoids N+1 queries (1 query per leave for attachments).
-     */
-    private List<LeaveApplicationWithAttachmentsDto> convertToDto(
-            List<LeaveApplication> leaves) {
-
-        if (leaves.isEmpty()) {
-            return List.of();
-        }
-
-        // Extract leave IDs
-        List<Long> leaveIds = leaves.stream()
-                .map(LeaveApplication::getId)
-                .collect(Collectors.toList());
-
-        // Batch fetch ALL attachments for these leaves in ONE query
-        List<LeaveAttachment> allAttachments =
-                leaveAttachmentRepository.findByLeaveApplicationIdIn(leaveIds);
-
-        // Group attachments by leaveId (for fast lookup)
-        Map<Long, List<LeaveAttachment>> attachmentsByLeaveId = leaveAttachmentRepository
-                .findByLeaveApplicationIdIn(leaveIds)
-                .stream()
-                .collect(Collectors.groupingBy(att -> att.getLeaveApplicationId()));
-
-        // Create DTOs
-        return leaves.stream()
-                .map(leave -> {
-                    List<LeaveAttachment> attachments =
-                            attachmentsByLeaveId.getOrDefault(leave.getId(), List.of());
-                    return new LeaveApplicationWithAttachmentsDto(leave, attachments);
-                })
-                .collect(Collectors.toList());
+    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
+        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+                approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER), pageable);
     }
 
-    /**
-     * Helper method to convert List to Page.
-     */
-    private <T> Page<T> toPageDto(List<T> list, Pageable pageable) {
-        int start = (int) pageable.getOffset();
-        int end   = Math.min(start + pageable.getPageSize(), list.size());
-        List<T> content = (start > list.size()) ? List.of() : list.subList(start, end);
-        return new PageImpl<>(content, pageable, list.size());
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // ORIGINAL METHODS (unchanged)
-    // ═══════════════════════════════════════════════════════════════
-
-    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long teamLeaderId, Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByTeamLeaderIdAndStatusAndCurrentApprovalLevel(
-                        teamLeaderId, LeaveStatus.PENDING, ApprovalLevel.TEAM_LEADER);
-        return toPage(all, pageable);
-    }
-
-    public Page<LeaveApplication> getPendingLeavesForManager(Long managerId, Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByManagerIdAndStatusAndCurrentApprovalLevel(
-                        managerId, LeaveStatus.PENDING, ApprovalLevel.MANAGER);
-        return toPage(all, pageable);
+    public Page<LeaveApplication> getPendingLeavesForManager(Long approverId, Pageable pageable) {
+        return toPage(leaveApplicationRepository.findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
+                approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER), pageable);
     }
 
     public Page<LeaveApplication> getPendingLeavesForHr(Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
-        return toPage(all, pageable);
+        return toPage(leaveApplicationRepository.findByStatusAndCurrentApprovalLevel(
+                LeaveStatus.PENDING, ApprovalLevel.HR), pageable);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // CORE DECISION (unchanged)
+    // CORE DECISION
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
@@ -250,8 +155,12 @@ public class LeaveApprovalService {
         decideLeave(req);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // BULK DECISION
+    // ═══════════════════════════════════════════════════════════════
+
     @Transactional
-    public String bulkDecision(BulkLeaveDecisionRequest request, boolean isHr) {
+    public String bulkDecision(BulkLeaveDecisionRequest request, boolean isSecondLevel) {
         validateDecision(request.getDecision());
 
         List<LeaveApplication> leaves =
@@ -263,9 +172,8 @@ public class LeaveApprovalService {
 
         for (LeaveApplication leave : leaves) {
             if (leave.getStatus() != LeaveStatus.PENDING) continue;
-
             ApprovalLevel currentLevel = leave.getCurrentApprovalLevel();
-            if (isHr && currentLevel != ApprovalLevel.HR) continue;
+            if (isSecondLevel && currentLevel != ApprovalLevel.SECOND_APPROVER) continue;
 
             try {
                 validateApproverForLevel(leave, approver, currentLevel);
@@ -286,6 +194,10 @@ public class LeaveApprovalService {
         return "Bulk decision completed successfully";
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // HISTORY
+    // ═══════════════════════════════════════════════════════════════
+
     public Page<LeaveApproval> getApprovalHistory(Long leaveId, Pageable pageable) {
         return leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, pageable);
     }
@@ -299,38 +211,29 @@ public class LeaveApprovalService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PRIVATE HELPERS (unchanged)
+    // PRIVATE: ADVANCE OR FINALIZE
+    //
+    // Level TEAM_LEADER approved + required==2 → advance to MANAGER
+    // Level TEAM_LEADER approved + required==1 → finalize
+    // Level MANAGER approved → always finalize (max 2 levels)
     // ═══════════════════════════════════════════════════════════════
 
     private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
-        int required = leave.getRequiredApprovalLevels();
         ApprovalLevel current = leave.getCurrentApprovalLevel();
+        int required          = leave.getRequiredApprovalLevels();
 
-        if (current == ApprovalLevel.TEAM_LEADER) {
+        if (current == ApprovalLevel.FIRST_APPROVER) {
             if (required >= 2) {
-                leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
+                leave.setCurrentApprovalLevel(ApprovalLevel.SECOND_APPROVER);
                 leaveApplicationRepository.save(leave);
-                notifyManager(leave, currentApprover);
+                notifySecondApprover(leave, currentApprover);
                 notifyEmployeeProgress(leave, currentApprover,
-                        "Your leave has been approved by Team Leader. Pending Manager approval.");
+                        "Your leave has been approved at level 1. Pending final approval.");
             } else {
                 finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
             }
-
-        } else if (current == ApprovalLevel.MANAGER) {
-            if (required >= 3) {
-                leave.setCurrentApprovalLevel(ApprovalLevel.HR);
-                leave.setEscalated(true);
-                leave.setEscalatedAt(LocalDateTime.now());
-                leaveApplicationRepository.save(leave);
-                notifyHr(leave, currentApprover);
-                notifyEmployeeProgress(leave, currentApprover,
-                        "Your leave has been approved by Manager. Pending HR approval.");
-            } else {
-                finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
-            }
-
-        } else if (current == ApprovalLevel.HR) {
+        } else {
+            // MANAGER or HR → final level
             finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
         }
     }
@@ -352,31 +255,25 @@ public class LeaveApprovalService {
         notifyEmployee(leave, finalApprover, finalStatus, null);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // PRIVATE: VALIDATE APPROVER
+    // ═══════════════════════════════════════════════════════════════
+
     private void validateApproverForLevel(LeaveApplication leave,
                                           Employee approver, ApprovalLevel level) {
         switch (level) {
-            case TEAM_LEADER -> {
-                if (leave.getTeamLeaderId() == null
-                        || !approver.getId().equals(leave.getTeamLeaderId())) {
+            case FIRST_APPROVER -> {
+                if (leave.getFirstApproverId() == null
+                        || !approver.getId().equals(leave.getFirstApproverId())) {
                     throw new BadRequestException(
-                            "Unauthorized: Only the assigned Team Leader can approve.");
-                }
-                if (approver.getRole() != Role.TEAM_LEADER) {
-                    throw new BadRequestException("Approver does not have TEAM_LEADER role.");
+                            "Unauthorized: You are not the assigned level-1 approver for this leave.");
                 }
             }
-            case MANAGER -> {
-                if (!approver.getId().equals(leave.getManagerId())) {
+            case SECOND_APPROVER -> {
+                if (leave.getSecondApproverId() == null
+                        || !approver.getId().equals(leave.getSecondApproverId())) {
                     throw new BadRequestException(
-                            "Unauthorized: Only the assigned Manager can approve at this stage.");
-                }
-                if (approver.getRole() != Role.MANAGER) {
-                    throw new BadRequestException("Approver does not have MANAGER role.");
-                }
-            }
-            case HR -> {
-                if (approver.getRole() != Role.HR) {
-                    throw new BadRequestException("Only HR can approve at this stage.");
+                            "Unauthorized: You are not the assigned level-2 approver for this leave.");
                 }
             }
         }
@@ -385,18 +282,13 @@ public class LeaveApprovalService {
     private void recordLevelDecision(LeaveApplication leave, Employee approver,
                                      ApprovalLevel level, LeaveStatus decision) {
         switch (level) {
-            case TEAM_LEADER -> {
-                leave.setTeamLeaderDecision(decision);
-                leave.setTeamLeaderDecidedAt(LocalDateTime.now());
+            case FIRST_APPROVER -> {
+                leave.setFirstApproverDecision(decision);
+                leave.setFirstApproverDecidedAt(LocalDateTime.now());
             }
-            case MANAGER -> {
+            case SECOND_APPROVER -> {
                 leave.setManagerDecision(decision);
                 leave.setManagerDecidedAt(LocalDateTime.now());
-            }
-            case HR -> {
-                leave.setHrDecision(decision);
-                leave.setHrDecidedAt(LocalDateTime.now());
-                leave.setHrDecidedBy(approver.getId());
             }
         }
     }
@@ -414,39 +306,33 @@ public class LeaveApprovalService {
         leaveApprovalRepository.save(record);
     }
 
-    private void notifyManager(LeaveApplication leave, Employee teamLeader) {
-        if (leave.getManagerId() == null) return;
-        employeeRepository.findById(leave.getManagerId()).ifPresent(mgr -> {
+    // ═══════════════════════════════════════════════════════════════
+    // NOTIFICATION HELPERS
+    // ═══════════════════════════════════════════════════════════════
+
+    private void notifySecondApprover(LeaveApplication leave, Employee firstApprover) {
+        if (leave.getSecondApproverId() == null) return;
+        employeeRepository.findById(leave.getSecondApproverId()).ifPresent(mgr -> {
             String empName = employeeRepository.findById(leave.getEmployeeId())
                     .map(Employee::getName).orElse("Employee");
             notificationService.createNotification(
-                    mgr.getId(), teamLeader.getEmail(), mgr.getEmail(),
+                    mgr.getId(), firstApprover.getEmail(), mgr.getEmail(),
                     EventType.LEAVE_APPLIED, mgr.getRole(), Channel.EMAIL,
-                    empName + "'s leave (" + leave.getStartDate() + " to " + leave.getEndDate()
-                            + ") approved by Team Leader. Requires your approval.");
+                    empName + "'s " + leave.getLeaveType().name() + " leave ("
+                            + leave.getStartDate() + " to " + leave.getEndDate()
+                            + ") approved at level 1. Requires your final approval.");
         });
-    }
-
-    private void notifyHr(LeaveApplication leave, Employee manager) {
-        String empName = employeeRepository.findById(leave.getEmployeeId())
-                .map(Employee::getName).orElse("Employee");
-        employeeRepository.findAllHr().forEach(hr ->
-                notificationService.createNotification(
-                        hr.getId(), manager.getEmail(), hr.getEmail(),
-                        EventType.LEAVE_APPLIED, hr.getRole(), Channel.EMAIL,
-                        empName + "'s leave (" + leave.getStartDate() + " to " + leave.getEndDate()
-                                + ") approved by Manager. Requires HR approval.")
-        );
     }
 
     private void notifyEmployee(LeaveApplication leave, Employee approver,
                                 LeaveStatus decision, String comments) {
         employeeRepository.findById(leave.getEmployeeId()).ifPresent(emp -> {
             String context = switch (decision) {
-                case APPROVED -> "Your leave from " + leave.getStartDate()
-                        + " to " + leave.getEndDate() + " has been fully approved.";
-                case REJECTED -> "Your leave from " + leave.getStartDate()
-                        + " to " + leave.getEndDate()
+                case APPROVED -> "Your " + leave.getLeaveType().name() + " leave from "
+                        + leave.getStartDate() + " to " + leave.getEndDate()
+                        + " has been fully approved.";
+                case REJECTED -> "Your " + leave.getLeaveType().name() + " leave from "
+                        + leave.getStartDate() + " to " + leave.getEndDate()
                         + " has been rejected. Reason: "
                         + (comments != null ? comments : "N/A");
                 default -> "A meeting is required regarding your leave from "
@@ -463,8 +349,38 @@ public class LeaveApprovalService {
                 notificationService.createNotification(
                         emp.getId(), approver.getEmail(), emp.getEmail(),
                         EventType.LEAVE_IN_PROGRESS, emp.getRole(), Channel.EMAIL,
-                        message + " (Leave: " + leave.getStartDate() + " to " + leave.getEndDate() + ")")
+                        message + " (Leave: " + leave.getStartDate()
+                                + " to " + leave.getEndDate() + ")")
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════════════
+
+    private List<LeaveApplicationWithAttachmentsDto> convertToDto(List<LeaveApplication> leaves) {
+        if (leaves.isEmpty()) return List.of();
+        List<Long> leaveIds = leaves.stream()
+                .map(LeaveApplication::getId).collect(Collectors.toList());
+        Map<Long, List<LeaveAttachment>> byLeaveId =
+                leaveAttachmentRepository.findByLeaveApplicationIdIn(leaveIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(LeaveAttachment::getLeaveApplicationId));
+        return leaves.stream()
+                .map(l -> new LeaveApplicationWithAttachmentsDto(
+                        l, byLeaveId.getOrDefault(l.getId(), List.of())))
+                .collect(Collectors.toList());
+    }
+
+    private <T> Page<T> toPageDto(List<T> list, Pageable pageable) {
+        int start   = (int) pageable.getOffset();
+        int end     = Math.min(start + pageable.getPageSize(), list.size());
+        List<T> content = start > list.size() ? List.of() : list.subList(start, end);
+        return new PageImpl<>(content, pageable, list.size());
+    }
+
+    private <T> Page<T> toPage(List<T> list, Pageable pageable) {
+        return toPageDto(list, pageable);
     }
 
     private void validateDecision(LeaveStatus decision) {
@@ -482,12 +398,5 @@ public class LeaveApprovalService {
             case MEETING_REQUIRED -> EventType.MEETING_REQUIRED;
             default               -> EventType.LEAVE_APPLIED;
         };
-    }
-
-    private <T> Page<T> toPage(List<T> list, Pageable pageable) {
-        int start = (int) pageable.getOffset();
-        int end   = Math.min(start + pageable.getPageSize(), list.size());
-        List<T> content = (start > list.size()) ? List.of() : list.subList(start, end);
-        return new PageImpl<>(content, pageable, list.size());
     }
 }

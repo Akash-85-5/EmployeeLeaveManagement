@@ -53,9 +53,10 @@ public class LopService {
                     lopRepo.findMonthlyLopForEmployee(callerId, year, month);
 
             case TEAM_LEADER -> {
-                List<Long> ids = getTeamMemberIds(callerId);
-                ids.add(callerId);
-                yield lopRepo.findMonthlyLopForTeam(ids, year, month);
+                List<LopRecord> all =
+                        lopRepo.findMonthlyLopForManager(year, month);
+                all.addAll(lopRepo.findMonthlyLopForEmployee(callerId, year, month));
+                yield all;
             }
 
             case MANAGER -> {
@@ -69,7 +70,7 @@ public class LopService {
                     lopRepo.findMonthlyLopForAdmin(year, month);
 
             // HR and CFO — all employees, highest LOP first
-            case HR, CFO ->
+            case HR, CFO,CEO ->
                     lopRepo.findMonthlyLopAllHighFirst(year, month);
         };
 
@@ -88,9 +89,10 @@ public class LopService {
                     lopRepo.findYearlyLopForEmployee(callerId, year);
 
             case TEAM_LEADER -> {
-                List<Long> ids = getTeamMemberIds(callerId);
-                ids.add(callerId);
-                yield lopRepo.findYearlyLopForTeam(ids, year);
+                List<LopRecord> all =
+                        lopRepo.findYearlyLopForManager(year);
+                all.addAll(lopRepo.findYearlyLopForEmployee(callerId, year));
+                yield all;
             }
 
             case MANAGER -> {
@@ -104,7 +106,7 @@ public class LopService {
                     lopRepo.findYearlyLopForAdmin(year);
 
             // HR and CFO — all employees, highest LOP first
-            case HR, CFO ->
+            case HR, CFO, CEO->
                     lopRepo.findYearlyLopAllHighFirst(year);
         };
 
@@ -201,12 +203,12 @@ public class LopService {
                 .orElseThrow(() -> new RuntimeException("Employee not found: " + id));
     }
 
-    private List<Long> getTeamMemberIds(Long teamLeaderId) {
-        return employeeRepo.findByTeamLeaderId(teamLeaderId)
-                .stream()
-                .map(Employee::getId)
-                .collect(Collectors.toList());
-    }
+//    private List<Long> getTeamMemberIds(Long teamLeaderId) {
+//        return employeeRepo.findByTeamLeaderId(teamLeaderId)
+//                .stream()
+//                .map(Employee::getId)
+//                .collect(Collectors.toList());
+//    }
 
     private void assertHrOrCfo(Long callerId) {
         Employee caller = getEmployee(callerId);

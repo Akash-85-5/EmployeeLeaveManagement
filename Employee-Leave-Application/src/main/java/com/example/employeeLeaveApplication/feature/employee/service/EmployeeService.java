@@ -91,11 +91,11 @@ public class EmployeeService {
             employeeRepository.findById(employee.getManagerId())
                     .ifPresent(m -> response.setManagerName(m.getName()));
         }
-        if (employee.getTeamLeaderId() != null) {
-            response.setTeamLeaderId(employee.getTeamLeaderId());
-            employeeRepository.findById(employee.getTeamLeaderId())
-                    .ifPresent(tl -> response.setTeamLeaderName(tl.getName()));
-        }
+//        if (employee.getTeamLeaderId() != null) {
+//            response.setTeamLeaderId(employee.getTeamLeaderId());
+//            employeeRepository.findById(employee.getTeamLeaderId())
+//                    .ifPresent(tl -> response.setTeamLeaderName(tl.getName()));
+//        }
 
         // ── Personal details ──────────────────────────────────────
         Optional<EmployeePersonalDetails> personalOpt =
@@ -426,9 +426,9 @@ public class EmployeeService {
         return employeeRepository.findByManagerId(managerId);
     }
 
-    public List<Employee> getTeamLeaderMembers(Long teamLeaderId) {
-        return employeeRepository.findByTeamLeaderId(teamLeaderId);
-    }
+//    public List<Employee> getTeamLeaderMembers(Long teamLeaderId) {
+//        return employeeRepository.findByTeamLeaderId(teamLeaderId);
+//    }
 
     public List<Employee> searchEmployees(String query) {
         return employeeRepository.findByNameContainingIgnoreCase(query);

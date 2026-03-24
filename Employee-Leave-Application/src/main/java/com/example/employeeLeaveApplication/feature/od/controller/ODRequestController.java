@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/od")
-@CrossOrigin(origins = "*") // Adjust this for your frontend URL
+@CrossOrigin(origins = "*")
 public class ODRequestController {
 
     private final ODService odService;
@@ -18,24 +18,18 @@ public class ODRequestController {
         this.odService = odService;
     }
 
-    // 1. Create a new OD Request
-    // POST /api/od/request?employeeId=1
     @PostMapping("/request")
     public ResponseEntity<ODRequest> createOD(@RequestParam Long employeeId,
                                               @RequestBody ODRequest request) {
         return ResponseEntity.ok(odService.createOD(employeeId, request));
     }
 
-    // 2. Approve an OD Request
-    // PUT /api/od/approve/5?approverId=2
     @PutMapping("/approve/{odId}")
     public ResponseEntity<ODRequest> approveOD(@PathVariable Long odId,
                                                @RequestParam Long approverId) {
         return ResponseEntity.ok(odService.approveOD(odId, approverId));
     }
 
-    // 3. Reject an OD Request
-    // PUT /api/od/reject/5?approverId=2
     @PutMapping("/reject/{odId}")
     public ResponseEntity<ODRequest> rejectOD(@PathVariable Long odId,
                                               @RequestParam Long approverId,
@@ -43,8 +37,6 @@ public class ODRequestController {
         return ResponseEntity.ok(odService.rejectOD(odId, approverId, reason));
     }
 
-    // 4. Cancel an OD Request (by User or Approver)
-    // PUT /api/od/cancel/5?userId=1
     @PutMapping("/cancel/{odId}")
     public ResponseEntity<ODRequest> cancelOD(@PathVariable Long odId,
                                               @RequestParam Long userId) {
@@ -56,18 +48,15 @@ public class ODRequestController {
         return ResponseEntity.ok(odService.getMyODRequests(employeeId));
     }
 
-    @GetMapping("/pending/teamleader/{tlId}")
-    public ResponseEntity<List<ODRequest>> getPendingForTL(@PathVariable Long tlId) {
-        return ResponseEntity.ok(odService.getPendingForTeamLeader(tlId));
+    /** Manager's inbox — all ODs currently waiting on them */
+    @GetMapping("/pending/approver/{managerId}")
+    public ResponseEntity<List<ODRequest>> getPendingForApprover(@PathVariable Long managerId) {
+        return ResponseEntity.ok(odService.getPendingForApprover(managerId));
     }
 
-    @GetMapping("/pending/manager/{managerId}")
-    public ResponseEntity<List<ODRequest>> getPendingForManager(@PathVariable Long managerId) {
-        return ResponseEntity.ok(odService.getPendingForManager(managerId));
-    }
-
-    @GetMapping("/pending/hr")
-    public ResponseEntity<List<ODRequest>> getPendingForHR() {
-        return ResponseEntity.ok(odService.getPendingForHR());
+    /** HR/Admin view — all pending ODs across the system */
+    @GetMapping("/pending/all")
+    public ResponseEntity<List<ODRequest>> getAllPending() {
+        return ResponseEntity.ok(odService.getAllPendingODs());
     }
 }

@@ -27,11 +27,11 @@ public class Employee {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "team_id")
-    private Long teamId;
-
-    @Column(name = "team_leader_id")
-    private Long teamLeaderId;
+//    @Column(name = "team_id")
+//    private Long teamId;
+//
+//    @Column(name = "team_leader_id")
+//    private Long teamLeaderId;
 
     @Column(nullable = false)
     private String name;
@@ -92,21 +92,21 @@ public class Employee {
     // GETTERS & SETTERS
     // ═══════════════════════════════════════════════════════════════
 
-    public Long getTeamId() {
-        return teamId;
-    }
-
-    public void setTeamId(Long teamId) {
-        this.teamId = teamId;
-    }
-
-    public Long getTeamLeaderId() {
-        return teamLeaderId;
-    }
-
-    public void setTeamLeaderId(Long teamLeaderId) {
-        this.teamLeaderId = teamLeaderId;
-    }
+//    public Long getTeamId() {
+//        return teamId;
+//    }
+//
+//    public void setTeamId(Long teamId) {
+//        this.teamId = teamId;
+//    }
+//
+//    public Long getTeamLeaderId() {
+//        return teamLeaderId;
+//    }
+//
+//    public void setTeamLeaderId(Long teamLeaderId) {
+//        this.teamLeaderId = teamLeaderId;
+//    }
 
     public Long getId() {
         return id;

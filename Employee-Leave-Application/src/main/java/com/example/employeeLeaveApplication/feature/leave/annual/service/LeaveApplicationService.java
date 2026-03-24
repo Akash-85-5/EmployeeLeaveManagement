@@ -3,7 +3,6 @@ package com.example.employeeLeaveApplication.feature.leave.annual.service;
 import com.example.employeeLeaveApplication.feature.holiday.utils.HolidayChecker;
 import com.example.employeeLeaveApplication.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.example.employeeLeaveApplication.feature.employee.repository.EmployeeRepository;
-import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveAllocationRepository;
 import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.example.employeeLeaveApplication.feature.leave.compoff.repository.CompOffRepository;
@@ -14,9 +13,8 @@ import com.example.employeeLeaveApplication.feature.leave.annual.dto.LeaveRespon
 import com.example.employeeLeaveApplication.feature.leave.compoff.entity.CompOff;
 import com.example.employeeLeaveApplication.feature.employee.entity.Employee;
 import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
-import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveAllocation;
-import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveAttachment;
+import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveApplication;
 import com.example.employeeLeaveApplication.shared.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.shared.enums.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,15 +30,15 @@ import java.util.List;
 @Service
 public class LeaveApplicationService {
 
-    private final LeaveApplicationRepository leaveApplicationRepository;
-    private final NotificationService notificationService;
-    private final EmployeeRepository employeeRepository;
-    private final HolidayChecker holidayChecker;
-    private final CompOffService compOffService;
-    private final CompOffRepository compOffRepository;
-    private final LeaveAttachmentRepository leaveAttachmentRepository;
-    private final AnnualLeaveBalanceService annualLeaveBalanceService;
-    private final LeaveAllocationRepository leaveAllocationRepository;
+    private final LeaveApplicationRepository   leaveApplicationRepository;
+    private final NotificationService           notificationService;
+    private final EmployeeRepository            employeeRepository;
+    private final HolidayChecker               holidayChecker;
+    private final CompOffService               compOffService;
+    private final CompOffRepository            compOffRepository;
+    private final LeaveAttachmentRepository    leaveAttachmentRepository;
+    private final AnnualLeaveBalanceService    annualLeaveBalanceService;
+    private final SickLeaveBalanceService      sickLeaveBalanceService;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
 
     @Value("${app.server.ip}")
@@ -58,18 +56,18 @@ public class LeaveApplicationService {
             CompOffRepository compOffRepository,
             LeaveAttachmentRepository leaveAttachmentRepository,
             AnnualLeaveBalanceService annualLeaveBalanceService,
-            LeaveAllocationRepository leaveAllocationRepository,
+            SickLeaveBalanceService sickLeaveBalanceService,
             EmployeePersonalDetailsRepository personalDetailsRepository) {
-        this.leaveApplicationRepository   = leaveApplicationRepository;
-        this.notificationService           = notificationService;
-        this.employeeRepository            = employeeRepository;
-        this.holidayChecker                = holidayChecker;
-        this.compOffService                = compOffService;
-        this.compOffRepository             = compOffRepository;
-        this.leaveAttachmentRepository     = leaveAttachmentRepository;
-        this.annualLeaveBalanceService     = annualLeaveBalanceService;
-        this.leaveAllocationRepository     = leaveAllocationRepository;
-        this.personalDetailsRepository     = personalDetailsRepository;
+        this.leaveApplicationRepository = leaveApplicationRepository;
+        this.notificationService         = notificationService;
+        this.employeeRepository          = employeeRepository;
+        this.holidayChecker              = holidayChecker;
+        this.compOffService              = compOffService;
+        this.compOffRepository           = compOffRepository;
+        this.leaveAttachmentRepository   = leaveAttachmentRepository;
+        this.annualLeaveBalanceService   = annualLeaveBalanceService;
+        this.sickLeaveBalanceService     = sickLeaveBalanceService;
+        this.personalDetailsRepository   = personalDetailsRepository;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -93,12 +91,10 @@ public class LeaveApplicationService {
         Employee employee = employeeRepository.findById(leave.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        // Validate leave type eligibility + balance
         validateLeaveTypeAndBalance(leave, employee, calculatedDays);
+        setupApprovalChain(leave, employee);
 
-        setupApprovalChain(leave, employee, calculatedDays);
-
-        // HR / ADMIN: auto-approve
+        // No manager at all → auto-approve
         if (leave.getRequiredApprovalLevels() == 0) {
             leave.setStatus(LeaveStatus.APPROVED);
             leave.setApprovedBy(employee.getId());
@@ -109,12 +105,56 @@ public class LeaveApplicationService {
             return new LeaveResponse(saved, null);
         }
 
-        // Everyone else: PENDING
         leave.setStatus(LeaveStatus.PENDING);
         LeaveApplication saved = leaveApplicationRepository.save(leave);
         notifyFirstApprover(saved, employee);
-
         return new LeaveResponse(saved, null);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // APPROVAL CHAIN SETUP
+    //
+    // Level 1 (stored as TEAM_LEADER): employee's direct managerId
+    // Level 2 (stored as MANAGER):     level-1 approver's managerId
+    //
+    // Rules:
+    //   - If employee has no managerId → auto-approve (0 levels)
+    //   - If level-1 approver has no managerId → 1 level only
+    //   - Otherwise → exactly 2 levels (always stop at 2)
+    // ═══════════════════════════════════════════════════════════════
+
+    private void setupApprovalChain(LeaveApplication leave, Employee employee) {
+        Long firstApproverId = employee.getManagerId();
+
+        if (firstApproverId == null) {
+            // Top of hierarchy — auto-approve
+            leave.setFirstApproverId(null);
+            leave.setSecondApproverId(null);
+            leave.setCurrentApprovalLevel(null);
+            leave.setRequiredApprovalLevels(0);
+            return;
+        }
+
+        // Level 1: employee's manager → stored as teamLeaderId, level = TEAM_LEADER
+        leave.setFirstApproverId(firstApproverId);
+        leave.setCurrentApprovalLevel(ApprovalLevel.FIRST_APPROVER);
+
+        Employee firstApprover = employeeRepository.findById(firstApproverId)
+                .orElseThrow(() -> new RuntimeException(
+                        "First approver not found: " + firstApproverId));
+
+        Long secondApproverId = firstApprover.getManagerId();
+
+        if (secondApproverId == null) {
+            // Level-1 approver is top of chain → only 1 level
+            leave.setSecondApproverId(null);
+            leave.setRequiredApprovalLevels(1);
+        } else {
+            // Level 2: first approver's manager → stored as managerId, level = MANAGER
+            // Always stop here — never go deeper
+            leave.setSecondApproverId(secondApproverId);
+            leave.setRequiredApprovalLevels(2);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -124,60 +164,36 @@ public class LeaveApplicationService {
     private void validateLeaveTypeAndBalance(LeaveApplication leave,
                                              Employee employee,
                                              BigDecimal days) {
-        LeaveType type = leave.getLeaveType();
         int year  = leave.getStartDate().getYear();
         int month = leave.getStartDate().getMonthValue();
 
-        switch (type) {
-
-            case SICK -> validateSickLeave(leave, employee, days, year);
-
+        switch (leave.getLeaveType()) {
+            case SICK         -> validateSickLeave(leave, days, year, month);
             case ANNUAL_LEAVE -> validateAnnualLeave(leave, days, year, month);
-
-            case MATERNITY -> validateMaternity(leave, employee, days);
-
-            case PATERNITY -> validatePaternity(leave, employee, days);
-
-            case COMP_OFF -> validateCompOff(leave, days);
-
-            default -> throw new BadRequestException("Unsupported leave type: " + type);
+            case MATERNITY    -> validateMaternity(leave, employee, days);
+            case PATERNITY    -> validatePaternity(leave, employee, days);
+            case COMP_OFF     -> validateCompOff(leave, days);
+            default -> throw new BadRequestException(
+                    "Unsupported leave type: " + leave.getLeaveType());
         }
     }
 
-    /**
-     * SICK: flat 12-day pool per year, no monthly accrual, no carry-forward.
-     * Cannot apply for past dates (except today).
-     * Future dates only allowed as pre-booked appointment with attachment.
-     */
-    private void validateSickLeave(LeaveApplication leave, Employee employee,
-                                   BigDecimal days, int year) {
-        List<LeaveAllocation> allocations =
-                leaveAllocationRepository.findByEmployeeIdAndYear(employee.getId(), year);
+    /** SICK: cumulative monthly (1.0/month), resets every year. */
+    private void validateSickLeave(LeaveApplication leave, BigDecimal days,
+                                   int year, int month) {
+        double available = sickLeaveBalanceService
+                .getAvailableForMonth(leave.getEmployeeId(), year, month);
 
-        double sickAllocated = allocations.stream()
-                .filter(a -> a.getLeaveCategory() == LeaveType.SICK)
-                .mapToDouble(LeaveAllocation::getAllocatedDays)
-                .sum();
-
-        // Total SICK days already used this year
-        Double usedDays = leaveApplicationRepository
-                .getTotalUsedDaysByType(employee.getId(), LeaveStatus.APPROVED, year, LeaveType.SICK);
-        if (usedDays == null) usedDays = 0.0;
-
-        double remaining = sickAllocated - usedDays;
-
-        if (days.doubleValue() > remaining) {
+        if (days.doubleValue() > available) {
             throw new BadRequestException(
-                    "Insufficient SICK leave balance. Available: "
-                            + String.format("%.1f", remaining)
+                    "Insufficient SICK leave balance for "
+                            + java.time.Month.of(month).name() + " " + year
+                            + ". Available (cumulative): " + String.format("%.1f", available)
                             + ", Requested: " + days);
         }
     }
 
-    /**
-     * ANNUAL_LEAVE: cumulative monthly balance (2/month rolls forward).
-     * Uses AnnualLeaveBalanceService to check available days.
-     */
+    /** ANNUAL_LEAVE: cumulative monthly (1.5/month), carry-forward at year-end. */
     private void validateAnnualLeave(LeaveApplication leave, BigDecimal days,
                                      int year, int month) {
         double available = annualLeaveBalanceService
@@ -192,9 +208,7 @@ public class LeaveApplicationService {
         }
     }
 
-    /**
-     * MATERNITY: 90 days, FEMALE only, one-time per year, no monthly limit.
-     */
+    /** MATERNITY: 90 days, FEMALE only, one-time per year. */
     private void validateMaternity(LeaveApplication leave, Employee employee, BigDecimal days) {
         EmployeePersonalDetails details = personalDetailsRepository
                 .findByEmployeeId(employee.getId()).orElse(null);
@@ -202,24 +216,19 @@ public class LeaveApplicationService {
         if (details == null || details.getGender() != Gender.FEMALE) {
             throw new BadRequestException("MATERNITY leave is only available for female employees.");
         }
-
         if (days.intValue() > PolicyConstants.MATERNITY_DAYS) {
             throw new BadRequestException(
                     "MATERNITY leave cannot exceed " + PolicyConstants.MATERNITY_DAYS + " days.");
         }
-
-        // One-time per year check
-        int year = leave.getStartDate().getYear();
-        Double usedMaternity = leaveApplicationRepository.getTotalUsedDaysByType(
-                employee.getId(), LeaveStatus.APPROVED, year, LeaveType.MATERNITY);
-        if (usedMaternity != null && usedMaternity > 0) {
+        Double used = leaveApplicationRepository.getTotalUsedDaysByType(
+                employee.getId(), LeaveStatus.APPROVED,
+                leave.getStartDate().getYear(), LeaveType.MATERNITY);
+        if (used != null && used > 0) {
             throw new BadRequestException("MATERNITY leave has already been taken this year.");
         }
     }
 
-    /**
-     * PATERNITY: 5 days, MALE only, one-time per year, no monthly limit.
-     */
+    /** PATERNITY: 5 days, MALE only, one-time per year. */
     private void validatePaternity(LeaveApplication leave, Employee employee, BigDecimal days) {
         EmployeePersonalDetails details = personalDetailsRepository
                 .findByEmployeeId(employee.getId()).orElse(null);
@@ -227,23 +236,19 @@ public class LeaveApplicationService {
         if (details == null || details.getGender() != Gender.MALE) {
             throw new BadRequestException("PATERNITY leave is only available for male employees.");
         }
-
         if (days.intValue() > PolicyConstants.PATERNITY_DAYS) {
             throw new BadRequestException(
                     "PATERNITY leave cannot exceed " + PolicyConstants.PATERNITY_DAYS + " days.");
         }
-
-        int year = leave.getStartDate().getYear();
-        Double usedPaternity = leaveApplicationRepository.getTotalUsedDaysByType(
-                employee.getId(), LeaveStatus.APPROVED, year, LeaveType.PATERNITY);
-        if (usedPaternity != null && usedPaternity > 0) {
+        Double used = leaveApplicationRepository.getTotalUsedDaysByType(
+                employee.getId(), LeaveStatus.APPROVED,
+                leave.getStartDate().getYear(), LeaveType.PATERNITY);
+        if (used != null && used > 0) {
             throw new BadRequestException("PATERNITY leave has already been taken this year.");
         }
     }
 
-    /**
-     * COMP_OFF: balance check against earned comp-off days.
-     */
+    /** COMP_OFF: balance check against earned comp-off days. */
     private void validateCompOff(LeaveApplication leave, BigDecimal days) {
         BigDecimal available = compOffService.getAvailableCompOffDays(leave.getEmployeeId());
         if (available.compareTo(days) < 0) {
@@ -254,47 +259,37 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // BALANCE DEDUCTION (called on APPROVAL)
+    // BALANCE DEDUCTION / RESTORE
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * Called when a leave is finally approved (either auto or by approver).
-     * Deducts from the appropriate balance.
-     */
     public void applyBalanceDeduction(LeaveApplication leave) {
-        LeaveType type  = leave.getLeaveType();
-        double days     = leave.getDays().doubleValue();
-        int year        = leave.getStartDate().getYear();
-        int month       = leave.getStartDate().getMonthValue();
-        Long empId      = leave.getEmployeeId();
+        double days = leave.getDays().doubleValue();
+        int year    = leave.getStartDate().getYear();
+        int month   = leave.getStartDate().getMonthValue();
+        Long empId  = leave.getEmployeeId();
 
-        switch (type) {
+        switch (leave.getLeaveType()) {
             case ANNUAL_LEAVE ->
                     annualLeaveBalanceService.deductLeave(empId, year, month, days);
-
+            case SICK ->
+                    sickLeaveBalanceService.deductLeave(empId, year, month, days);
             case COMP_OFF ->
                     compOffService.useCompOff(empId, leave.getDays(), leave.getId());
-
-            // SICK, MATERNITY, PATERNITY: no separate balance table,
-            // balance is computed live from approved leave records vs allocation.
-            case SICK, MATERNITY, PATERNITY -> { /* no-op */ }
+            case MATERNITY, PATERNITY -> { /* no balance table */ }
         }
     }
 
-    /**
-     * Called on leave cancellation to restore balance.
-     */
     public void restoreBalance(LeaveApplication leave) {
-        LeaveType type = leave.getLeaveType();
-        double days    = leave.getDays().doubleValue();
-        int year       = leave.getStartDate().getYear();
-        int month      = leave.getStartDate().getMonthValue();
-        Long empId     = leave.getEmployeeId();
+        double days = leave.getDays().doubleValue();
+        int year    = leave.getStartDate().getYear();
+        int month   = leave.getStartDate().getMonthValue();
+        Long empId  = leave.getEmployeeId();
 
-        switch (type) {
+        switch (leave.getLeaveType()) {
             case ANNUAL_LEAVE ->
                     annualLeaveBalanceService.restoreLeave(empId, year, month, days);
-
+            case SICK ->
+                    sickLeaveBalanceService.restoreLeave(empId, year, month, days);
             case COMP_OFF -> {
                 List<CompOff> linked = compOffRepository.findByUsedLeaveApplicationId(leave.getId());
                 BigDecimal restored = BigDecimal.ZERO;
@@ -308,7 +303,7 @@ public class LeaveApplicationService {
                     compOffService.restoreCompOffBalance(empId, restored);
                 }
             }
-            case SICK, MATERNITY, PATERNITY -> { /* no balance table to restore */ }
+            case MATERNITY, PATERNITY -> { /* no balance table */ }
         }
     }
 
@@ -325,17 +320,13 @@ public class LeaveApplicationService {
         if (!leave.getEmployeeId().equals(employeeId)) {
             throw new BadRequestException("Unauthorized: You cannot cancel another employee's leave.");
         }
-
         if (leave.getStatus() == LeaveStatus.REJECTED
                 || leave.getStatus() == LeaveStatus.CANCELLED) {
             throw new BadRequestException("Leave is already finalized as " + leave.getStatus());
         }
-
-        // Restore balance only if was already approved
         if (leave.getStatus() == LeaveStatus.APPROVED) {
             restoreBalance(leave);
         }
-
         leave.setStatus(LeaveStatus.CANCELLED);
         leaveApplicationRepository.save(leave);
     }
@@ -345,25 +336,22 @@ public class LeaveApplicationService {
     // ═══════════════════════════════════════════════════════════════
 
     public BigDecimal calculateLeaveDuration(LeaveApplication leave) {
-        LocalDate startDate = leave.getStartDate();
-        LocalDate endDate   = leave.getEndDate();
+        LocalDate startDate  = leave.getStartDate();
+        LocalDate endDate    = leave.getEndDate();
 
         if (endDate.isBefore(startDate)) {
             throw new BadRequestException("End date cannot be before start date.");
         }
 
-        boolean sameDay    = startDate.isEqual(endDate);
+        boolean sameDay     = startDate.isEqual(endDate);
         boolean startIsHalf = leave.getStartDateHalfDayType() != null;
         boolean endIsHalf   = leave.getEndDateHalfDayType()   != null;
 
         if (sameDay) {
-            return (startIsHalf || endIsHalf)
-                    ? new BigDecimal("0.5")
-                    : BigDecimal.ONE;
+            return (startIsHalf || endIsHalf) ? new BigDecimal("0.5") : BigDecimal.ONE;
         }
 
         long workingDays = holidayChecker.countWorkingDays(startDate, endDate);
-
         if (workingDays <= 0) {
             throw new BadRequestException(
                     "No working days found in the selected date range. "
@@ -371,77 +359,18 @@ public class LeaveApplicationService {
         }
 
         BigDecimal days = BigDecimal.valueOf(workingDays);
-
         if (startIsHalf && !holidayChecker.isNonWorkingDay(startDate)) {
             days = days.subtract(new BigDecimal("0.5"));
         }
         if (endIsHalf && !holidayChecker.isNonWorkingDay(endDate)) {
             days = days.subtract(new BigDecimal("0.5"));
         }
-
         if (days.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException(
                     "Calculated leave duration is zero or negative. "
                             + "Check your dates and half-day selections.");
         }
-
         return days;
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // APPROVAL CHAIN SETUP (unchanged)
-    // ═══════════════════════════════════════════════════════════════
-
-    private void setupApprovalChain(LeaveApplication leave, Employee employee, BigDecimal days) {
-        switch (employee.getRole()) {
-            case EMPLOYEE    -> setupEmployeeChain(leave, employee, days);
-            case TEAM_LEADER -> setupTeamLeaderChain(leave, employee, days);
-            case MANAGER, ADMIN -> setupManagerChain(leave, employee);
-            default -> throw new BadRequestException("Unknown role: " + employee.getRole());
-        }
-    }
-
-    private void setupEmployeeChain(LeaveApplication leave, Employee employee, BigDecimal days) {
-        if (employee.getTeamLeaderId() == null) {
-            throw new BadRequestException("No Team Leader assigned. Please contact HR.");
-        }
-        Employee manager = employeeRepository.findById(employee.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
-
-        leave.setTeamLeaderId(employee.getTeamLeaderId());
-        leave.setCurrentApprovalLevel(ApprovalLevel.TEAM_LEADER);
-        leave.setManagerId(employee.getManagerId());
-        leave.setHrId(manager.getManagerId());
-
-        if (days.compareTo(BigDecimal.ONE) <= 0) {
-            leave.setRequiredApprovalLevels(1);
-        } else if (days.compareTo(BigDecimal.valueOf(7)) < 0) {
-            leave.setRequiredApprovalLevels(2);
-        } else {
-            leave.setRequiredApprovalLevels(3);
-        }
-    }
-
-    private void setupTeamLeaderChain(LeaveApplication leave, Employee employee, BigDecimal days) {
-        if (employee.getManagerId() == null) {
-            throw new BadRequestException("No Manager assigned to Team Leader. Please contact HR.");
-        }
-        Employee manager = employeeRepository.findById(employee.getManagerId())
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
-
-        leave.setTeamLeaderId(null);
-        leave.setManagerId(employee.getManagerId());
-        leave.setHrId(manager.getManagerId());
-        leave.setCurrentApprovalLevel(ApprovalLevel.MANAGER);
-        leave.setRequiredApprovalLevels(days.compareTo(BigDecimal.valueOf(7)) < 0 ? 1 : 2);
-    }
-
-    private void setupManagerChain(LeaveApplication leave, Employee employee) {
-        leave.setTeamLeaderId(null);
-        leave.setManagerId(null);
-        leave.setHrId(employee.getManagerId());
-        leave.setCurrentApprovalLevel(ApprovalLevel.HR);
-        leave.setRequiredApprovalLevels(1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -501,7 +430,6 @@ public class LeaveApplicationService {
 
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);
-
         return new LeaveResponse(leaveApplicationRepository.save(leave), null);
     }
 
@@ -530,7 +458,6 @@ public class LeaveApplicationService {
             }
             return;
         }
-
         long workingDays = holidayChecker.countWorkingDays(startDate, endDate);
         if (workingDays == 0) {
             throw new BadRequestException(
@@ -548,35 +475,16 @@ public class LeaveApplicationService {
     }
 
     private void notifyFirstApprover(LeaveApplication leave, Employee employee) {
-        ApprovalLevel firstLevel = leave.getCurrentApprovalLevel();
+        if (leave.getFirstApproverId() == null) return;
 
-        if (firstLevel == ApprovalLevel.TEAM_LEADER && leave.getTeamLeaderId() != null) {
-            employeeRepository.findById(leave.getTeamLeaderId()).ifPresent(tl ->
-                    notificationService.createNotification(
-                            tl.getId(), employee.getEmail(), tl.getEmail(),
-                            EventType.LEAVE_APPLIED, tl.getRole(), Channel.EMAIL,
-                            employee.getName() + " applied leave from "
-                                    + leave.getStartDate() + " to " + leave.getEndDate()
-                                    + ". Awaiting your approval.")
-            );
-        } else if (firstLevel == ApprovalLevel.MANAGER && leave.getManagerId() != null) {
-            employeeRepository.findById(leave.getManagerId()).ifPresent(mgr ->
-                    notificationService.createNotification(
-                            mgr.getId(), employee.getEmail(), mgr.getEmail(),
-                            EventType.LEAVE_APPLIED, mgr.getRole(), Channel.EMAIL,
-                            "Team Leader " + employee.getName() + " applied leave from "
-                                    + leave.getStartDate() + " to " + leave.getEndDate()
-                                    + ". Awaiting your approval.")
-            );
-        } else if (firstLevel == ApprovalLevel.HR) {
-            employeeRepository.findAllHr().forEach(hr ->
-                    notificationService.createNotification(
-                            hr.getId(), employee.getEmail(), hr.getEmail(),
-                            EventType.LEAVE_APPLIED, hr.getRole(), Channel.EMAIL,
-                            "Manager " + employee.getName() + " applied leave from "
-                                    + leave.getStartDate() + " to " + leave.getEndDate()
-                                    + ". Awaiting your approval.")
-            );
-        }
+        employeeRepository.findById(leave.getFirstApproverId()).ifPresent(approver ->
+                notificationService.createNotification(
+                        approver.getId(), employee.getEmail(), approver.getEmail(),
+                        EventType.LEAVE_APPLIED, approver.getRole(), Channel.EMAIL,
+                        employee.getName() + " applied for "
+                                + leave.getLeaveType().name() + " leave from "
+                                + leave.getStartDate() + " to " + leave.getEndDate()
+                                + ". Awaiting your approval.")
+        );
     }
 }

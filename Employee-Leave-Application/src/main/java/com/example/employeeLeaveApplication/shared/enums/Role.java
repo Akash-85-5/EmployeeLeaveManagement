@@ -6,5 +6,6 @@ public enum Role {
     MANAGER,
     HR,
     ADMIN,
-    CFO;
+    CFO,
+    CEO
 }
