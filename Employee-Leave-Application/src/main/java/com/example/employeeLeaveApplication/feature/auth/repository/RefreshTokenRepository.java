@@ -14,7 +14,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByToken(String token);
 
     @Modifying
-    @Transactional  // ← MUST have this directly on repo method
+    @Transactional
     @Query("UPDATE RefreshToken r SET r.revoked = true WHERE r.user = :user")
     void revokeAllByUser(User user);
+
+    // ✅ NEW — cleanup old tokens
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM RefreshToken r WHERE r.revoked = true OR r.expiresAt < CURRENT_TIMESTAMP")
+    void deleteAllExpiredOrRevoked();
 }
