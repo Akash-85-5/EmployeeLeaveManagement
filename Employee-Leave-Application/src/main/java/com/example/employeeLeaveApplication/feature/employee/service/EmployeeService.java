@@ -78,6 +78,7 @@ public class EmployeeService {
         response.setEmail(employee.getEmail());
         response.setRole(employee.getRole().name());
         response.setManagerId(employee.getManagerId());
+        response.setEmployeeExperience(employee.getEmployeeExperience());
         response.setHrname(hrName);
         response.setActive(user.getStatus() == Status.ACTIVE);
         response.setMustChangePassword(user.isForcePwdChange());
@@ -524,7 +525,6 @@ public class EmployeeService {
     }
 
     private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
-        r.setEmployeeType(pd.getEmployeeType());
         r.setFirstName(pd.getFirstName());
         r.setLastName(pd.getLastName());
         r.setSurName(pd.getSurName());

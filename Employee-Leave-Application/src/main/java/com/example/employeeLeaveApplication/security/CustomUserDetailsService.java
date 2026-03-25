@@ -2,6 +2,7 @@ package com.example.employeeLeaveApplication.security;
 
 import com.example.employeeLeaveApplication.feature.auth.entity.User;
 import com.example.employeeLeaveApplication.feature.auth.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+@Transactional
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -20,6 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 

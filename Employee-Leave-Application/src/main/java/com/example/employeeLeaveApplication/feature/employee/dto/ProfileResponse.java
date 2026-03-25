@@ -151,8 +151,13 @@ public class ProfileResponse {
     public String getHrRemarks() { return hrRemarks; }
     public void setHrRemarks(String hrRemarks) { this.hrRemarks = hrRemarks; }
 
-    public EmployeeExperience getEmployeeType() { return employeeExperience; }
-    public void setEmployeeType(EmployeeExperience employeeExperience) { this.employeeExperience = employeeExperience; }
+    public EmployeeExperience getEmployeeExperience() {
+        return employeeExperience;
+    }
+
+    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
+        this.employeeExperience = employeeExperience;
+    }
 
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
