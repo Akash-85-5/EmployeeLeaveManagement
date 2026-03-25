@@ -8,6 +8,7 @@ import com.example.employeeLeaveApplication.feature.auth.dto.LoginResponse;
 import com.example.employeeLeaveApplication.shared.enums.Status;
 import com.example.employeeLeaveApplication.feature.auth.entity.User;
 import com.example.employeeLeaveApplication.feature.auth.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +37,7 @@ public class AuthService {
     }
 
     // ─── LOGIN ───────────────────────────────────────────────────────────────
+    // Returns [accessJwt, refreshTokenString, LoginResponse]
 
     public Object[] login(LoginRequest request) {
 
@@ -53,37 +55,35 @@ public class AuthService {
             throw new RuntimeException("Account is disabled. Contact admin.");
         }
 
-        String accessToken = jwtTokenProvider.generateToken(user);
+        String accessToken    = jwtTokenProvider.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         LoginResponse loginResponse = new LoginResponse(
                 user.getId(),
-                accessToken,
                 user.getRole().name(),
                 user.isForcePwdChange()
         );
 
-        return new Object[]{loginResponse, refreshToken.getToken()};
+        return new Object[]{accessToken, refreshToken.getToken(), loginResponse};
     }
 
-    // ─── REFRESH ACCESS TOKEN ─────────────────────────────────────────────────
+    // ─── REFRESH ─────────────────────────────────────────────────────────────
+    // Returns [newAccessJwt, newRefreshTokenString]
 
+    @Transactional
     public Object[] refreshAccessToken(String rawRefreshToken) {
 
-        RefreshToken validated = refreshTokenService.validateRefreshToken(rawRefreshToken);
-        User user = validated.getUser();
+        RefreshToken validated    = refreshTokenService.validateRefreshToken(rawRefreshToken);
+        RefreshToken newRefresh   = refreshTokenService.rotateRefreshToken(validated);
+        String newAccessToken     = jwtTokenProvider.generateToken(validated.getUser());
 
-        String newAccessToken = jwtTokenProvider.generateToken(user);
-        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
-
-        return new Object[]{newAccessToken, newRefreshToken.getToken()};
+        return new Object[]{newAccessToken, newRefresh.getToken()};
     }
 
     // ─── LOGOUT ──────────────────────────────────────────────────────────────
 
     public void logout(String rawRefreshToken) {
         if (rawRefreshToken != null) {
-            // Single validate — get the token object, then revoke all for that user
             RefreshToken rt = refreshTokenService.validateRefreshToken(rawRefreshToken);
             refreshTokenService.revokeAllTokensForUser(rt.getUser());
         }
@@ -107,7 +107,6 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setForcePwdChange(false);
-
         userRepository.save(user);
     }
 }

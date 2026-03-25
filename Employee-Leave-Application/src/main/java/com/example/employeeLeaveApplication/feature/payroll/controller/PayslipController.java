@@ -24,67 +24,19 @@ public class PayslipController {
         this.payslipService = payslipService;
     }
 
+    // ───────────── CFO ACTIONS ─────────────
+
     @PreAuthorize("hasRole('CFO')")
     @PostMapping("/create")
     public PayslipResponse createPayslip(@RequestBody CreatePayslipRequest request){
         return payslipService.createPayslip(request);
     }
 
-    @PreAuthorize("hasAnyRole('CFO','HR','ADMIN')")
-    @GetMapping("/payroll/{year}/{month}")
-    public List<PayslipResponse> payroll(
-            @PathVariable Integer year,
-            @PathVariable Integer month){
-        return payslipService.getPayrollByMonth(year,month);
+    @PreAuthorize("hasRole('CFO')")
+    @PutMapping("/update")
+    public PayslipResponse updatePayslip(@RequestBody CreatePayslipRequest request){
+        return payslipService.updatePayslip(request);
     }
-
-    @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
-    @GetMapping("/history/{year}")
-    public List<PayslipResponse> history(
-            @PathVariable Integer year,
-            Authentication authentication){
-
-        CustomUserDetails user =
-                (CustomUserDetails) authentication.getPrincipal();
-
-        Long employeeId = user.getUser().getId();
-
-        return payslipService.getEmployeeHistory(employeeId, year);
-    }
-
-    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER','HR')")
-    @GetMapping("/my/{year}/{month}")
-    public PayslipResponse myPayslip(
-            @PathVariable Integer year,
-            @PathVariable Integer month,
-            Authentication auth){
-
-        CustomUserDetails user =
-                (CustomUserDetails) auth.getPrincipal();
-
-        return payslipService.getEmployeePayslip(
-                user.getUser().getId(),year,month);
-    }
-
-    @PreAuthorize("hasAnyRole('EMPLOYEE','MANAGER','ADMIN','TEAM_LEADER','HR')")
-    @GetMapping("/download/{year}/{month}")
-    public ResponseEntity<byte[]> download(
-            @PathVariable Integer year,
-            @PathVariable Integer month,
-            Authentication auth) {
-
-        CustomUserDetails user =
-                (CustomUserDetails) auth.getPrincipal();
-
-        byte[] pdf = payslipService.downloadPayslip(
-                user.getUser().getId(), year, month);
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=payslip.pdf")
-                .body(pdf);
-    }
-
 
     @PreAuthorize("hasRole('CFO')")
     @DeleteMapping("/{employeeId}/{year}/{month}")
@@ -94,9 +46,19 @@ public class PayslipController {
             @PathVariable Integer month){
 
         payslipService.deletePayslip(employeeId,year,month);
-
         return "Payslip deleted successfully";
     }
+
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/prefill")
+    public PayslipResponse prefill(
+            @RequestParam Long employeeId,
+            @RequestParam Integer year,
+            @RequestParam Integer month){
+
+        return payslipService.getPrefillData(employeeId, year, month);
+    }
+
     @PreAuthorize("hasRole('CFO')")
     @GetMapping("/export/{year}/{month}")
     public ResponseEntity<String> exportPayroll(
@@ -111,7 +73,6 @@ public class PayslipController {
         csv.append("EmployeeId,Year,Month,Basic,HRA,Conveyance,Medical,OtherAllowance,Bonus,Incentive,Stipend,PF,ESI,ProfessionalTax,TDS,LOP,Gross,Net\n");
 
         for(PayslipResponse p : payslips){
-
             csv.append(p.getEmployeeId()).append(",")
                     .append(p.getYear()).append(",")
                     .append(p.getMonth()).append(",")
@@ -136,12 +97,75 @@ public class PayslipController {
                 .header("Content-Disposition","attachment; filename=payroll.csv")
                 .body(csv.toString());
     }
-    @PreAuthorize("hasRole('CFO')")
-    @PutMapping("/update")
-    public PayslipResponse updatePayslip(@RequestBody CreatePayslipRequest request){
 
-        return payslipService.updatePayslip(request);
+    // ───────────── MANAGEMENT VIEW ─────────────
+
+    @PreAuthorize("hasAnyRole('CFO','HR','ADMIN')")
+    @GetMapping("/payroll/{year}/{month}")
+    public List<PayslipResponse> payroll(
+            @PathVariable Integer year,
+            @PathVariable Integer month){
+        return payslipService.getPayrollByMonth(year,month);
     }
+
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/employee/{employeeId}/{year}")
+    public List<PayslipResponse> getEmployeeYearlyPayslips(
+            @PathVariable Long employeeId,
+            @PathVariable Integer year){
+
+        return payslipService.getEmployeeHistory(employeeId, year);
+    }
+
+    // ───────────── EMPLOYEE ACTIONS ─────────────
+
+    @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
+    @GetMapping("/history/{year}")
+    public List<PayslipResponse> history(
+            @PathVariable Integer year,
+            Authentication authentication){
+
+        CustomUserDetails user =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        Long employeeId = user.getUser().getId();
+
+        return payslipService.getEmployeeHistory(employeeId, year);
+    }
+
+    @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
+    @GetMapping("/my/{year}/{month}")
+    public PayslipResponse myPayslip(
+            @PathVariable Integer year,
+            @PathVariable Integer month,
+            Authentication auth){
+
+        CustomUserDetails user =
+                (CustomUserDetails) auth.getPrincipal();
+
+        return payslipService.getEmployeePayslip(
+                user.getUser().getId(),year,month);
+    }
+
+    @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
+    @GetMapping("/download/{year}/{month}")
+    public ResponseEntity<byte[]> download(
+            @PathVariable Integer year,
+            @PathVariable Integer month,
+            Authentication auth) {
+
+        CustomUserDetails user =
+                (CustomUserDetails) auth.getPrincipal();
+
+        byte[] pdf = payslipService.downloadPayslip(
+                user.getUser().getId(), year, month);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=payslip.pdf")
+                .body(pdf);
+    }
+
     @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
     @GetMapping("/summary/{year}")
     public YearlySummaryResponse summary(
@@ -154,23 +178,5 @@ public class PayslipController {
         Long employeeId = user.getUser().getId();
 
         return payslipService.yearlySummary(employeeId, year);
-    }
-
-    @PreAuthorize("hasRole('CFO')")
-    @GetMapping("/employee/{employeeId}/{year}")
-    public List<PayslipResponse> getEmployeeYearlyPayslips(
-            @PathVariable Long employeeId,
-            @PathVariable Integer year){
-
-        return payslipService.getEmployeeHistory(employeeId, year);
-    }
-    @PreAuthorize("hasRole('CFO')")
-    @GetMapping("/prefill")
-    public PayslipResponse prefill(
-            @RequestParam Long employeeId,
-            @RequestParam Integer year,
-            @RequestParam Integer month){
-
-        return payslipService.getPrefillData(employeeId, year, month);
     }
 }

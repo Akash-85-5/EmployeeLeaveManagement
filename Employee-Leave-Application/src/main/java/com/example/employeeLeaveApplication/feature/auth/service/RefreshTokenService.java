@@ -22,22 +22,36 @@ public class RefreshTokenService {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
-    // Generate and persist a new refresh token for the user
+    // ─── LOGIN — revoke all old sessions, create fresh token ─────────────────
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        // Revoke any existing tokens for this user (one active token per user)
         refreshTokenRepository.revokeAllByUser(user);
 
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
-        refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiresAt(Instant.now().plusMillis(refreshExpirationMs));
-        refreshToken.setRevoked(false);
+        RefreshToken token = new RefreshToken();
+        token.setUser(user);
+        token.setToken(UUID.randomUUID().toString());
+        token.setExpiresAt(Instant.now().plusMillis(refreshExpirationMs));
+        token.setRevoked(false);
 
-        return refreshTokenRepository.save(refreshToken);
+        return refreshTokenRepository.save(token);
     }
 
-    // Validate: exists, not revoked, not expired
+    // ─── REFRESH — revoke only this specific token, issue new one ─────────────
+    @Transactional
+    public RefreshToken rotateRefreshToken(RefreshToken oldToken) {
+        oldToken.setRevoked(true);
+        refreshTokenRepository.save(oldToken);
+
+        RefreshToken newToken = new RefreshToken();
+        newToken.setUser(oldToken.getUser());
+        newToken.setToken(UUID.randomUUID().toString());
+        newToken.setExpiresAt(Instant.now().plusMillis(refreshExpirationMs));
+        newToken.setRevoked(false);
+
+        return refreshTokenRepository.save(newToken);
+    }
+
+    // ─── VALIDATE ─────────────────────────────────────────────────────────────
     public RefreshToken validateRefreshToken(String token) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
@@ -53,7 +67,7 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
-    // Revoke all tokens for a user (logout)
+    // ─── LOGOUT — revoke all tokens for user ──────────────────────────────────
     @Transactional
     public void revokeAllTokensForUser(User user) {
         refreshTokenRepository.revokeAllByUser(user);

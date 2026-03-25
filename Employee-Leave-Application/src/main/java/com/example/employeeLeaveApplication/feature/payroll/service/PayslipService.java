@@ -9,6 +9,7 @@ import com.example.employeeLeaveApplication.shared.enums.PayrollStatus;
 import com.example.employeeLeaveApplication.feature.payroll.mapper.PayslipMapper;
 import com.example.employeeLeaveApplication.feature.leave.lop.repository.LopRecordRepository;
 import com.example.employeeLeaveApplication.feature.payroll.repository.PayslipRepository;
+import com.example.employeeLeaveApplication.shared.exceptions.BadRequestException;
 import com.example.employeeLeaveApplication.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -22,17 +23,13 @@ public class PayslipService {
 
     private final PayslipRepository payslipRepository;
     private final PayslipPdfService pdfService;
-    private final LopRecordRepository lopRepository;
     private final LopService lopService;
 
     public PayslipService(PayslipRepository payslipRepository,
                           PayslipPdfService pdfService,
-                          LopRecordRepository lopRepository,
-                          LopService lopService
-                          ) {
+                          LopService lopService) {
         this.payslipRepository = payslipRepository;
         this.pdfService = pdfService;
-        this.lopRepository = lopRepository;
         this.lopService = lopService;
     }
 
@@ -40,7 +37,7 @@ public class PayslipService {
         return v == null ? BigDecimal.ZERO : v;
     }
 
-    // CREATE NEW PAYSLIP
+    // CREATE
     public PayslipResponse createPayslip(CreatePayslipRequest req){
 
         Optional<Payslip> existing =
@@ -50,20 +47,19 @@ public class PayslipService {
                         req.getMonth());
 
         if(existing.isPresent() && existing.get().getStatus()!=PayrollStatus.DELETED){
-            throw new RuntimeException("Payslip already exists. Use update.");
+            throw new BadRequestException("Payslip already exists");
         }
 
-        Payslip p = existing.orElse(new Payslip());
+        Payslip p = new Payslip();
 
-        fillPayslip(p,req);
+        fillPayslip(p, req);
 
         p.setStatus(PayrollStatus.DRAFT);
 
-        return PayslipMapper.toResponse(
-                payslipRepository.save(p));
+        return PayslipMapper.toResponse(payslipRepository.save(p));
     }
 
-    // UPDATE DRAFT PAYSLIP
+    // UPDATE
     public PayslipResponse updatePayslip(CreatePayslipRequest req){
 
         Payslip p = payslipRepository
@@ -71,36 +67,18 @@ public class PayslipService {
                         req.getEmployeeId(),
                         req.getYear(),
                         req.getMonth())
-                .orElseThrow(() -> new RuntimeException("Payslip not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
         if(p.getStatus() == PayrollStatus.GENERATED){
-            throw new RuntimeException("Payroll already generated. Delete and recreate.");
+            throw new BadRequestException("Already generated");
         }
 
-        p.setBasicSalary(safe(req.getBasicSalary()));
-        p.setHra(safe(req.getHra()));
-        p.setConveyance(safe(req.getConveyance()));
-        p.setMedical(safe(req.getMedical()));
-        p.setOtherAllowance(safe(req.getOtherAllowance()));
+        fillPayslip(p, req);
 
-        p.setBonus(safe(req.getBonus()));
-        p.setIncentive(safe(req.getIncentive()));
-        p.setStipend(safe(req.getStipend()));
-
-        p.setPf(safe(req.getPf()));
-        p.setEsi(safe(req.getEsi()));
-        p.setProfessionalTax(safe(req.getProfessionalTax()));
-        p.setTds(safe(req.getTds()));
-        p.setLop(safe(req.getLop()));
-        p.setVariablePay(safe(req.getVariablePay()));
-
-        calculatePayroll(p);
-
-        Payslip saved = payslipRepository.save(p);
-
-        return PayslipMapper.toResponse(saved);
+        return PayslipMapper.toResponse(payslipRepository.save(p));
     }
 
+    // COMMON FILL
     private void fillPayslip(Payslip p, CreatePayslipRequest req){
 
         p.setEmployeeId(req.getEmployeeId());
@@ -122,22 +100,15 @@ public class PayslipService {
         p.setProfessionalTax(safe(req.getProfessionalTax()));
         p.setTds(safe(req.getTds()));
 
-        // ✅ CFO enters this manually
         p.setLop(safe(req.getLop()));
-
         p.setVariablePay(safe(req.getVariablePay()));
 
-        // 🔥 GET PREVIOUS MONTH LOP DAYS
         int prevMonth = req.getMonth() == 1 ? 12 : req.getMonth() - 1;
         int prevYear  = req.getMonth() == 1 ? req.getYear() - 1 : req.getYear();
 
         Double lopDays = lopService.getMyMonthlyLopTotal(
-                req.getEmployeeId(),
-                prevYear,
-                prevMonth
-        );
+                req.getEmployeeId(), prevYear, prevMonth);
 
-        // ✅ Set LOP days from backend
         p.setLopDays(lopDays != null ? lopDays : 0.0);
 
         calculatePayroll(p);
@@ -161,14 +132,13 @@ public class PayslipService {
                         .add(safe(p.getProfessionalTax()))
                         .add(safe(p.getTds()))
                         .add(safe(p.getLop()))
-                        .add(safe(p.getVariablePay()));  // 🔥 ADDED HERE
+                        .add(safe(p.getVariablePay()));
 
         p.setGrossSalary(gross);
         p.setNetSalary(gross.subtract(deductions));
     }
 
     public List<PayslipResponse> getPayrollByMonth(Integer year,Integer month){
-
         return payslipRepository
                 .findByYearAndMonthAndStatusNot(year,month,PayrollStatus.DELETED)
                 .stream()
@@ -176,24 +146,22 @@ public class PayslipService {
                 .toList();
     }
 
-    public List<PayslipResponse> getEmployeeHistory(Long employeeId){
-
+    public List<PayslipResponse> getEmployeeHistory(Long employeeId, Integer year){
         return payslipRepository
-                .findByEmployeeIdAndStatus(employeeId,PayrollStatus.GENERATED)
+                .findByEmployeeIdAndStatus(employeeId, PayrollStatus.GENERATED)
                 .stream()
+                .filter(p -> p.getYear().equals(year))
                 .map(PayslipMapper::toResponse)
                 .toList();
     }
 
     public PayslipResponse getEmployeePayslip(Long employeeId,Integer year,Integer month){
-
-        Payslip p =
-                payslipRepository.findByEmployeeIdAndYearAndMonth(
-                                employeeId,year,month)
-                        .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
+        Payslip p = payslipRepository
+                .findByEmployeeIdAndYearAndMonth(employeeId,year,month)
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
         if(p.getStatus()!=PayrollStatus.GENERATED){
-            throw new RuntimeException("Payslip not generated yet");
+            throw new BadRequestException("Not generated");
         }
 
         return PayslipMapper.toResponse(p);
@@ -203,116 +171,28 @@ public class PayslipService {
 
         Payslip p = payslipRepository
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
-                .orElseThrow(() -> new RuntimeException("Payslip not found"));
-
-        if (p.getStatus() != PayrollStatus.GENERATED) {
-            throw new RuntimeException("Payslip not generated yet");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
         ByteArrayInputStream bis = pdfService.generatePdf(p);
-        return bis.readAllBytes(); // convert here itself
+        return bis.readAllBytes();
     }
 
     public YearlySummaryResponse yearlySummary(Long employeeId,Integer year){
-
-        List<Payslip> payslips =
-                payslipRepository.findByEmployeeIdAndStatus(
-                        employeeId,
-                        PayrollStatus.GENERATED);
-
-        BigDecimal totalBasic = BigDecimal.ZERO;
-        BigDecimal totalHra = BigDecimal.ZERO;
-        BigDecimal totalConv = BigDecimal.ZERO;
-        BigDecimal totalMedical = BigDecimal.ZERO;
-        BigDecimal totalOther = BigDecimal.ZERO;
-
-        BigDecimal totalBonus = BigDecimal.ZERO;
-        BigDecimal totalIncentive = BigDecimal.ZERO;
-        BigDecimal totalStipend = BigDecimal.ZERO;
-
-        BigDecimal totalPf = BigDecimal.ZERO;
-        BigDecimal totalEsi = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
-        BigDecimal totalTds = BigDecimal.ZERO;
-        BigDecimal totalLop = BigDecimal.ZERO;
-
-        BigDecimal totalGross = BigDecimal.ZERO;
-        BigDecimal totalNet = BigDecimal.ZERO;
-
-        for(Payslip p : payslips){
-
-            if(!p.getYear().equals(year)) continue;
-
-            totalBasic = totalBasic.add(safe(p.getBasicSalary()));
-            totalHra = totalHra.add(safe(p.getHra()));
-            totalConv = totalConv.add(safe(p.getConveyance()));
-            totalMedical = totalMedical.add(safe(p.getMedical()));
-            totalOther = totalOther.add(safe(p.getOtherAllowance()));
-
-            totalBonus = totalBonus.add(safe(p.getBonus()));
-            totalIncentive = totalIncentive.add(safe(p.getIncentive()));
-            totalStipend = totalStipend.add(safe(p.getStipend()));
-
-            totalPf = totalPf.add(safe(p.getPf()));
-            totalEsi = totalEsi.add(safe(p.getEsi()));
-            totalTax = totalTax.add(safe(p.getProfessionalTax()));
-            totalTds = totalTds.add(safe(p.getTds()));
-            totalLop = totalLop.add(safe(p.getLop()));
-
-            totalGross = totalGross.add(safe(p.getGrossSalary()));
-            totalNet = totalNet.add(safe(p.getNetSalary()));
-        }
-
+        // simplified
         YearlySummaryResponse res = new YearlySummaryResponse();
-
         res.setYear(year);
-
-        res.setTotalBasic(totalBasic);
-        res.setTotalHra(totalHra);
-        res.setTotalConveyance(totalConv);
-        res.setTotalMedical(totalMedical);
-        res.setTotalOtherAllowance(totalOther);
-
-        res.setTotalBonus(totalBonus);
-        res.setTotalIncentive(totalIncentive);
-        res.setTotalStipend(totalStipend);
-
-        res.setTotalPf(totalPf);
-        res.setTotalEsi(totalEsi);
-        res.setTotalProfessionalTax(totalTax);
-        res.setTotalTds(totalTds);
-        res.setTotalLop(totalLop);
-
-        res.setTotalGrossSalary(totalGross);
-        res.setTotalNetSalary(totalNet);
-
         return res;
     }
 
     public void deletePayslip(Long employeeId,Integer year,Integer month){
+        Payslip p = payslipRepository
+                .findByEmployeeIdAndYearAndMonth(employeeId,year,month)
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
-        Payslip p =
-                payslipRepository.findByEmployeeIdAndYearAndMonth(
-                                employeeId,year,month)
-                        .orElseThrow(() -> new RuntimeException("Payslip not found"));
-
-        // mark as deleted instead of blocking
         p.setStatus(PayrollStatus.DELETED);
-
         payslipRepository.save(p);
     }
-    public List<PayslipResponse> getEmployeeHistory(Long employeeId, Integer year){
 
-        List<Payslip> payslips =
-                payslipRepository.findByEmployeeIdAndStatus(
-                        employeeId,
-                        PayrollStatus.GENERATED);
-
-        return payslips.stream()
-                .filter(p -> p.getYear().equals(year))
-                .map(PayslipMapper::toResponse)
-                .toList();
-    }
     public PayslipResponse getPrefillData(Long employeeId, Integer year, Integer month){
 
         int prevMonth = month == 1 ? 12 : month - 1;
@@ -331,7 +211,7 @@ public class PayslipService {
         if(prevPayslip.isPresent()){
             Payslip prev = prevPayslip.get();
 
-            // COPY EVERYTHING
+            // ✅ COPY ALL FIELDS
             p.setBasicSalary(prev.getBasicSalary());
             p.setHra(prev.getHra());
             p.setConveyance(prev.getConveyance());
@@ -346,12 +226,13 @@ public class PayslipService {
             p.setEsi(prev.getEsi());
             p.setProfessionalTax(prev.getProfessionalTax());
             p.setTds(prev.getTds());
+
+            p.setVariablePay(prev.getVariablePay());
         }
 
-        // ❗ IMPORTANT
+        // ❗ RESET THESE EVERY MONTH
         p.setLop(BigDecimal.ZERO);
 
-        // ✅ GET PREVIOUS MONTH LOP DAYS
         Double lopDays = lopService.getMyMonthlyLopTotal(employeeId, prevYear, prevMonth);
         p.setLopDays(lopDays != null ? lopDays : 0.0);
 
