@@ -19,4 +19,5 @@ public interface EmployeePersonalDetailsRepository
     List<EmployeePersonalDetails> findByVerificationStatus(VerificationStatus status);
 
     List<EmployeePersonalDetails> findAllByOrderBySubmittedAtDesc();
+
 }

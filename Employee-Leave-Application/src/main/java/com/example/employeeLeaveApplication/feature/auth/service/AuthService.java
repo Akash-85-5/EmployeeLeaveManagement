@@ -82,11 +82,17 @@ public class AuthService {
 
     // ─── LOGOUT ──────────────────────────────────────────────────────────────
 
+    // ─── LOGOUT (CURRENT DEVICE ONLY) ─────────────────────────────
+
     public void logout(String rawRefreshToken) {
-        if (rawRefreshToken != null) {
-            RefreshToken rt = refreshTokenService.validateRefreshToken(rawRefreshToken);
-            refreshTokenService.revokeAllTokensForUser(rt.getUser());
-        }
+
+        if (rawRefreshToken == null) return;
+
+        // validate token (optional but safe)
+        RefreshToken rt = refreshTokenService.validateRefreshToken(rawRefreshToken);
+
+        // ✅ revoke ONLY this token
+        refreshTokenService.revokeToken(rt.getToken());
     }
 
     // ─── CHANGE PASSWORD ─────────────────────────────────────────────────────

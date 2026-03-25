@@ -22,10 +22,19 @@ public class RefreshTokenService {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
-    // ─── LOGIN — revoke all old sessions, create fresh token ─────────────────
+    // ✅ CLEANUP
+    @Transactional
+    public void cleanUpTokens() {
+        refreshTokenRepository.deleteAllExpiredOrRevoked();
+    }
+
+    // ─── LOGIN (MULTI-DEVICE) ─────────────────────────────
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        refreshTokenRepository.revokeAllByUser(user);
+
+        cleanUpTokens();
+
+        // ❌ REMOVED revokeAllByUser → allows multiple sessions
 
         RefreshToken token = new RefreshToken();
         token.setUser(user);
@@ -36,9 +45,12 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(token);
     }
 
-    // ─── REFRESH — revoke only this specific token, issue new one ─────────────
+    // ─── REFRESH (ROTATION PER DEVICE) ────────────────────
     @Transactional
     public RefreshToken rotateRefreshToken(RefreshToken oldToken) {
+
+        cleanUpTokens();
+
         oldToken.setRevoked(true);
         refreshTokenRepository.save(oldToken);
 
@@ -51,8 +63,9 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(newToken);
     }
 
-    // ─── VALIDATE ─────────────────────────────────────────────────────────────
+    // ─── VALIDATE ─────────────────────────────────────────
     public RefreshToken validateRefreshToken(String token) {
+
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
@@ -67,7 +80,18 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
-    // ─── LOGOUT — revoke all tokens for user ──────────────────────────────────
+    // ─── LOGOUT CURRENT DEVICE ONLY ✅ ─────────────────────
+    @Transactional
+    public void revokeToken(String token) {
+
+        if (token == null) return;
+
+        refreshTokenRepository.findByToken(token).ifPresent(refreshToken -> {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+        });
+    }
+    // ❗ KEEP THIS ONLY IF YOU WANT "LOGOUT ALL DEVICES"
     @Transactional
     public void revokeAllTokensForUser(User user) {
         refreshTokenRepository.revokeAllByUser(user);

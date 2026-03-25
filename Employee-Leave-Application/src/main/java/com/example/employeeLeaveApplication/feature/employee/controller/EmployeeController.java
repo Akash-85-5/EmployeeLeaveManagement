@@ -1,9 +1,12 @@
 package com.example.employeeLeaveApplication.feature.employee.controller;
 
+import com.example.employeeLeaveApplication.feature.auth.entity.User;
+import com.example.employeeLeaveApplication.feature.employee.dto.EmployeeProfileResponse;
 import com.example.employeeLeaveApplication.feature.employee.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.feature.employee.entity.Employee;
 import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.feature.employee.service.EmployeeService;
+import com.example.employeeLeaveApplication.security.CustomUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -13,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -139,5 +144,15 @@ public class EmployeeController {
     public ResponseEntity<String> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully");
+    }
+    @GetMapping("/me")
+    public EmployeeProfileResponse getMyProfile(Authentication authentication) {
+
+        CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
+
+        User user = userDetails.getUser();
+
+        return employeeService.getMyProfile(user);
     }
 }

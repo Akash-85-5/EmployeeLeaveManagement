@@ -1,12 +1,9 @@
 package com.example.employeeLeaveApplication.feature.employee.service;
 
-import com.example.employeeLeaveApplication.feature.employee.dto.HrVerificationRequest;
+import com.example.employeeLeaveApplication.feature.employee.dto.*;
 import com.example.employeeLeaveApplication.feature.employee.entity.Employee;
 import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.feature.auth.entity.User;
-import com.example.employeeLeaveApplication.feature.employee.dto.ExperiencedPersonalDetailsRequest;
-import com.example.employeeLeaveApplication.feature.employee.dto.FresherPersonalDetailsRequest;
-import com.example.employeeLeaveApplication.feature.employee.dto.ProfileResponse;
 import com.example.employeeLeaveApplication.feature.notification.service.NotificationService;
 import com.example.employeeLeaveApplication.feature.payroll.dto.PfUpdateRequest;
 import com.example.employeeLeaveApplication.infrastructure.storage.DocumentStorageService;
@@ -637,5 +634,40 @@ public class EmployeeService {
         }
         employee.setVpnStatus(decision);
         employeeRepository.save(employee);
+    }
+    public Employee getById(Long id) {
+        return employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+    }
+    public EmployeeProfileResponse getMyProfile(User user) {
+
+        Employee employee = user.getEmployee();
+
+        // ✅ FIXED METHOD NAME + Optional handling
+        EmployeePersonalDetails personal =
+                personalDetailsRepository.findByEmployeeId(employee.getId())
+                        .orElse(null);
+
+        EmployeeProfileResponse res = new EmployeeProfileResponse();
+
+        res.setId(employee.getId());
+        res.setName(employee.getName());
+        res.setEmail(employee.getEmail());
+        res.setRole(employee.getRole().name());
+        res.setManagerId(employee.getManagerId());
+        res.setActive(employee.isActive());
+
+        res.setBiometricStatus(employee.getBiometricStatus().name());
+        res.setVpnStatus(employee.getVpnStatus().name());
+
+        // ✅ SAFE NULL HANDLING
+        res.setVerificationStatus(
+                personal != null ? personal.getVerificationStatus().name() : null
+        );
+
+        // ✅ FROM USER TABLE
+        res.setForcePasswordChange(user.isForcePwdChange());
+
+        return res;
     }
 }
