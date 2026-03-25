@@ -41,7 +41,7 @@ public class ProfileResponse {
     private String hrRemarks;
 
     // ── NEW: FRESHER or EXPERIENCED ───────────────────────────────
-    private EmployeeType employeeType;
+    private EmployeeExperience employeeExperience;
 
     // ── UNCHANGED personal fields ─────────────────────────────────
     private String contactNumber;
@@ -151,8 +151,8 @@ public class ProfileResponse {
     public String getHrRemarks() { return hrRemarks; }
     public void setHrRemarks(String hrRemarks) { this.hrRemarks = hrRemarks; }
 
-    public EmployeeType getEmployeeType() { return employeeType; }
-    public void setEmployeeType(EmployeeType employeeType) { this.employeeType = employeeType; }
+    public EmployeeExperience getEmployeeType() { return employeeExperience; }
+    public void setEmployeeType(EmployeeExperience employeeExperience) { this.employeeExperience = employeeExperience; }
 
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }

@@ -8,7 +8,6 @@ import com.example.employeeLeaveApplication.shared.exceptions.BadRequestExceptio
 import com.example.employeeLeaveApplication.feature.access.repository.AccessRequestRepository;
 import com.example.employeeLeaveApplication.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.example.employeeLeaveApplication.feature.employee.repository.EmployeeRepository;
-import com.example.employeeLeaveApplication.feature.auth.repository.UserRepository;
 import com.example.employeeLeaveApplication.shared.enums.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,19 +32,16 @@ public class AccessRequestService {
 
     private final AccessRequestRepository accessRequestRepository;
     private final EmployeeRepository employeeRepository;
-    private final UserRepository userRepository;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
     private final NotificationService notificationService;
 
     public AccessRequestService(
             AccessRequestRepository accessRequestRepository,
             EmployeeRepository employeeRepository,
-            UserRepository userRepository,
             EmployeePersonalDetailsRepository personalDetailsRepository,
             NotificationService notificationService) {
         this.accessRequestRepository = accessRequestRepository;
         this.employeeRepository = employeeRepository;
-        this.userRepository = userRepository;
         this.personalDetailsRepository = personalDetailsRepository;
         this.notificationService = notificationService;
     }

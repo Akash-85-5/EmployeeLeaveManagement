@@ -1,6 +1,6 @@
 package com.example.employeeLeaveApplication.shared.enums;
 
-public enum EmployeeType {
+public enum EmployeeExperience {
     FRESHER,
     EXPERIENCED
 }

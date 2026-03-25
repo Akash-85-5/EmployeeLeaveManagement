@@ -19,7 +19,7 @@ public class EmployeePersonalDetails {
     // ── NEW: FRESHER or EXPERIENCED ───────────────────────────────
     @Enumerated(EnumType.STRING)
     @Column(name = "employee_type", nullable = false)
-    private EmployeeType employeeType;
+    private EmployeeExperience employeeExperience;
 
     // ── NEW: HR verification ──────────────────────────────────────
     @Enumerated(EnumType.STRING)
@@ -188,8 +188,8 @@ public class EmployeePersonalDetails {
     public Long getEmployeeId() { return employeeId; }
     public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
 
-    public EmployeeType getEmployeeType() { return employeeType; }
-    public void setEmployeeType(EmployeeType employeeType) { this.employeeType = employeeType; }
+    public EmployeeExperience getEmployeeType() { return employeeExperience; }
+    public void setEmployeeType(EmployeeExperience employeeExperience) { this.employeeExperience = employeeExperience; }
 
     public VerificationStatus getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(VerificationStatus verificationStatus) { this.verificationStatus = verificationStatus; }

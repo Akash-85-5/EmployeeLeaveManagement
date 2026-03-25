@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.example.employeeLeaveApplication.shared.enums.BiometricVpnStatus;
+import com.example.employeeLeaveApplication.shared.enums.EmployeeExperience;
 import com.example.employeeLeaveApplication.shared.enums.Role;
 
 import jakarta.persistence.Column;
@@ -42,6 +43,9 @@ public class Employee {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    @Column(name = "employee_experience")
+    private EmployeeExperience employeeExperience;
 
     @Column(name = "manager_id")
     private Long managerId;

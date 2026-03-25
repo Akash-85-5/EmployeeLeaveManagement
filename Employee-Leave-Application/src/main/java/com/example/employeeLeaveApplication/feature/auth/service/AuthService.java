@@ -46,7 +46,7 @@ public class AuthService {
                 )
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmployee_Email(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getStatus() != Status.ACTIVE) {
@@ -98,7 +98,7 @@ public class AuthService {
                 .getAuthentication()
                 .getName();
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmployee_Email(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {

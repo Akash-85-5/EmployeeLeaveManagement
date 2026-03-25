@@ -4,7 +4,7 @@ import com.example.employeeLeaveApplication.feature.admin.dto.CreateUserRequest;
 import com.example.employeeLeaveApplication.feature.admin.dto.UserDropdownResponse;
 import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.feature.payroll.dto.PfUpdateRequest;
-import com.example.employeeLeaveApplication.shared.enums.EmployeeType;
+import com.example.employeeLeaveApplication.shared.enums.EmployeeExperience;
 import com.example.employeeLeaveApplication.shared.enums.Role;
 import com.example.employeeLeaveApplication.feature.access.service.AccessRequestService;
 import com.example.employeeLeaveApplication.feature.admin.service.AdminService;
@@ -99,7 +99,7 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EmployeePersonalDetails> adminUpdatePersonalDetails(
             @PathVariable Long employeeId,
-            @RequestParam EmployeeType employeeType,
+            @RequestParam EmployeeExperience employeeExperience,
             @RequestPart("data") String dataJson,
             @RequestPart(value = "aadhaarCard", required = false) MultipartFile aadhaarCard,
             @RequestPart(value = "doc1", required = false) MultipartFile doc1,
@@ -107,7 +107,7 @@ public class AdminController {
 
         return ResponseEntity.ok(
                 employeeService.adminUpdatePersonalDetails(
-                        employeeId, dataJson, aadhaarCard, doc1, doc2, employeeType));
+                        employeeId, dataJson, aadhaarCard, doc1, doc2, employeeExperience));
     }
 
     @GetMapping("/employees/{employeeId}/personal-details")

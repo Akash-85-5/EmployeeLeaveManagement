@@ -33,7 +33,7 @@ public class PasswordResetService {
 
     public void requestReset(String email) {
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmployee_Email(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         boolean alreadyPending =
@@ -67,10 +67,10 @@ public class PasswordResetService {
             throw new RuntimeException("Already handled");
         }
 
-        User admin = userRepository.findByEmail(adminEmail)
+        User admin = userRepository.findByEmployee_Email(adminEmail)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findByEmployee_Id(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode("1234"));
@@ -97,7 +97,7 @@ public class PasswordResetService {
             throw new RuntimeException("Already handled");
         }
 
-        User admin = userRepository.findByEmail(adminEmail)
+        User admin = userRepository.findByEmployee_Email(adminEmail)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
         request.setStatus(ResetStatus.REJECTED);
@@ -116,7 +116,7 @@ public class PasswordResetService {
 
         return requests.stream().map(req -> {
 
-            User user = userRepository.findById(req.getUserId())
+            User user = userRepository.findByEmployee_Id(req.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             return new PasswordResetAdminResponse(

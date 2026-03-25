@@ -37,33 +37,30 @@ public class AdminService {
     @Transactional
     public void createUser(CreateUserRequest request) {
 
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (userRepository.findByEmployee_Email(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
 
-        User user = new User();
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setRole(request.getRole());
-        user.setJoiningDate(request.getJoiningDate());
-        user.setPasswordHash(passwordEncoder.encode("1234"));
-        user.setForcePwdChange(true);
-        user.setStatus(Status.ACTIVE);
-        user.setManagerId(request.getManagerId());
-
-        Role role = request.getRole();
-
+        // Save Employee first (main entity)
         Employee emp = new Employee();
         emp.setName(request.getName());
         emp.setEmail(request.getEmail());
         emp.setRole(request.getRole());
         emp.setJoiningDate(request.getJoiningDate());
         emp.setManagerId(request.getManagerId());
-
         Employee savedEmp = employeeRepository.save(emp);
+
+        // Link User to Employee
+        User user = new User();
+        user.setEmployee(savedEmp);               // FK link
+        user.setPasswordHash(passwordEncoder.encode("1234"));
+        user.setForcePwdChange(true);
+        user.setStatus(Status.ACTIVE);
         userRepository.save(user);
 
-        if (role != Role.CEO || role != Role.CFO) {
+        // Fixed || → && bug from before
+        Role role = request.getRole();
+        if (role != Role.CEO && role != Role.CFO) {
             try {
                 leaveAllocationService.allocateForNewEmployee(savedEmp.getId());
             } catch (Exception e) {
@@ -71,12 +68,13 @@ public class AdminService {
             }
         }
     }
+
     public List<UserDropdownResponse> getEligibleManagers(Role role) {
         List<User> users;
         if (role == Role.EMPLOYEE) {
-            users = userRepository.findByRole(Role.MANAGER);
+            users = userRepository.findByEmployee_Role(Role.MANAGER);
         } else if (role == Role.MANAGER || role == Role.ADMIN) {
-            users = userRepository.findByRole(Role.HR);
+            users = userRepository.findByEmployee_Role(Role.HR);
         } else {
             return new ArrayList<>();
         }
@@ -86,15 +84,10 @@ public class AdminService {
     }
 
     public void resetPassword(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByEmployee_Id(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setPasswordHash(passwordEncoder.encode("1234"));
         user.setForcePwdChange(true);
         userRepository.save(user);
-    }
-
-    private User getUserOrThrow(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

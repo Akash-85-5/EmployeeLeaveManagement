@@ -58,7 +58,7 @@ public class EmployeeService {
 
     public ProfileResponse getProfile(Long employeeId) {
 
-        User user = userRepository.findById(employeeId)
+        User user = userRepository.findByEmployee_Id(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
@@ -170,7 +170,7 @@ public class EmployeeService {
 
         // Fill all text fields
         fillCommonFields(pd, request);
-        pd.setEmployeeType(EmployeeType.FRESHER);
+        pd.setEmployeeType(EmployeeExperience.FRESHER);
         // UNA not needed for fresher
         pd.setUnaNumber(null);
         // Clear experienced-only fields
@@ -241,7 +241,7 @@ public class EmployeeService {
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
 
         fillCommonFields(pd, request);
-        pd.setEmployeeType(EmployeeType.EXPERIENCED);
+        pd.setEmployeeType(EmployeeExperience.EXPERIENCED);
         pd.setUnaNumber(request.getUnaNumber());
         pd.setPreviousRole(request.getPreviousRole());
         pd.setOldCompanyName(request.getOldCompanyName());
@@ -340,7 +340,7 @@ public class EmployeeService {
             MultipartFile aadhaarCard,
             MultipartFile doc1,      // tc OR experienceCertificate
             MultipartFile doc2,      // offerLetter OR leavingLetter
-            EmployeeType employeeType) {
+            EmployeeExperience employeeExperience) {
 
         employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
@@ -349,10 +349,10 @@ public class EmployeeService {
                 .findByEmployeeId(employeeId)
                 .orElse(new EmployeePersonalDetails());
 
-        if (employeeType == EmployeeType.FRESHER) {
+        if (employeeExperience == EmployeeExperience.FRESHER) {
             FresherPersonalDetailsRequest req = parseJson(dataJson, FresherPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setEmployeeType(EmployeeType.FRESHER);
+            pd.setEmployeeType(EmployeeExperience.FRESHER);
             pd.setUnaNumber(null);
             clearExperiencedFields(pd);
             if (aadhaarCard != null && !aadhaarCard.isEmpty())
@@ -364,7 +364,7 @@ public class EmployeeService {
         } else {
             ExperiencedPersonalDetailsRequest req = parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setEmployeeType(EmployeeType.EXPERIENCED);
+            pd.setEmployeeType(EmployeeExperience.EXPERIENCED);
             pd.setUnaNumber(req.getUnaNumber());
             pd.setPreviousRole(req.getPreviousRole());
             pd.setOldCompanyName(req.getOldCompanyName());
@@ -552,10 +552,10 @@ public class EmployeeService {
                     .map(String::trim).collect(Collectors.toList()));
         }
 
-        if (pd.getEmployeeType() == EmployeeType.FRESHER) {
+        if (pd.getEmployeeType() == EmployeeExperience.FRESHER) {
             r.setTcDocPath(pd.getTcDocPath());
             r.setOfferLetterDocPath(pd.getOfferLetterDocPath());
-        } else if (pd.getEmployeeType() == EmployeeType.EXPERIENCED) {
+        } else if (pd.getEmployeeType() == EmployeeExperience.EXPERIENCED) {
             r.setExperienceCertDocPath(pd.getExperienceCertDocPath());
             r.setLeavingLetterDocPath(pd.getLeavingLetterDocPath());
             r.setPreviousRole(pd.getPreviousRole());
@@ -566,7 +566,7 @@ public class EmployeeService {
     }
 
     private void notifyHr(String employeeName, Long employeeId) {
-        User hrUser = userRepository.findById(HR_ID).orElse(null);
+        User hrUser = userRepository.findByEmployee_Id(HR_ID).orElse(null);
         if (hrUser == null) return;
         String msg = "Employee " + employeeName + " (ID: " + employeeId
                 + ") has submitted their profile. Please review and verify.";
@@ -576,7 +576,7 @@ public class EmployeeService {
     }
 
     private void notifyEmployee(Employee employee, EventType eventType, String message) {
-        User empUser = userRepository.findById(employee.getId()).orElse(null);
+        User empUser = userRepository.findByEmployee_Id(employee.getId()).orElse(null);
         if (empUser == null) return;
         notificationService.createNotification(
                 employee.getId(), "noreply@company.com", empUser.getEmail(),
