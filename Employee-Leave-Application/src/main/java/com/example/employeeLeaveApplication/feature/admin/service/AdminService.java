@@ -48,6 +48,7 @@ public class AdminService {
         emp.setRole(request.getRole());
         emp.setJoiningDate(request.getJoiningDate());
         emp.setManagerId(request.getManagerId());
+        emp.setEmployeeExperience(request.getEmployeeExperience());
         Employee savedEmp = employeeRepository.save(emp);
 
         // Link User to Employee

@@ -192,6 +192,14 @@ public class Employee {
         this.onboardingCompletedAt = onboardingCompletedAt;
     }
 
+    public EmployeeExperience getEmployeeExperience() {
+        return employeeExperience;
+    }
+
+    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
+        this.employeeExperience = employeeExperience;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.feature.admin.dto;
 
+import com.example.employeeLeaveApplication.shared.enums.EmployeeExperience;
 import com.example.employeeLeaveApplication.shared.enums.Role;
 
 import java.time.LocalDate;
@@ -10,8 +11,16 @@ public class CreateUserRequest {
     private String email;
     private Role role;
     private Long managerId;
+    private EmployeeExperience employeeExperience;
     private LocalDate joiningDate;
 
+    public EmployeeExperience getEmployeeExperience() {
+        return employeeExperience;
+    }
+
+    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
+        this.employeeExperience = employeeExperience;
+    }
 
     public LocalDate getJoiningDate() {
         return joiningDate;
