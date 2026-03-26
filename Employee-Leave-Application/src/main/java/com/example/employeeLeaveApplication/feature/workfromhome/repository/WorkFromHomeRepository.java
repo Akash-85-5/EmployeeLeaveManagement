@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface WorkFromHomeRepository extends JpaRepository<WorkFromHome, Long> {
 
     List<WorkFromHome> findByEmployeeId(Long employeeId);
-
+    List<WorkFromHome> findByStatus(WfhStatus status);
     @Query("""
     SELECT w FROM WorkFromHome w
     WHERE w.employeeId = :employeeId
@@ -24,5 +24,6 @@ public interface WorkFromHomeRepository extends JpaRepository<WorkFromHome, Long
             LocalDate date,
             WfhStatus status
     );
+
 
 }

@@ -9,6 +9,8 @@ import com.example.employeeLeaveApplication.feature.employee.repository.Employee
 import com.example.employeeLeaveApplication.feature.workfromhome.repository.WorkFromHomeRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class WorkFromHomeService {
 
@@ -19,6 +21,9 @@ public class WorkFromHomeService {
                                EmployeeRepository employeeRepository) {
         this.repository = repository;
         this.employeeRepository = employeeRepository;
+    }
+    public List<WorkFromHome> getEmployeeWFH(Long employeeId) {
+        return repository.findByEmployeeId(employeeId);
     }
 
     public WorkFromHome applyWFH(Long employeeId, WorkFromHomeRequest request) {
@@ -51,4 +56,85 @@ public class WorkFromHomeService {
 
         return repository.save(wfh);
     }
+    public List<WorkFromHome> getPendingForTL() {
+        return repository.findByStatus(WfhStatus.PENDING_TEAM_LEADER);
+    }
+
+    public List<WorkFromHome> getPendingForManager() {
+        return repository.findByStatus(WfhStatus.PENDING_MANAGER);
+    }
+
+// HR Pending
+
+    public List<WorkFromHome> getPendingForHR() {
+        return repository.findByStatus(WfhStatus.PENDING_HR);
+    }
+//approve ---
+
+
+    public WorkFromHome approveByTL(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.PENDING_MANAGER);
+
+        return repository.save(wfh);
+    }
+    public WorkFromHome approveByManager(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.PENDING_HR);
+
+        return repository.save(wfh);
+    }
+
+    public WorkFromHome approveByHR(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.APPROVED);
+
+        return repository.save(wfh);
+    }
+    // TL Reject----
+
+    public WorkFromHome rejectByTL(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.REJECTED);
+
+        return repository.save(wfh);
+    }
+
+
+    // Manager Reject
+    public WorkFromHome rejectByManager(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.REJECTED);
+
+        return repository.save(wfh);
+    }
+
+
+    // HR Reject
+    public WorkFromHome rejectByHR(Long id) {
+
+        WorkFromHome wfh = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("WFH not found"));
+
+        wfh.setStatus(WfhStatus.REJECTED);
+
+        return repository.save(wfh);
+    }
+
+
 }

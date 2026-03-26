@@ -65,7 +65,11 @@ public class SecurityConfig {
                                 "/api/password-reset/request"
                         ).permitAll()
 
-                        // 🔐 ROLE BASED
+                        .requestMatchers(
+                                "/api/password-reset/approve/**",
+                                "/api/password-reset/reject/**",
+                                "/api/admin/**"
+                        ).hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/hr/**").hasRole("HR")
                         .requestMatchers("/api/manager/**").hasAnyRole("MANAGER","TEAM_LEADER")
@@ -77,6 +81,7 @@ public class SecurityConfig {
                                 "/api/wfh/**",
                                 "/debug/**"
                         ).permitAll()
+                        .requestMatchers("/api/announcements/**").permitAll()
 
                         .anyRequest().authenticated()
                 )
