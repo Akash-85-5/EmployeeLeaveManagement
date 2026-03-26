@@ -69,7 +69,6 @@ public class DashboardService {
             dto.setEmployeeId(member.getId());
             dto.setEmployeeName(member.getName());
 
-
             employeePersonalDetailsRepository.findByEmployeeId(member.getId())
                     .ifPresent(details -> {
                         dto.setDesignation(details.getDesignation());
@@ -113,8 +112,6 @@ public class DashboardService {
         response.setYearlyBalance(yearlyAllocated - yearlyUsed);
 
         // ── 2. MONTHLY STATS (cumulative ANNUAL_LEAVE balance) ────
-        // How many ANNUAL_LEAVE days the employee has available this month
-        // (cumulative: unused days from previous months roll forward)
         AnnualLeaveMonthlyBalance monthlyBalance = annualLeaveMonthlyBalanceRepository
                 .findByEmployeeIdAndYearAndMonth(employeeId, currentYear, currentMonth)
                 .orElse(null);
@@ -124,7 +121,6 @@ public class DashboardService {
         double monthlyUsed      = monthlyBalance != null ? monthlyBalance.getUsedDays()      : 0.0;
         double monthlyRemaining = monthlyBalance != null ? monthlyBalance.getRemainingDays()  : monthlyAvailable;
 
-        // Keep field names compatible with existing EmployeeDashboardResponse
         response.setMonthlyAllocated(monthlyAvailable);
         response.setMonthlyUsed(monthlyUsed);
         response.setMonthlyBalance(monthlyRemaining);
@@ -144,6 +140,7 @@ public class DashboardService {
 
         Map<LeaveType, List<LeaveApplication>> byType = approvedLeaves.stream()
                 .collect(Collectors.groupingBy(LeaveApplication::getLeaveType));
+
         List<LeaveApplication> pendingLeaves = applicationRepository
                 .findByEmployeeIdAndStatusAndYear(employeeId, LeaveStatus.PENDING, currentYear);
         Map<LeaveType, List<LeaveApplication>> pendingByType = pendingLeaves.stream()
@@ -152,15 +149,15 @@ public class DashboardService {
         List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
 
         for (LeaveAllocation allocation : allocations) {
-            LeaveType type     = allocation.getLeaveCategory();
-            double allocated   = allocation.getAllocatedDays();
+            LeaveType type   = allocation.getLeaveCategory();
+            double allocated = allocation.getAllocatedDays();
             List<LeaveApplication> typeLeaves = byType.getOrDefault(type, List.of());
 
             double used = typeLeaves.stream()
                     .mapToDouble(l -> l.getDays().doubleValue())
                     .sum();
 
-            // For ANNUAL_LEAVE, remaining = cumulative monthly remaining (not simple allocated-used)
+            // For ANNUAL_LEAVE, remaining = cumulative monthly remaining
             double remaining = (type == LeaveType.ANNUAL_LEAVE)
                     ? monthlyRemaining
                     : (allocated - used);
@@ -169,43 +166,42 @@ public class DashboardService {
                     .filter(l -> l.getDays().compareTo(new BigDecimal("0.5")) == 0)
                     .count();
 
-            Long pendingCount = (long) pendingByType
-                    .getOrDefault(type, List.of())
-                    .size();
+            long pendingCount = pendingByType.getOrDefault(type, List.of()).size();
+
             breakdown.add(new LeaveTypeBreakdown(
-                    type,
-                    (Double) allocated,
-                    (Double) used,
-                    (Double) remaining,
-                    halfDays,
-                    pendingCount));
+                    type, allocated, used, remaining, halfDays, pendingCount));
         }
 
-        // CompOff in breakdown
+        // ── CompOff in breakdown ──────────────────────────────────
         CompOffBalance compOff = compOffRepository
                 .findByEmployeeIdAndYear(employeeId, currentYear).orElse(null);
 
         double coEarned = compOff != null ? compOff.getEarned()  : 0.0;
         double coUsed   = compOff != null ? compOff.getUsed()    : 0.0;
         double coBal    = compOff != null ? compOff.getBalance() : 0.0;
-        Long pendingCount = (long) pendingByType
-                .getOrDefault(LeaveType.COMP_OFF, List.of())
-                .size();
+        long compOffPending = pendingByType.getOrDefault(LeaveType.COMP_OFF, List.of()).size();
 
         breakdown.add(new LeaveTypeBreakdown(
-                LeaveType.COMP_OFF,
-                (Double) coEarned,
-                (Double) coUsed,
-                (Double) coBal,
-                0,
-                pendingCount));
+                LeaveType.COMP_OFF, coEarned, coUsed, coBal, 0, compOffPending));
 
-        response.setBreakdown(breakdown);
         response.setCompoffBalance(coBal);
 
-        // ── 5. LOSS OF PAY (manual — just read stored value) ──────
+        // ── CarryForward in breakdown ─────────────────────────────
+        // ✅ Re-use cfBalance already fetched in section 3 — no duplicate query
+        double cfTotal     = cfBalance != null ? cfBalance.getTotalCarriedForward() : 0.0;
+        double cfUsed      = cfBalance != null ? cfBalance.getTotalUsed()           : 0.0;
+        double cfRemaining = cfBalance != null ? cfBalance.getRemaining()           : 0.0;
+
+        breakdown.add(new LeaveTypeBreakdown(
+                LeaveType.CARRY_FORWARD, cfTotal, cfUsed, cfRemaining, 0, 0L));
+
+        // ✅ Single setBreakdown call at the end
+        response.setBreakdown(breakdown);
+
+        // ── 5. LOSS OF PAY ────────────────────────────────────────
+        // ✅ FIXED: was illegal field declaration inside method body
         Double totalLOP = lopRepository.sumLopDaysForYear(employeeId, currentYear);
-        response.setLossOfPayPercentage(totalLOP != null ? totalLOP : 0.0);
+        response.setLopDays(totalLOP != null ? totalLOP : 0.0);
 
         // ── 6. LEAVE STATUS COUNTS ────────────────────────────────
         Integer approvedCount = applicationRepository
@@ -236,7 +232,6 @@ public class DashboardService {
         response.setYear(year);
         response.setMonth(month);
 
-        // Use cumulative monthly balance for ANNUAL_LEAVE
         AnnualLeaveMonthlyBalance balance = annualLeaveMonthlyBalanceRepository
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
                 .orElse(null);
@@ -245,7 +240,6 @@ public class DashboardService {
         double availableDays = balance != null ? balance.getAvailableDays() : PolicyConstants.ANNUAL_LEAVE_PER_MONTH;
 
         response.setTotalApprovedCount((int) usedDays);
-        // Exceeded = used more than what was available this month
         response.setExceededLimit(usedDays > availableDays);
 
         log.info("✅ [DASHBOARD] Monthly stats: usedDays={}, available={}", usedDays, availableDays);
@@ -593,7 +587,6 @@ public class DashboardService {
 
     // ═══════════════════════════════════════════════════════════════
     // ADMIN — Employees Exceeding Monthly Limit
-    // Now means: used more ANNUAL_LEAVE than their cumulative available for the month
     // ═══════════════════════════════════════════════════════════════
 
     public List<TeamMemberBalance> getEmployeesExceedingMonthlyLimit(Integer year, Integer month) {
@@ -778,26 +771,21 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public AdminDashboardResponse getAdminDashboard(Long adminId) {
-        // 1. Get Admin's Personal Data (The same way the Manager does)
         EmployeeDashboardResponse ownStats = getDashboard(adminId);
 
         AdminDashboardResponse response = new AdminDashboardResponse();
-        response.setPersonalStats(ownStats); // Use the nested DTO
+        response.setPersonalStats(ownStats);
         response.setCurrentYear(LocalDate.now().getYear());
         response.setLastUpdated(LocalDateTime.now());
 
-        // 2. Global Employee Counts
         List<Employee> allEmployees = employeeRepository.findByActiveTrue();
         response.setTotalEmployees(allEmployees.size());
         response.setTotalManagers(employeeRepository.findByRole(Role.MANAGER).size());
         response.setNewEmployeesPendingOnboarding(employeeRepository.findOnboardingPending().size());
 
-        // 3. Global Leave Counts
         response.setTotalPendingLeaves(applicationRepository.findByStatus(LeaveStatus.PENDING).size());
         response.setTotalRejectedLeaves(applicationRepository.findByStatus(LeaveStatus.REJECTED).size());
 
-        // 4. Global Financial/Compliance Metrics
-        // (Your existing loop logic for YTD, CarryForward, and LOP averages)
         calculateGlobalMetrics(response, allEmployees);
 
         return response;
@@ -805,23 +793,25 @@ public class DashboardService {
 
     private void calculateGlobalMetrics(AdminDashboardResponse response, List<Employee> allEmployees) {
         int currentYear = response.getCurrentYear();
-        double totalUsedYTD = 0, totalCFBalance = 0, totalCompOffBalance = 0, totalLOP = 0;
-        int lopCount = 0;
+        double totalUsedYTD      = 0;
+        double totalCFBalance    = 0;
+        double totalCompOffBalance = 0;
+        double totalLOP          = 0;
+        int lopCount             = 0;
 
         for (Employee emp : allEmployees) {
-            // Total Approved Days
-            Double used = applicationRepository.getTotalUsedDays(emp.getId(), LeaveStatus.APPROVED, currentYear);
+            Double used = applicationRepository.getTotalUsedDays(
+                    emp.getId(), LeaveStatus.APPROVED, currentYear);
             if (used != null) totalUsedYTD += used;
 
-            // Total Carry Forward Remaining
-            carryForwardRepository.findByEmployeeIdAndYear(emp.getId(), currentYear)
-                    .ifPresent(cf -> response.setTotalCarryForwardBalance(response.getTotalCarryForwardBalance() + cf.getRemaining()));
+            CarryForwardBalance cf = carryForwardRepository
+                    .findByEmployeeIdAndYear(emp.getId(), currentYear).orElse(null);
+            if (cf != null) totalCFBalance += cf.getRemaining();
 
-            // Total Comp Off Balance
-            compOffRepository.findByEmployeeIdAndYear(emp.getId(), currentYear)
-                    .ifPresent(co -> response.setTotalCompOffBalance(response.getTotalCompOffBalance() + co.getBalance()));
+            CompOffBalance co = compOffRepository
+                    .findByEmployeeIdAndYear(emp.getId(), currentYear).orElse(null);
+            if (co != null) totalCompOffBalance += co.getBalance();
 
-            // Average LOP calculation
             Double lop = lopRepository.sumLopDaysForYear(emp.getId(), currentYear);
             if (lop != null && lop > 0) {
                 totalLOP += lop;
@@ -830,6 +820,8 @@ public class DashboardService {
         }
 
         response.setTotalLeaveDaysUsedYTD(totalUsedYTD);
+        response.setTotalCarryForwardBalance(totalCFBalance);
+        response.setTotalCompOffBalance(totalCompOffBalance);
         response.setAverageLossOfPayPercentage(lopCount > 0 ? totalLOP / lopCount : 0.0);
     }
 

@@ -8,5 +8,6 @@ public enum LeaveType {
     COMP_OFF,
     ON_DUTY,
     VPN,
-    BIOMETRIC
+    BIOMETRIC,
+    CARRY_FORWARD  // ✅ Add this
 }

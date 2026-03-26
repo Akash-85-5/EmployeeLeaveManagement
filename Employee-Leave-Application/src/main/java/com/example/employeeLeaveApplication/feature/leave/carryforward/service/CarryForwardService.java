@@ -19,14 +19,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Manages year-end carry-forward processing for ANNUAL_LEAVE.
+ * Admin-facing entry point for carry-forward operations.
  *
- * SICK, COMP_OFF, MATERNITY, PATERNITY are NOT carried forward.
- * Only ANNUAL_LEAVE unused balance (max 10 days) goes to next year.
+ * Year-end flow:
+ *   1. Read each employee's December ANNUAL_LEAVE remaining balance
+ *      via AnnualLeaveBalanceService.
+ *   2. Apply PolicyConstants.MAX_CARRY_FORWARD cap.
+ *   3. Delegate persistence to CarryForwardLeaveService.processYearEndCarryForward().
  *
- * The actual carry-forward calculation is done inside
- * AnnualLeaveBalanceService.processYearEndCarryForward().
- * This service is the admin-facing entry point.
+ * Leave application lifecycle (apply / approve / reject / cancel) is
+ * handled entirely by CarryForwardLeaveService.
+ *
+ * Policy (from PolicyConstants):
+ *   - Only ANNUAL_LEAVE carries forward.
+ *   - Max carry-forward = PolicyConstants.MAX_CARRY_FORWARD (10 days).
+ *   - SICK, COMP_OFF, MATERNITY, PATERNITY are NOT carried forward.
+ *   - Carry-forward balance is SEPARATE from the 2.5/month combined limit.
  */
 @Service
 @RequiredArgsConstructor
@@ -34,11 +42,20 @@ public class CarryForwardService {
 
     private static final Logger log = LoggerFactory.getLogger(CarryForwardService.class);
 
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeRepository           employeeRepository;
     private final CarryForwardBalanceRepository carryForwardRepository;
-    private final AnnualLeaveBalanceService annualLeaveBalanceService;
+    private final AnnualLeaveBalanceService     annualLeaveBalanceService;
+    private final CarryForwardLeaveService      carryForwardLeaveService;   // ✅ NEW
 
     // ── Process all employees for a given year ────────────────────
+
+    /**
+     * Triggers year-end carry-forward for every active employee.
+     * Safe to run multiple times (upsert semantics inside CarryForwardLeaveService).
+     *
+     * @param fromYear  the year whose December balance is the source
+     *                  (carry amount goes into fromYear + 1)
+     */
     @Transactional
     public void processYearEndCarryForward(Integer fromYear) {
         log.info("[CF] Processing year-end carry forward for year: {}", fromYear);
@@ -53,12 +70,47 @@ public class CarryForwardService {
     }
 
     // ── Process one employee ──────────────────────────────────────
+
+    /**
+     * 1. Reads December ANNUAL_LEAVE remaining balance from AnnualLeaveBalanceService.
+     * 2. Applies PolicyConstants.MAX_CARRY_FORWARD cap.
+     * 3. Calls CarryForwardLeaveService to persist the balance for (fromYear + 1).
+     */
     @Transactional
     public void processEmployeeCarryForward(Long employeeId, Integer fromYear) {
-        annualLeaveBalanceService.processYearEndCarryForward(employeeId, fromYear);
+
+        // ── Step 1: Get December remaining ANNUAL_LEAVE balance ───
+        List<?> summary = annualLeaveBalanceService.getYearSummary(employeeId, fromYear);
+
+        double decRemaining = 0.0;
+        if (!summary.isEmpty()) {
+            // getYearSummary returns List<AnnualLeaveMonthlyBalance>
+            AnnualLeaveMonthlyBalance decBalance =
+                    (AnnualLeaveMonthlyBalance) summary.get(summary.size() - 1);
+            decRemaining = decBalance.getRemainingDays();
+        }
+
+        log.info("[CF] employee={}, fromYear={}, decemberRemaining={}", employeeId, fromYear, decRemaining);
+
+        // ── Step 2: Apply cap ─────────────────────────────────────
+        // Max carry-forward = PolicyConstants.MAX_CARRY_FORWARD (10 days)
+        // If remaining ≤ 10 → carry all; if > 10 → carry only 10
+        double carryAmount = Math.min(decRemaining, PolicyConstants.MAX_CARRY_FORWARD);
+
+        if (carryAmount <= 0) {
+            log.info("[CF] No carry forward for employee {} (remaining={})", employeeId, decRemaining);
+            return;
+        }
+
+        // ── Step 3: Persist via CarryForwardLeaveService ──────────
+        carryForwardLeaveService.processYearEndCarryForward(employeeId, fromYear, carryAmount);
+
+        log.info("[CF] Carry forward complete: employee={}, carried={} days into {}",
+                employeeId, carryAmount, fromYear + 1);
     }
 
     // ── Get balance for employee/year ─────────────────────────────
+
     @Transactional(readOnly = true)
     public CarryForwardBalanceResponse getBalance(Long employeeId, Integer year) {
         Employee employee = employeeRepository.findById(employeeId)
@@ -85,6 +137,7 @@ public class CarryForwardService {
     }
 
     // ── Check eligibility for carry-forward ───────────────────────
+
     @Transactional(readOnly = true)
     public CarryForwardEligibilityResponse checkEligibility(Long employeeId, Integer year) {
         Employee employee = employeeRepository.findById(employeeId)
@@ -93,19 +146,20 @@ public class CarryForwardService {
         // Get December remaining from annual leave monthly balance
         List<?> summary = annualLeaveBalanceService.getYearSummary(employeeId, year);
         double decRemaining = summary.isEmpty() ? 0.0
-                : ((AnnualLeaveMonthlyBalance)
-                summary.get(summary.size() - 1)).getRemainingDays();
+                : ((AnnualLeaveMonthlyBalance) summary.get(summary.size() - 1)).getRemainingDays();
 
         double eligibleAmount = Math.min(decRemaining, PolicyConstants.MAX_CARRY_FORWARD);
-        boolean eligible = decRemaining > 0;
+        boolean eligible      = decRemaining > 0;
 
         String reason;
         if (!eligible) {
             reason = "No remaining ANNUAL_LEAVE balance to carry forward";
         } else if (decRemaining <= PolicyConstants.MAX_CARRY_FORWARD) {
-            reason = String.format("Eligible to carry forward %.1f days (full remaining balance)", decRemaining);
+            reason = String.format(
+                    "Eligible to carry forward %.1f days (full remaining balance)", decRemaining);
         } else {
-            reason = String.format("Balance %.1f days exceeds max. Only %.0f days will be carried forward.",
+            reason = String.format(
+                    "Balance %.1f days exceeds max. Only %.0f days will be carried forward.",
                     decRemaining, PolicyConstants.MAX_CARRY_FORWARD);
         }
 
@@ -122,6 +176,7 @@ public class CarryForwardService {
     }
 
     // ── Get all balances for a year ───────────────────────────────
+
     @Transactional(readOnly = true)
     public List<CarryForwardBalanceResponse> getAllBalances(Integer year) {
         List<CarryForwardBalance> balances = carryForwardRepository.findByYear(year);
