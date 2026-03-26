@@ -9,195 +9,156 @@ public class EmployeeDashboardResponse {
     private String employeeName;
     private Integer currentYear;
 
-    // Yearly stats
+    // ── Yearly stats ──────────────────────────────────────────────
     private Double yearlyAllocated;
     private Double yearlyUsed;
     private Double yearlyBalance;
 
-    // Monthly stats
-    private Double monthlyAllocated;
-    private Double monthlyUsed;
-    private Double monthlyBalance;
+    // ── Monthly ANNUAL_LEAVE cumulative balance ───────────────────
+    // monthlyAllocated  = cumulative available ANNUAL_LEAVE this month
+    // monthlyUsed       = ANNUAL_LEAVE days used this month
+    // monthlyBalance    = monthlyAllocated - monthlyUsed
+    private Double monthlyAnnualAllocated;
+    private Double monthlyAnnualUsed;
+    private Double monthlyAnnualBalance;
 
-    // Carry forward
+    private Double monthlySickAllocated;
+    private Double monthlySickUsed;
+    private Double monthlySickBalance;
+
+    private Double monthlyTotalBalance;
+
+    // ── Carry forward ─────────────────────────────────────────────
     private Double carryForwardTotal;
     private Double carryForwardUsed;
     private Double carryForwardRemaining;
 
-    // Comp-off
+    // ── Comp-off ──────────────────────────────────────────────────
     private Double compoffBalance;
 
-    // LOP
+    // ── LOP ───────────────────────────────────────────────────────
     private Double lossOfPayPercentage;
 
-    // Last updated
+    // ── Audit ─────────────────────────────────────────────────────
     private LocalDateTime lastUpdated;
 
-    // Leave status counts
+    // ── Leave status counts ───────────────────────────────────────
     private Integer approvedCount = 0;
     private Integer rejectedCount = 0;
-    private Integer pendingCount = 0;
+    private Integer pendingCount  = 0;
 
-    // Breakdown by leave type
+    // ── Breakdown by leave type ───────────────────────────────────
     private List<LeaveTypeBreakdown> breakdown;
 
     public EmployeeDashboardResponse() {
         this.lastUpdated = LocalDateTime.now();
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // GETTERS AND SETTERS
-    // ═══════════════════════════════════════════════════════════════
+    // ── Getters & Setters ─────────────────────────────────────────
 
-    public Long getEmployeeId() {
-        return employeeId;
+    public Double getMonthlySickAllocated() {
+        return monthlySickAllocated;
     }
 
-    public void setEmployeeId(Long employeeId) {
-        this.employeeId = employeeId;
+    public void setMonthlySickAllocated(Double monthlySickAllocated) {
+        this.monthlySickAllocated = monthlySickAllocated;
     }
 
-    public String getEmployeeName() {
-        return employeeName;
+    public Double getMonthlySickUsed() {
+        return monthlySickUsed;
     }
 
-    public void setEmployeeName(String employeeName) {
-        this.employeeName = employeeName;
+    public void setMonthlySickUsed(Double monthlySickUsed) {
+        this.monthlySickUsed = monthlySickUsed;
     }
 
-    public Integer getCurrentYear() {
-        return currentYear;
+    public Double getMonthlySickBalance() {
+        return monthlySickBalance;
     }
 
-    public void setCurrentYear(Integer currentYear) {
-        this.currentYear = currentYear;
+    public void setMonthlySickBalance(Double monthlySickBalance) {
+        this.monthlySickBalance = monthlySickBalance;
     }
 
-    public Double getYearlyAllocated() {
-        return yearlyAllocated;
+    public Long getEmployeeId() { return employeeId; }
+    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
+
+    public String getEmployeeName() { return employeeName; }
+    public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
+
+    public Integer getCurrentYear() { return currentYear; }
+    public void setCurrentYear(Integer currentYear) { this.currentYear = currentYear; }
+
+    public Double getYearlyAllocated() { return yearlyAllocated; }
+    public void setYearlyAllocated(Double yearlyAllocated) { this.yearlyAllocated = yearlyAllocated; }
+
+    public Double getYearlyUsed() { return yearlyUsed; }
+    public void setYearlyUsed(Double yearlyUsed) { this.yearlyUsed = yearlyUsed; }
+
+    public Double getYearlyBalance() { return yearlyBalance; }
+    public void setYearlyBalance(Double yearlyBalance) { this.yearlyBalance = yearlyBalance; }
+
+    public Double getMonthlyAnnualAllocated() {
+        return monthlyAnnualAllocated;
     }
 
-    public void setYearlyAllocated(Double yearlyAllocated) {
-        this.yearlyAllocated = yearlyAllocated;
+    public void setMonthlyAnnualAllocated(Double monthlyAnnualAllocated) {
+        this.monthlyAnnualAllocated = monthlyAnnualAllocated;
     }
 
-    public Double getYearlyUsed() {
-        return yearlyUsed;
+    public Double getMonthlyAnnualUsed() {
+        return monthlyAnnualUsed;
     }
 
-    public void setYearlyUsed(Double yearlyUsed) {
-        this.yearlyUsed = yearlyUsed;
+    public void setMonthlyAnnualUsed(Double monthlyAnnualUsed) {
+        this.monthlyAnnualUsed = monthlyAnnualUsed;
     }
 
-    public Double getYearlyBalance() {
-        return yearlyBalance;
+    public Double getMonthlyAnnualBalance() {
+        return monthlyAnnualBalance;
     }
 
-    public void setYearlyBalance(Double yearlyBalance) {
-        this.yearlyBalance = yearlyBalance;
+    public void setMonthlyAnnualBalance(Double monthlyAnnualBalance) {
+        this.monthlyAnnualBalance = monthlyAnnualBalance;
     }
 
-    public Double getMonthlyAllocated() {
-        return monthlyAllocated;
+
+    public Double getMonthlyTotalBalance() { return monthlyTotalBalance; }
+    public void setMonthlyTotalBalance(Double monthlyTotalBalance) {
+        this.monthlyTotalBalance = monthlyTotalBalance;
     }
 
-    public void setMonthlyAllocated(Double monthlyAllocated) {
-        this.monthlyAllocated = monthlyAllocated;
-    }
+    public Double getCarryForwardTotal() { return carryForwardTotal; }
+    public void setCarryForwardTotal(Double carryForwardTotal) { this.carryForwardTotal = carryForwardTotal; }
 
-    public Double getMonthlyUsed() {
-        return monthlyUsed;
-    }
+    public Double getCarryForwardUsed() { return carryForwardUsed; }
+    public void setCarryForwardUsed(Double carryForwardUsed) { this.carryForwardUsed = carryForwardUsed; }
 
-    public void setMonthlyUsed(Double monthlyUsed) {
-        this.monthlyUsed = monthlyUsed;
-    }
-
-    public Double getMonthlyBalance() {
-        return monthlyBalance;
-    }
-
-    public void setMonthlyBalance(Double monthlyBalance) {
-        this.monthlyBalance = monthlyBalance;
-    }
-
-    public Double getCarryForwardTotal() {
-        return carryForwardTotal;
-    }
-
-    public void setCarryForwardTotal(Double carryForwardTotal) {
-        this.carryForwardTotal = carryForwardTotal;
-    }
-
-    public Double getCarryForwardUsed() {
-        return carryForwardUsed;
-    }
-
-    public void setCarryForwardUsed(Double carryForwardUsed) {
-        this.carryForwardUsed = carryForwardUsed;
-    }
-
-    public Double getCarryForwardRemaining() {
-        return carryForwardRemaining;
-    }
-
+    public Double getCarryForwardRemaining() { return carryForwardRemaining; }
     public void setCarryForwardRemaining(Double carryForwardRemaining) {
         this.carryForwardRemaining = carryForwardRemaining;
     }
 
-    public Double getCompoffBalance() {
-        return compoffBalance;
-    }
+    public Double getCompoffBalance() { return compoffBalance; }
+    public void setCompoffBalance(Double compoffBalance) { this.compoffBalance = compoffBalance; }
 
-    public void setCompoffBalance(Double compoffBalance) {
-        this.compoffBalance = compoffBalance;
-    }
-
-    public Double getLossOfPayPercentage() {
-        return lossOfPayPercentage;
-    }
-
+    public Double getLossOfPayPercentage() { return lossOfPayPercentage; }
     public void setLossOfPayPercentage(Double lossOfPayPercentage) {
         this.lossOfPayPercentage = lossOfPayPercentage;
     }
 
-    public Integer getApprovedCount() {
-        return approvedCount;
-    }
+    public Integer getApprovedCount() { return approvedCount; }
+    public void setApprovedCount(Integer approvedCount) { this.approvedCount = approvedCount; }
 
-    public void setApprovedCount(Integer approvedCount) {
-        this.approvedCount = approvedCount;
-    }
+    public Integer getRejectedCount() { return rejectedCount; }
+    public void setRejectedCount(Integer rejectedCount) { this.rejectedCount = rejectedCount; }
 
-    public Integer getRejectedCount() {
-        return rejectedCount;
-    }
+    public Integer getPendingCount() { return pendingCount; }
+    public void setPendingCount(Integer pendingCount) { this.pendingCount = pendingCount; }
 
-    public void setRejectedCount(Integer rejectedCount) {
-        this.rejectedCount = rejectedCount;
-    }
+    public LocalDateTime getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
 
-    public Integer getPendingCount() {
-        return pendingCount;
-    }
-
-    public void setPendingCount(Integer pendingCount) {
-        this.pendingCount = pendingCount;
-    }
-
-    public LocalDateTime getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public void setLastUpdated(LocalDateTime lastUpdated) {
-        this.lastUpdated = lastUpdated;
-    }
-
-    public List<LeaveTypeBreakdown> getBreakdown() {
-        return breakdown;
-    }
-
-    public void setBreakdown(List<LeaveTypeBreakdown> breakdown) {
-        this.breakdown = breakdown;
-    }
+    public List<LeaveTypeBreakdown> getBreakdown() { return breakdown; }
+    public void setBreakdown(List<LeaveTypeBreakdown> breakdown) { this.breakdown = breakdown; }
 }
