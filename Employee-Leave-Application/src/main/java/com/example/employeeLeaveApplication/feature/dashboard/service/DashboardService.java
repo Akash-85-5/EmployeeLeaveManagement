@@ -87,6 +87,7 @@ public class DashboardService {
         double yearlyAllocated = allocations.stream().mapToDouble(LeaveAllocation::getAllocatedDays).sum();
         Double yearlyUsed = applicationRepository.getTotalUsedDays(employeeId, LeaveStatus.APPROVED, currentYear);
         if (yearlyUsed == null) yearlyUsed = 0.0;
+
         response.setYearlyAllocated(yearlyAllocated);
         response.setYearlyUsed(yearlyUsed);
         response.setYearlyBalance(yearlyAllocated - yearlyUsed);

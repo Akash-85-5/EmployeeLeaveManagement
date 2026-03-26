@@ -9,6 +9,7 @@ public class CreateUserRequest {
 
     private String name;
     private String email;
+    private String empCode;
     private Role role;
     private Long managerId;
     private EmployeeExperience employeeExperience;
@@ -45,6 +46,8 @@ public class CreateUserRequest {
     public void setEmail(String email) {
         this.email = email;
     }
+    public String getEmpCode() { return empCode; }
+    public void setEmpCode(String empCode) { this.empCode = empCode; }
 
     public Role getRole() {
         return role;

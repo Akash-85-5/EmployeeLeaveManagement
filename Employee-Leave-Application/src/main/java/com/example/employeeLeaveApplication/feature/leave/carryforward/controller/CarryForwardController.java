@@ -17,12 +17,12 @@ import java.util.List;
 public class CarryForwardController {
 
     private static final org.slf4j.Logger log =
-            org.slf4j.LoggerFactory.getLogger(
-                    CarryForwardController.class);
+            org.slf4j.LoggerFactory.getLogger(CarryForwardController.class);
 
     private final CarryForwardService carryForwardService;
 
-    // ✅ FIXED: Added TEAM_LEADER
+    // ── Get balance for an employee ───────────────────────────────
+
     @GetMapping("/balance/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
@@ -31,13 +31,12 @@ public class CarryForwardController {
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
         if (year == null) year = LocalDate.now().getYear();
-        log.info("[CARRYFORWARD] Fetching balance: " +
-                "employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(
-                carryForwardService.getBalance(employeeId, year));
+        log.info("[CARRYFORWARD] Fetching balance: employee={}, year={}", employeeId, year);
+        return ResponseEntity.ok(carryForwardService.getBalance(employeeId, year));
     }
 
-    // ✅ FIXED: Added TEAM_LEADER
+    // ── Check eligibility for carry-forward ───────────────────────
+
     @GetMapping("/eligibility/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
             "or hasRole('HR') or hasRole('ADMIN') " +
@@ -46,22 +45,18 @@ public class CarryForwardController {
             @PathVariable Long employeeId,
             @RequestParam(required = false) Integer year) {
         if (year == null) year = LocalDate.now().getYear();
-        log.info("[CARRYFORWARD] Checking eligibility: " +
-                "employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(
-                carryForwardService.checkEligibility(
-                        employeeId, year));
+        log.info("[CARRYFORWARD] Checking eligibility: employee={}, year={}", employeeId, year);
+        return ResponseEntity.ok(carryForwardService.checkEligibility(employeeId, year));
     }
 
-    // ✅ FIXED: Added TEAM_LEADER
+    // ── HR / Admin: all balances for a year ───────────────────────
+
     @GetMapping("/balances/{year}")
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') " +
             "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<List<CarryForwardBalanceResponse>> getAllBalances(
             @PathVariable Integer year) {
-        log.info("[CARRYFORWARD] Fetching all balances " +
-                "for year: {}", year);
-        return ResponseEntity.ok(
-                carryForwardService.getAllBalances(year));
+        log.info("[CARRYFORWARD] Fetching all balances for year: {}", year);
+        return ResponseEntity.ok(carryForwardService.getAllBalances(year));
     }
 }

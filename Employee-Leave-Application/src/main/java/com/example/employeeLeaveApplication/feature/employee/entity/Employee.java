@@ -33,6 +33,13 @@ public class Employee {
 //
 //    @Column(name = "team_leader_id")
 //    private Long teamLeaderId;
+    // ═══════════════════════════════════════════════════════════════
+    // IDENTITY
+    // ═══════════════════════════════════════════════════════════════
+
+    @Column(name = "emp_code", unique = true, length = 20)
+    private String empCode;   // e.g. INTERN001, WENXT002, WENXTTR003
+
 
     @Column(nullable = false)
     private String name;
@@ -62,11 +69,11 @@ public class Employee {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "biometric_status")
-    private BiometricVpnStatus biometricStatus = PENDING; // PENDING, COMPLETED, FAILED
+    private BiometricVpnStatus biometricStatus = PENDING;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "vpn_status")
-    private BiometricVpnStatus vpnStatus = PENDING; // PENDING, COMPLETED, FAILED
+    private BiometricVpnStatus vpnStatus = PENDING;
 
     @Column(name = "onboarding_completed_at")
     private LocalDateTime onboardingCompletedAt;
@@ -111,14 +118,12 @@ public class Employee {
 //    public void setTeamLeaderId(Long teamLeaderId) {
 //        this.teamLeaderId = teamLeaderId;
 //    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public Long getId() {
-        return id;
-    }
+    public String getEmpCode() { return empCode; }
+    public void setEmpCode(String empCode) { this.empCode = empCode; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getName() {
         return name;
