@@ -132,33 +132,22 @@ public class LeaveApplicationService {
 
         if (firstApproverId == null) {
             // Top of hierarchy — auto-approve
-            leave.setFirstApproverId(null);
-            leave.setSecondApproverId(null);
-            leave.setCurrentApprovalLevel(null);
+            leave.setCurrentApproverId(null);
+            leave.setApprovalLevel(0);
             leave.setRequiredApprovalLevels(0);
+            leave.setStatus(LeaveStatus.PENDING); // will be overridden in applyLeave
             return;
         }
 
-        // Level 1: employee's manager → stored as teamLeaderId, level = TEAM_LEADER
-        leave.setFirstApproverId(firstApproverId);
-        leave.setCurrentApprovalLevel(ApprovalLevel.FIRST_APPROVER);
+        // Level 1: employee's direct manager
+        leave.setCurrentApproverId(firstApproverId);
+        leave.setApprovalLevel(1);
 
         Employee firstApprover = employeeRepository.findById(firstApproverId)
-                .orElseThrow(() -> new RuntimeException(
-                        "First approver not found: " + firstApproverId));
+                .orElseThrow(() -> new RuntimeException("First approver not found: " + firstApproverId));
 
-        Long secondApproverId = firstApprover.getManagerId();
-
-        if (secondApproverId == null) {
-            // Level-1 approver is top of chain → only 1 level
-            leave.setSecondApproverId(null);
-            leave.setRequiredApprovalLevels(1);
-        } else {
-            // Level 2: first approver's manager → stored as managerId, level = MANAGER
-            // Always stop here — never go deeper
-            leave.setSecondApproverId(secondApproverId);
-            leave.setRequiredApprovalLevels(2);
-        }
+        // Max 2 levels — same as OD
+        leave.setRequiredApprovalLevels(firstApprover.getManagerId() != null ? 2 : 1);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -496,9 +485,9 @@ public class LeaveApplicationService {
     }
 
     private void notifyFirstApprover(LeaveApplication leave, Employee employee) {
-        if (leave.getFirstApproverId() == null) return;
+        if (leave.getCurrentApproverId() == null) return;
 
-        employeeRepository.findById(leave.getFirstApproverId()).ifPresent(approver ->
+        employeeRepository.findById(leave.getCurrentApproverId()).ifPresent(approver ->
                 notificationService.createNotification(
                         approver.getId(), employee.getEmail(), approver.getEmail(),
                         EventType.LEAVE_APPLIED, approver.getRole(), Channel.EMAIL,

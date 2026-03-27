@@ -78,8 +78,7 @@ public class DashboardController {
     // ── MANAGER ──────────────────────────────────────────────────
 
     @GetMapping("/manager/summary/{managerId}")
-    @PreAuthorize("hasRole('MANAGER') " +
-            "and #managerId == authentication.principal.user.id")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<ManagerDashboardResponse> getManagerDashboard(
             @PathVariable Long managerId) {
         log.info("[API] GET manager dashboard: {}", managerId);

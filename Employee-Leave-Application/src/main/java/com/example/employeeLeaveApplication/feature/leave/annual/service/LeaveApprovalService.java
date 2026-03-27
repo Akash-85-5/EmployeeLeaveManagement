@@ -14,6 +14,7 @@ import com.example.employeeLeaveApplication.feature.leave.annual.repository.Leav
 import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.example.employeeLeaveApplication.shared.enums.*;
+import com.example.employeeLeaveApplication.shared.exceptions.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -58,25 +59,25 @@ public class LeaveApprovalService {
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
             Long approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-                        approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER);
+                .findByCurrentApproverIdAndStatus(
+                        approverId, LeaveStatus.PENDING);
         return toPageDto(convertToDto(all), pageable);
     }
 
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
             Long approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
-                        approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER);
+                .findByCurrentApproverIdAndStatus(
+                        approverId, LeaveStatus.PENDING);
         return toPageDto(convertToDto(all), pageable);
     }
 
-    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
-            Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
-        return toPageDto(convertToDto(all), pageable);
-    }
+//    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
+//            Pageable pageable) {
+//        List<LeaveApplication> all = leaveApplicationRepository
+//                .findByCurrentApproverIdAndStatus(LeaveStatus.PENDING);
+//        return toPageDto(convertToDto(all), pageable);
+//    }
 
     public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
         LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
@@ -85,20 +86,20 @@ public class LeaveApprovalService {
                 leave, leaveAttachmentRepository.findByLeaveApplicationId(leaveId));
     }
 
-    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
-        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-                approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER), pageable);
-    }
+//    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
+//        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+//                approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER), pageable);
+//    }
 
     public Page<LeaveApplication> getPendingLeavesForManager(Long approverId, Pageable pageable) {
-        return toPage(leaveApplicationRepository.findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
-                approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER), pageable);
+        return toPage(leaveApplicationRepository.findByCurrentApproverIdAndStatus(
+                approverId, LeaveStatus.PENDING), pageable);
     }
 
-    public Page<LeaveApplication> getPendingLeavesForHr(Pageable pageable) {
-        return toPage(leaveApplicationRepository.findByStatusAndCurrentApprovalLevel(
-                LeaveStatus.PENDING, ApprovalLevel.HR), pageable);
-    }
+//    public Page<LeaveApplication> getPendingLeavesForHr(Pageable pageable) {
+//        return toPage(leaveApplicationRepository.findByStatusAndCurrentApprovalLevel(
+//                LeaveStatus.PENDING, ApprovalLevel.HR), pageable);
+//    }
 
     // ═══════════════════════════════════════════════════════════════
     // CORE DECISION
@@ -116,22 +117,49 @@ public class LeaveApprovalService {
                     "Leave is already processed with status: " + leave.getStatus());
         }
 
+        // Only the designated current approver can act
+        if (!request.getApproverId().equals(leave.getCurrentApproverId())) {
+            throw new BadRequestException(
+                    "Unauthorized: You are not the designated approver for this leave.");
+        }
+
         Employee approver = employeeRepository.findById(request.getApproverId())
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
 
-        ApprovalLevel currentLevel = leave.getCurrentApprovalLevel();
-        validateApproverForLevel(leave, approver, currentLevel);
-        recordLevelDecision(leave, approver, currentLevel, request.getDecision());
-        saveApprovalRecord(leave.getId(), approver, currentLevel,
+        saveApprovalRecord(leave.getId(), approver, leave.getApprovalLevel(),
                 request.getDecision(), request.getComments());
 
         if (request.getDecision() == LeaveStatus.REJECTED) {
             finalizeLeave(leave, LeaveStatus.REJECTED, approver);
+
         } else if (request.getDecision() == LeaveStatus.MEETING_REQUIRED) {
             leaveApplicationRepository.save(leave);
             notifyEmployee(leave, approver, request.getDecision(), request.getComments());
+
         } else {
-            advanceOrFinalize(leave, approver);
+            // APPROVED — mirror OD logic exactly
+            if (leave.getApprovalLevel() == 1) {
+                if (approver.getManagerId() != null) {
+                    // Advance to level 2
+                    Employee level2Approver = employeeRepository.findById(approver.getManagerId())
+                            .orElseThrow(() -> new RuntimeException("Level-2 approver not found"));
+
+                    leave.setApprovalLevel(2);
+                    leave.setCurrentApproverId(level2Approver.getId());
+                    leaveApplicationRepository.save(leave);
+
+                    notifySecondApprover(leave, approver, level2Approver);
+                    notifyEmployeeProgress(leave, approver,
+                            "Your leave has been approved at level 1. Pending final approval.");
+                } else {
+                    // No level-2 — single approval is enough
+                    finalizeLeave(leave, LeaveStatus.APPROVED, approver);
+                }
+            } else if (leave.getApprovalLevel() == 2) {
+                finalizeLeave(leave, LeaveStatus.APPROVED, approver);
+            } else {
+                throw new BadRequestException("Unexpected approval level: " + leave.getApprovalLevel());
+            }
         }
     }
 
@@ -159,40 +187,39 @@ public class LeaveApprovalService {
     // BULK DECISION
     // ═══════════════════════════════════════════════════════════════
 
-    @Transactional
-    public String bulkDecision(BulkLeaveDecisionRequest request, boolean isSecondLevel) {
-        validateDecision(request.getDecision());
-
-        List<LeaveApplication> leaves =
-                leaveApplicationRepository.findAllById(request.getLeaveIds());
-        if (leaves.isEmpty()) throw new RuntimeException("No leaves found");
-
-        Employee approver = employeeRepository.findById(request.getApproverId())
-                .orElseThrow(() -> new RuntimeException("Approver not found"));
-
-        for (LeaveApplication leave : leaves) {
-            if (leave.getStatus() != LeaveStatus.PENDING) continue;
-            ApprovalLevel currentLevel = leave.getCurrentApprovalLevel();
-            if (isSecondLevel && currentLevel != ApprovalLevel.SECOND_APPROVER) continue;
-
-            try {
-                validateApproverForLevel(leave, approver, currentLevel);
-            } catch (BadRequestException e) {
-                continue;
-            }
-
-            recordLevelDecision(leave, approver, currentLevel, request.getDecision());
-            saveApprovalRecord(leave.getId(), approver, currentLevel,
-                    request.getDecision(), "Bulk decision");
-
-            if (request.getDecision() == LeaveStatus.REJECTED) {
-                finalizeLeave(leave, LeaveStatus.REJECTED, approver);
-            } else if (request.getDecision() == LeaveStatus.APPROVED) {
-                advanceOrFinalize(leave, approver);
-            }
-        }
-        return "Bulk decision completed successfully";
-    }
+//    @Transactional
+//    public String bulkDecision(BulkLeaveDecisionRequest request, boolean isSecondLevel) {
+//        validateDecision(request.getDecision());
+//
+//        List<LeaveApplication> leaves =
+//                leaveApplicationRepository.findAllById(request.getLeaveIds());
+//        if (leaves.isEmpty()) throw new RuntimeException("No leaves found");
+//
+//        Employee approver = employeeRepository.findById(request.getApproverId())
+//                .orElseThrow(() -> new RuntimeException("Approver not found"));
+//
+//        for (LeaveApplication leave : leaves) {
+//            if (leave.getStatus() != LeaveStatus.PENDING) continue;
+//            ApprovalLevel currentLevel = leave.getCurrentApprovalLevel();
+//            if (isSecondLevel && currentLevel != ApprovalLevel.SECOND_APPROVER) continue;
+//
+//            try {
+//                validateApproverForLevel(leave, approver, currentLevel);
+//            } catch (BadRequestException e) {
+//                continue;
+//            }
+//            recordLevelDecision(leave, approver, currentLevel, request.getDecision());
+//            saveApprovalRecord(leave.getId(), approver, currentLevel,
+//                    request.getDecision(), "Bulk decision");
+//
+//            if (request.getDecision() == LeaveStatus.REJECTED) {
+//                finalizeLeave(leave, LeaveStatus.REJECTED, approver);
+//            } else if (request.getDecision() == LeaveStatus.APPROVED) {
+//                advanceOrFinalize(leave, approver);
+//            }
+//        }
+//        return "Bulk decision completed successfully";
+//    }
 
     // ═══════════════════════════════════════════════════════════════
     // HISTORY
@@ -218,25 +245,25 @@ public class LeaveApprovalService {
     // Level MANAGER approved → always finalize (max 2 levels)
     // ═══════════════════════════════════════════════════════════════
 
-    private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
-        ApprovalLevel current = leave.getCurrentApprovalLevel();
-        int required          = leave.getRequiredApprovalLevels();
-
-        if (current == ApprovalLevel.FIRST_APPROVER) {
-            if (required >= 2) {
-                leave.setCurrentApprovalLevel(ApprovalLevel.SECOND_APPROVER);
-                leaveApplicationRepository.save(leave);
-                notifySecondApprover(leave, currentApprover);
-                notifyEmployeeProgress(leave, currentApprover,
-                        "Your leave has been approved at level 1. Pending final approval.");
-            } else {
-                finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
-            }
-        } else {
-            // MANAGER or HR → final level
-            finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
-        }
-    }
+//    private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
+//        ApprovalLevel current = leave.getCurrentApprovalLevel();
+//        int required          = leave.getRequiredApprovalLevels();
+//
+//        if (current == ApprovalLevel.FIRST_APPROVER) {
+//            if (required >= 2) {
+//                leave.setCurrentApprovalLevel(ApprovalLevel.SECOND_APPROVER);
+//                leaveApplicationRepository.save(leave);
+//                notifySecondApprover(leave, currentApprover);
+//                notifyEmployeeProgress(leave, currentApprover,
+//                        "Your leave has been approved at level 1. Pending final approval.");
+//            } else {
+//                finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
+//            }
+//        } else {
+//            // MANAGER or HR → final level
+//            finalizeLeave(leave, LeaveStatus.APPROVED, currentApprover);
+//        }
+//    }
 
     private void finalizeLeave(LeaveApplication leave,
                                LeaveStatus finalStatus,
@@ -259,46 +286,47 @@ public class LeaveApprovalService {
     // PRIVATE: VALIDATE APPROVER
     // ═══════════════════════════════════════════════════════════════
 
-    private void validateApproverForLevel(LeaveApplication leave,
-                                          Employee approver, ApprovalLevel level) {
-        switch (level) {
-            case FIRST_APPROVER -> {
-                if (leave.getFirstApproverId() == null
-                        || !approver.getId().equals(leave.getFirstApproverId())) {
-                    throw new BadRequestException(
-                            "Unauthorized: You are not the assigned level-1 approver for this leave.");
-                }
-            }
-            case SECOND_APPROVER -> {
-                if (leave.getSecondApproverId() == null
-                        || !approver.getId().equals(leave.getSecondApproverId())) {
-                    throw new BadRequestException(
-                            "Unauthorized: You are not the assigned level-2 approver for this leave.");
-                }
-            }
-        }
-    }
+//    private void validateApproverForLevel(LeaveApplication leave,
+//                                          Employee approver, ApprovalLevel level) {
+//        switch (level) {
+//            case FIRST_APPROVER -> {
+//                if (leave.getFirstApproverId() == null
+//                        || !approver.getId().equals(leave.getFirstApproverId())) {
+//                    throw new BadRequestException(
+//                            "Unauthorized: You are not the assigned level-1 approver for this leave.");
+//                }
+//            }
+//            case SECOND_APPROVER -> {
+//                if (leave.getSecondApproverId() == null
+//                        || !approver.getId().equals(leave.getSecondApproverId())) {
+//                    throw new BadRequestException(
+//                            "Unauthorized: You are not the assigned level-2 approver for this leave.");
+//                }
+//            }
+//        }
+//    }
+//
+//    private void recordLevelDecision(LeaveApplication leave, Employee approver,
+//                                     ApprovalLevel level, LeaveStatus decision) {
+//        switch (level) {
+//            case FIRST_APPROVER -> {
+//                leave.setFirstApproverDecision(decision);
+//                leave.setFirstApproverDecidedAt(LocalDateTime.now());
+//                leave.setCurrentApproverId(leave.getSecondApproverId());
+//            }
+//            case SECOND_APPROVER -> {
+//                leave.setManagerDecision(decision);
+//                leave.setManagerDecidedAt(LocalDateTime.now());
+//            }
+//        }
+//    }
 
-    private void recordLevelDecision(LeaveApplication leave, Employee approver,
-                                     ApprovalLevel level, LeaveStatus decision) {
-        switch (level) {
-            case FIRST_APPROVER -> {
-                leave.setFirstApproverDecision(decision);
-                leave.setFirstApproverDecidedAt(LocalDateTime.now());
-            }
-            case SECOND_APPROVER -> {
-                leave.setManagerDecision(decision);
-                leave.setManagerDecidedAt(LocalDateTime.now());
-            }
-        }
-    }
-
-    private void saveApprovalRecord(Long leaveId, Employee approver, ApprovalLevel level,
+    private void saveApprovalRecord(Long leaveId, Employee approver, int level,
                                     LeaveStatus decision, String comments) {
         LeaveApproval record = new LeaveApproval();
         record.setLeaveId(leaveId);
         record.setApproverId(approver.getId());
-        record.setApprovalLevel(level);
+//        record.setApprovalLevel(level);          // store the int directly
         record.setApproverRole(approver.getRole());
         record.setDecision(decision);
         record.setComments(comments);
@@ -310,18 +338,16 @@ public class LeaveApprovalService {
     // NOTIFICATION HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    private void notifySecondApprover(LeaveApplication leave, Employee firstApprover) {
-        if (leave.getSecondApproverId() == null) return;
-        employeeRepository.findById(leave.getSecondApproverId()).ifPresent(mgr -> {
-            String empName = employeeRepository.findById(leave.getEmployeeId())
-                    .map(Employee::getName).orElse("Employee");
-            notificationService.createNotification(
-                    mgr.getId(), firstApprover.getEmail(), mgr.getEmail(),
-                    EventType.LEAVE_APPLIED, mgr.getRole(), Channel.EMAIL,
-                    empName + "'s " + leave.getLeaveType().name() + " leave ("
-                            + leave.getStartDate() + " to " + leave.getEndDate()
-                            + ") approved at level 1. Requires your final approval.");
-        });
+    private void notifySecondApprover(LeaveApplication leave, Employee firstApprover,
+                                      Employee level2Approver) {
+        String empName = employeeRepository.findById(leave.getEmployeeId())
+                .map(Employee::getName).orElse("Employee");
+        notificationService.createNotification(
+                level2Approver.getId(), firstApprover.getEmail(), level2Approver.getEmail(),
+                EventType.LEAVE_APPLIED, level2Approver.getRole(), Channel.EMAIL,
+                empName + "'s " + leave.getLeaveType().name() + " leave ("
+                        + leave.getStartDate() + " to " + leave.getEndDate()
+                        + ") approved at level 1. Requires your final approval.");
     }
 
     private void notifyEmployee(LeaveApplication leave, Employee approver,

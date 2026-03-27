@@ -101,6 +101,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
+                        "https://jgpq493j-8080.inc1.devtunnels.ms/",
                         "https://fqkvs6nm-8080.inc1.devtunnels.ms",
                         "https://lh4dz46t-5173.inc1.devtunnels.ms"  // ← removed trailing slash
                 )

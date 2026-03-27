@@ -20,7 +20,7 @@ public class TeamService {
 
     // ✅ full team visibility
     public List<LeaveApplication> getTeamLeaves(Long managerId) {
-        return leaveRepo.findByFirstApproverId(managerId);
+        return leaveRepo.findByCurrentApproverId(managerId);
     }
 
     // ✅ current week visibility

@@ -34,7 +34,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<LeaveApplication> findByFirstApproverId(Long managerId);
+    List<LeaveApplication> findByCurrentApproverId(Long managerId);
 
 
 
@@ -159,7 +159,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("endDate") LocalDate endDate
     );
 
-    @Query("SELECT l FROM LeaveApplication l WHERE l.firstApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
+    @Query("SELECT l FROM LeaveApplication l WHERE l.currentApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
     )
     List<LeaveApplication> findTeamLeavesForWeek(
             @Param("managerId") Long managerId,
@@ -236,12 +236,12 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             "AND la.year = :year")
     List<Long> findManagersWhoApprovedLeaves(@Param("year") Integer year);
 
-    @Query("SELECT la FROM LeaveApplication la " +
-            "WHERE la.status = 'APPROVED' " +
-            "AND la.approvedRole = 'MANAGER' " +
-            "AND la.year = :year " +
-            "ORDER BY la.approvedAt DESC")
-    List<LeaveApplication> findLeavesApprovedByManagers(@Param("year") Integer year);
+//    @Query("SELECT la FROM LeaveApplication la " +
+//            "WHERE la.status = 'APPROVED' " +
+//            "AND la.approvedRole = 'MANAGER' " +
+//            "AND la.year = :year " +
+//            "ORDER BY la.approvedAt DESC")
+//    List<LeaveApplication> findLeavesApprovedByManagers(@Param("year") Integer year);
 
     @Query("SELECT la FROM LeaveApplication la " +
             "WHERE la.status = 'APPROVED' " +
@@ -289,22 +289,18 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("status") LeaveStatus status
     );
 
-    List<LeaveApplication> findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-            Long teamLeaderId,
-            LeaveStatus status,
-            ApprovalLevel currentApprovalLevel
-    );
+//    List<LeaveApplication> findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+//            Long teamLeaderId,
+//            LeaveStatus status,
+//            ApprovalLevel currentApprovalLevel
+//    );
 
-    List<LeaveApplication> findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
+    List<LeaveApplication> findByCurrentApproverIdAndStatus(
             Long managerId,
-            LeaveStatus status,
-            ApprovalLevel currentApprovalLevel
+            LeaveStatus status
     );
 
-    List<LeaveApplication> findByStatusAndCurrentApprovalLevel(
-            LeaveStatus status,
-            ApprovalLevel currentApprovalLevel
-    );
+
 
     @Query("""
         SELECT l FROM LeaveApplication l

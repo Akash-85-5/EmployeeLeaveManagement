@@ -21,7 +21,11 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "leave_application")
 public class LeaveApplication {
@@ -75,38 +79,20 @@ public class LeaveApplication {
     @Column(nullable = false)
     private LeaveStatus status = LeaveStatus.PENDING;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "current_approval_level")
-    private ApprovalLevel currentApprovalLevel;
 
     @Column(name = "required_approval_levels")
     private Integer requiredApprovalLevels;
 
-    @Column(name = "first_approver_id")
-    private Long firstApproverId;
+    @Column(name = "current_approver_id")
+    private Long currentApproverId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "first_approver_decision")
-    private LeaveStatus firstApproverDecision;
-
-    @Column(name = "first_approver_decided_at")
-    private LocalDateTime firstApproverDecidedAt;
-
-    @Column(name = "second_approver_id")
-    private Long secondApproverId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "second_approver_decision")
-    private LeaveStatus secondApproverDecision;
-
-    @Column(name = "second_approver_decided_at")
-    private LocalDateTime secondApproverDecidedAt;
+    @Column(name = "approval_level")
+    private Integer approvalLevel;  // 0 = auto-approved, 1 = at level 1, 2 = at level 2
 
 
     @Column(name = "approved_by")
     private Long approvedBy;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "approved_role")
     private Role approvedRole;
 
@@ -168,6 +154,14 @@ public class LeaveApplication {
         isAppointment = appointment;
     }
 
+    public Long getCurrentApproverId() {
+        return currentApproverId;
+    }
+
+    public void setCurrentApproverId(Long currentApproverId) {
+        this.currentApproverId = currentApproverId;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -216,44 +210,10 @@ public class LeaveApplication {
     public LeaveStatus getStatus() { return status; }
     public void setStatus(LeaveStatus status) { this.status = status; }
 
-    public ApprovalLevel getCurrentApprovalLevel() { return currentApprovalLevel; }
-    public void setCurrentApprovalLevel(ApprovalLevel currentApprovalLevel) {
-        this.currentApprovalLevel = currentApprovalLevel;
-    }
 
     public Integer getRequiredApprovalLevels() { return requiredApprovalLevels; }
     public void setRequiredApprovalLevels(Integer requiredApprovalLevels) {
         this.requiredApprovalLevels = requiredApprovalLevels;
-    }
-
-
-    public LeaveStatus getFirstApproverDecision() { return firstApproverDecision; }
-    public void setFirstApproverDecision(LeaveStatus firstApproverDecision) {
-        this.firstApproverDecision = firstApproverDecision;
-    }
-
-    public LocalDateTime getFirstApproverDecidedAt() { return firstApproverDecidedAt; }
-    public void setFirstApproverDecidedAt(LocalDateTime firstApproverDecidedAt) {
-        this.firstApproverDecidedAt = firstApproverDecidedAt;
-    }
-
-    public Long getFirstApproverId() {
-        return firstApproverId;
-    }
-
-    public void setFirstApproverId(Long firstApproverId) {
-        this.firstApproverId = firstApproverId;
-    }
-
-    public Long getSecondApproverId() { return secondApproverId; }
-    public void setSecondApproverId(Long secondApproverId) { this.secondApproverId = secondApproverId; }
-
-    public LeaveStatus getManagerDecision() { return secondApproverDecision; }
-    public void setManagerDecision(LeaveStatus managerDecision) { this.secondApproverDecision = managerDecision; }
-
-    public LocalDateTime getManagerDecidedAt() { return secondApproverDecidedAt; }
-    public void setManagerDecidedAt(LocalDateTime managerDecidedAt) {
-        this.secondApproverDecidedAt = managerDecidedAt;
     }
 
     public Long getApprovedBy() { return approvedBy; }

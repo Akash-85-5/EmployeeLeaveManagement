@@ -242,8 +242,8 @@ public class LeaveReminderSchedulerService {
 
     @Transactional
     public void escalateToHigher(LeaveApplication leave) {
-        Employee manager = employeeRepository.findById(leave.getSecondApproverId())
-                .orElseThrow(() -> new RuntimeException("Manager not found: " + leave.getSecondApproverId()));
+        Employee manager = employeeRepository.findById(leave.getCurrentApproverId())
+                .orElseThrow(() -> new RuntimeException("Manager not found: " + leave.getCurrentApproverId()));
 
         Long higherManagerId = manager.getManagerId();
 
@@ -258,7 +258,7 @@ public class LeaveReminderSchedulerService {
         leave.setEscalated(true);
         leave.setEscalatedAt(LocalDateTime.now());
         if (higherManagerId != null) {
-            leave.setSecondApproverId(higherManagerId);
+            leave.setCurrentApproverId(higherManagerId);
         }
 
         leaveApplicationRepository.save(leave);
