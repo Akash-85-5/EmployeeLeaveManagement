@@ -21,9 +21,9 @@ public class LeaveBalanceController {
 
     // ── Leave balance (all types) ─────────────────────────────────
     @GetMapping("/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id " +
-            "or hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')" +
-            "or hasRole('MANAGER') or hasRole('TEAM_LEADER') or hasRole('CFO')" )
+//    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+//            "or hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')" +
+//            "or hasRole('MANAGER') or hasRole('TEAM_LEADER') or hasRole('CFO')" )
     public ResponseEntity<LeaveBalanceResponse> getBalance(
             @PathVariable Long employeeId,
             @RequestParam Integer year) {

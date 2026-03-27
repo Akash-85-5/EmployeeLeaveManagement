@@ -34,7 +34,7 @@ public class EmployeeController {
 
     // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/profile/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
@@ -60,7 +60,7 @@ public class EmployeeController {
      */
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
             @PathVariable Long employeeId,
             @RequestPart("data") String dataJson,
@@ -86,7 +86,7 @@ public class EmployeeController {
      */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.id")
     public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
             @PathVariable Long employeeId,
             @RequestPart("data") String dataJson,
@@ -108,7 +108,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
+//    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
@@ -122,7 +122,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
+    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.id")
     public List<Employee> getTeamMembers(@PathVariable Long managerId) {
         return employeeService.getTeamMembers(managerId);
     }

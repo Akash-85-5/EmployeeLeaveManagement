@@ -82,6 +82,9 @@ public class LeaveApplication {
     @Column(name = "required_approval_levels")
     private Integer requiredApprovalLevels;
 
+    @Column(name = "current_approver_id")
+    private Long currentApproverId;
+
     @Column(name = "first_approver_id")
     private Long firstApproverId;
 
@@ -159,6 +162,30 @@ public class LeaveApplication {
     }
 
     // ── Getters & Setters ──────────────────────────────────────────
+
+    public Long getCurrentApproverId() {
+        return currentApproverId;
+    }
+
+    public void setCurrentApproverId(Long currentApproverId) {
+        this.currentApproverId = currentApproverId;
+    }
+
+    public LeaveStatus getSecondApproverDecision() {
+        return secondApproverDecision;
+    }
+
+    public void setSecondApproverDecision(LeaveStatus secondApproverDecision) {
+        this.secondApproverDecision = secondApproverDecision;
+    }
+
+    public LocalDateTime getSecondApproverDecidedAt() {
+        return secondApproverDecidedAt;
+    }
+
+    public void setSecondApproverDecidedAt(LocalDateTime secondApproverDecidedAt) {
+        this.secondApproverDecidedAt = secondApproverDecidedAt;
+    }
 
     public Boolean getAppointment() {
         return isAppointment;

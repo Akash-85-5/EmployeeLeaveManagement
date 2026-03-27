@@ -59,7 +59,7 @@ public class AuthService {
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         LoginResponse loginResponse = new LoginResponse(
-                user.getId(),
+                user.getEmployee().getId(),
                 user.getRole().name(),
                 user.isForcePwdChange()
         );

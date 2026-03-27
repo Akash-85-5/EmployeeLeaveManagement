@@ -55,28 +55,28 @@ public class LeaveApprovalService {
     // MANAGER     = level-2 approver (level-1's manager)
     // ═══════════════════════════════════════════════════════════════
 
-    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
-            Long approverId, Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-                        approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER);
-        return toPageDto(convertToDto(all), pageable);
-    }
+//    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
+//            Long approverId, Pageable pageable) {
+//        List<LeaveApplication> all = leaveApplicationRepository
+//                .findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+//                        approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER);
+//        return toPageDto(convertToDto(all), pageable);
+//    }
 
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
             Long approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
-                        approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER);
+                .findByCurrentApproverIdAndStatus(
+                        approverId, LeaveStatus.PENDING);
         return toPageDto(convertToDto(all), pageable);
     }
 
-    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
-            Pageable pageable) {
-        List<LeaveApplication> all = leaveApplicationRepository
-                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
-        return toPageDto(convertToDto(all), pageable);
-    }
+//    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
+//            Pageable pageable) {
+//        List<LeaveApplication> all = leaveApplicationRepository
+//                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
+//        return toPageDto(convertToDto(all), pageable);
+//    }
 
     public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
         LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
@@ -85,20 +85,20 @@ public class LeaveApprovalService {
                 leave, leaveAttachmentRepository.findByLeaveApplicationId(leaveId));
     }
 
-    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
-        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-                approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER), pageable);
-    }
-
-    public Page<LeaveApplication> getPendingLeavesForManager(Long approverId, Pageable pageable) {
-        return toPage(leaveApplicationRepository.findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
-                approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER), pageable);
-    }
-
-    public Page<LeaveApplication> getPendingLeavesForHr(Pageable pageable) {
-        return toPage(leaveApplicationRepository.findByStatusAndCurrentApprovalLevel(
-                LeaveStatus.PENDING, ApprovalLevel.HR), pageable);
-    }
+//    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
+//        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
+//                approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER), pageable);
+//    }
+//
+//    public Page<LeaveApplication> getPendingLeavesForManager(Long approverId, Pageable pageable) {
+//        return toPage(leaveApplicationRepository.findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
+//                approverId, LeaveStatus.PENDING, ApprovalLevel.SECOND_APPROVER), pageable);
+//    }
+//
+//    public Page<LeaveApplication> getPendingLeavesForHr(Pageable pageable) {
+//        return toPage(leaveApplicationRepository.findByStatusAndCurrentApprovalLevel(
+//                LeaveStatus.PENDING, ApprovalLevel.HR), pageable);
+//    }
 
     // ═══════════════════════════════════════════════════════════════
     // CORE DECISION
@@ -225,6 +225,7 @@ public class LeaveApprovalService {
         if (current == ApprovalLevel.FIRST_APPROVER) {
             if (required >= 2) {
                 leave.setCurrentApprovalLevel(ApprovalLevel.SECOND_APPROVER);
+                leave.setCurrentApproverId(leave.getSecondApproverId());
                 leaveApplicationRepository.save(leave);
                 notifySecondApprover(leave, currentApprover);
                 notifyEmployeeProgress(leave, currentApprover,

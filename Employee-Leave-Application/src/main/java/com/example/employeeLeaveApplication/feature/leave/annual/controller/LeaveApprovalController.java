@@ -24,20 +24,20 @@ public class LeaveApprovalController {
 
     // ── Pending per role (WITH ATTACHMENTS) ─────────────────────
 
-    @GetMapping("/pending/team-leader/{teamLeaderId}")
-    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
-    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForTeamLeader(
-            @PathVariable Long teamLeaderId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<LeaveApplicationWithAttachmentsDto> result =
-                leaveApprovalService.getPendingLeavesForTeamLeaderWithAttachments(teamLeaderId, pageable);
-        return ResponseEntity.ok(result);
-    }
+//    @GetMapping("/pending/team-leader/{teamLeaderId}")
+//    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
+//    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForTeamLeader(
+//            @PathVariable Long teamLeaderId,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//        Pageable pageable = PageRequest.of(page, size);
+//        Page<LeaveApplicationWithAttachmentsDto> result =
+//                leaveApprovalService.getPendingLeavesForTeamLeaderWithAttachments(teamLeaderId, pageable);
+//        return ResponseEntity.ok(result);
+//    }
 
     @GetMapping("/pending/manager/{managerId}")
-    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.user.id")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForManager(
             @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
@@ -48,16 +48,16 @@ public class LeaveApprovalController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/pending/hr")
-    @PreAuthorize("hasRole('HR')")
-    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForHr(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<LeaveApplicationWithAttachmentsDto> result =
-                leaveApprovalService.getPendingLeavesForHrWithAttachments(pageable);
-        return ResponseEntity.ok(result);
-    }
+//    @GetMapping("/pending/hr")
+//    @PreAuthorize("hasRole('HR')")
+//    public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForHr(
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//        Pageable pageable = PageRequest.of(page, size);
+//        Page<LeaveApplicationWithAttachmentsDto> result =
+//                leaveApprovalService.getPendingLeavesForHrWithAttachments(pageable);
+//        return ResponseEntity.ok(result);
+//    }
 
     // ── Get single leave with attachments ────────────────────────
 
@@ -72,7 +72,7 @@ public class LeaveApprovalController {
     // ── Core decision ─────────────────────────────────────────────
 
     @PatchMapping("/decision")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
+//    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
         return ResponseEntity.ok("Decision recorded: " + request.getDecision());

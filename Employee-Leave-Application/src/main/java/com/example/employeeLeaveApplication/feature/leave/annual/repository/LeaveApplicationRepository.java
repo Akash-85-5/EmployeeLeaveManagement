@@ -34,7 +34,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     Page<LeaveApplication> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<LeaveApplication> findByFirstApproverId(Long managerId);
+    List<LeaveApplication> findByCurrentApproverId(Long managerId);
 
 
 
@@ -159,7 +159,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("endDate") LocalDate endDate
     );
 
-    @Query("SELECT l FROM LeaveApplication l WHERE l.firstApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
+    @Query("SELECT l FROM LeaveApplication l WHERE l.currentApproverId = :managerId AND l.startDate <= :weekEnd AND l.endDate >= :weekStart"
     )
     List<LeaveApplication> findTeamLeavesForWeek(
             @Param("managerId") Long managerId,
@@ -295,10 +295,9 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             ApprovalLevel currentApprovalLevel
     );
 
-    List<LeaveApplication> findBySecondApproverIdAndStatusAndCurrentApprovalLevel(
+    List<LeaveApplication> findByCurrentApproverIdAndStatus(
             Long managerId,
-            LeaveStatus status,
-            ApprovalLevel currentApprovalLevel
+            LeaveStatus status
     );
 
     List<LeaveApplication> findByStatusAndCurrentApprovalLevel(

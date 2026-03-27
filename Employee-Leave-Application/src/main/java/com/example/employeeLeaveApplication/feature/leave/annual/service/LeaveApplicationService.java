@@ -141,6 +141,7 @@ public class LeaveApplicationService {
 
         // Level 1: employee's manager → stored as teamLeaderId, level = TEAM_LEADER
         leave.setFirstApproverId(firstApproverId);
+        leave.setCurrentApproverId(firstApproverId);
         leave.setCurrentApprovalLevel(ApprovalLevel.FIRST_APPROVER);
 
         Employee firstApprover = employeeRepository.findById(firstApproverId)

@@ -213,4 +213,52 @@ public class Employee {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public EmployeeExperience getEmployeeExperience() {
+        return employeeExperience;
+    }
+
+    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
+        this.employeeExperience = employeeExperience;
+    }
+
+    public SeparationStatus getSeparationStatus() {
+        return separationStatus;
+    }
+
+    public void setSeparationStatus(SeparationStatus separationStatus) {
+        this.separationStatus = separationStatus;
+    }
+
+    public SeparationType getSeparationType() {
+        return separationType;
+    }
+
+    public void setSeparationType(SeparationType separationType) {
+        this.separationType = separationType;
+    }
+
+    public LocalDate getNoticeStartDate() {
+        return noticeStartDate;
+    }
+
+    public void setNoticeStartDate(LocalDate noticeStartDate) {
+        this.noticeStartDate = noticeStartDate;
+    }
+
+    public LocalDate getNoticeEndDate() {
+        return noticeEndDate;
+    }
+
+    public void setNoticeEndDate(LocalDate noticeEndDate) {
+        this.noticeEndDate = noticeEndDate;
+    }
+
+    public LocalDate getRelievedDate() {
+        return relievedDate;
+    }
+
+    public void setRelievedDate(LocalDate relievedDate) {
+        this.relievedDate = relievedDate;
+    }
 }

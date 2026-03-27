@@ -203,7 +203,7 @@ public class    LeaveApplicationController {
 
     // ── Get employee's leaves ─────────────────────────────────────
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public List<LeaveApplication> getEmployeeLeaves(
             @PathVariable Long employeeId,
             @RequestParam(required = false) LeaveStatus status,

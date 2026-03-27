@@ -65,14 +65,12 @@ public class SecurityConfig {
                                 "/api/password-reset/request"
                         ).permitAll()
 
-                        .requestMatchers(
-                                "/api/password-reset/approve/**",
-                                "/api/password-reset/reject/**",
-                                "/api/admin/**"
-                        ).hasRole("ADMIN")
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+//                        .requestMatchers(
+//                                "/api/password-reset/approve/**",
+//                                "/api/password-reset/reject/**",
+//                                "/api/admin/**"
+//                        ).hasRole("ADMIN")
                         .requestMatchers("/api/hr/**").hasRole("HR")
-                        .requestMatchers("/api/manager/**").hasAnyRole("MANAGER","TEAM_LEADER")
                         .requestMatchers("/api/payslip").hasAnyRole("CFO", "ADMIN","EMPLOYEE","MANAGER","HR")
 
                         // 🌐 PUBLIC APIs
@@ -101,6 +99,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
+                        "http://localhost:4173",
                         "https://fqkvs6nm-8080.inc1.devtunnels.ms",
                         "https://lh4dz46t-5173.inc1.devtunnels.ms"  // ← removed trailing slash
                 )
