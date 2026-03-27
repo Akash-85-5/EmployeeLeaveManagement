@@ -74,6 +74,22 @@ public class CompOffService {
         }
     }
 
+
+    @Transactional
+    public void restoreCompOffRecords(Long leaveApplicationId, Long employeeId, BigDecimal days) {
+        // 1. Find the specific records used by this leave
+        List<CompOff> usedRecords = compOffRepository.findByUsedLeaveApplicationId(leaveApplicationId);
+
+        for (CompOff record : usedRecords) {
+            record.setStatus(CompOffStatus.EARNED);
+            record.setUsedLeaveApplicationId(null);
+            compOffRepository.save(record);
+        }
+
+        // 2. Now update the numerical balance table
+        balanceService.restoreUsed(employeeId, days);
+    }
+
     // ===================== EXISTING =====================
     @Transactional
     public void approveCompOff(Long id) {

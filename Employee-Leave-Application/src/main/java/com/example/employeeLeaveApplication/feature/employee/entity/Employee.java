@@ -6,17 +6,10 @@ import java.time.LocalDateTime;
 import com.example.employeeLeaveApplication.shared.enums.BiometricVpnStatus;
 import com.example.employeeLeaveApplication.shared.enums.EmployeeExperience;
 import com.example.employeeLeaveApplication.shared.enums.Role;
+import com.example.employeeLeaveApplication.shared.enums.SeparationStatus;
+import com.example.employeeLeaveApplication.shared.enums.SeparationType;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import static com.example.employeeLeaveApplication.shared.enums.BiometricVpnStatus.PENDING;
 
@@ -30,12 +23,6 @@ public class Employee {
 
     @Column(name = "team_id")
     private Long teamId;
-//
-//    @Column(name = "team_leader_id")
-//    private Long teamLeaderId;
-    // ═══════════════════════════════════════════════════════════════
-    // IDENTITY
-    // ═══════════════════════════════════════════════════════════════
 
     @Column(name = "emp_code", unique = true, length = 20)
     private String empCode;   // e.g. INTERN001, WENXT002, WENXTTR003
@@ -59,6 +46,27 @@ public class Employee {
 
     @Column(name = "active")
     private boolean active = true;
+
+    // ─────────────────────────────────────────────────────────────
+    // 🔥 SEPARATION / NOTICE PERIOD FIELDS
+    // ─────────────────────────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "separation_status")
+    private SeparationStatus separationStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "separation_type")
+    private SeparationType separationType;
+
+    @Column(name = "notice_start_date")
+    private LocalDate noticeStartDate;
+
+    @Column(name = "notice_end_date")
+    private LocalDate noticeEndDate;
+
+    @Column(name = "relieved_date")
+    private LocalDate relievedDate;
 
     // ═══════════════════════════════════════════════════════════════
     // HR DASHBOARD FIELDS (Onboarding & Compliance)
@@ -110,14 +118,7 @@ public class Employee {
     public void setTeamId(Long teamId) {
         this.teamId = teamId;
     }
-//
-//    public Long getTeamLeaderId() {
-//        return teamLeaderId;
-//    }
-//
-//    public void setTeamLeaderId(Long teamLeaderId) {
-//        this.teamLeaderId = teamLeaderId;
-//    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -195,14 +196,6 @@ public class Employee {
 
     public void setOnboardingCompletedAt(LocalDateTime onboardingCompletedAt) {
         this.onboardingCompletedAt = onboardingCompletedAt;
-    }
-
-    public EmployeeExperience getEmployeeExperience() {
-        return employeeExperience;
-    }
-
-    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
-        this.employeeExperience = employeeExperience;
     }
 
     public LocalDateTime getCreatedAt() {

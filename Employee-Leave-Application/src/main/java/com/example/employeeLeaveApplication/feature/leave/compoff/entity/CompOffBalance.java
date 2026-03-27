@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comp_off_balance",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "year"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "balance_year"}))
 public class CompOffBalance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

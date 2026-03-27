@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 @Entity
 @Table(name = "annual_leave_monthly_balance", uniqueConstraints = @UniqueConstraint(
-        columnNames = {"employee_id", "year", "month"}))
+        columnNames = {"employee_id", "\"year\"", "\"month\""}))
 public class AnnualLeaveMonthlyBalance {
 
     @Id
@@ -14,7 +14,7 @@ public class AnnualLeaveMonthlyBalance {
     @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 
-    @Column(name = "year", nullable = false)
+    @Column(name = "\"year\"", nullable = false)
     private Integer year;
 
     /**
@@ -23,7 +23,7 @@ public class AnnualLeaveMonthlyBalance {
      * i.e., month=3 means the balance available to use IN March
      * (which includes any unused days from Jan + Feb + March accrual).
      */
-    @Column(name = "month", nullable = false)
+    @Column(name = "\"month\"", nullable = false)
     private Integer month;
 
     /**

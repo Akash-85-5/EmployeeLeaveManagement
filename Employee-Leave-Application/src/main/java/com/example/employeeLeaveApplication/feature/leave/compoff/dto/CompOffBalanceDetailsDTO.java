@@ -1,5 +1,7 @@
 package com.example.employeeLeaveApplication.feature.leave.compoff.dto;
 
+import jakarta.persistence.Column;
+
 import java.math.BigDecimal;
 
 // 🔄 UPDATED FILE
@@ -10,6 +12,7 @@ public class CompOffBalanceDetailsDTO {
 
     // ===================== EXISTING =====================
     private Long employeeId;
+    @Column(name = "balance_year")
     private Integer year;
     private BigDecimal totalApprovedDays;
     private BigDecimal availableDays;

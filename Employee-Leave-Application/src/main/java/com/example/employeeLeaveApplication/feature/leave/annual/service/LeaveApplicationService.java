@@ -8,6 +8,7 @@ import com.example.employeeLeaveApplication.feature.leave.annual.repository.Leav
 import com.example.employeeLeaveApplication.feature.leave.compoff.repository.CompOffRepository;
 import com.example.employeeLeaveApplication.feature.notification.service.NotificationService;
 import com.example.employeeLeaveApplication.feature.leave.compoff.service.CompOffService;
+import com.example.employeeLeaveApplication.feature.separation.service.SeparationService;
 import com.example.employeeLeaveApplication.shared.constants.PolicyConstants;
 import com.example.employeeLeaveApplication.feature.leave.annual.dto.LeaveResponse;
 import com.example.employeeLeaveApplication.feature.leave.compoff.entity.CompOff;
@@ -41,6 +42,7 @@ public class LeaveApplicationService {
     private final SickLeaveBalanceService      sickLeaveBalanceService;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
 
+    private final SeparationService separationService;
     @Value("${app.server.ip}")
     private String serverIp;
 
@@ -57,7 +59,8 @@ public class LeaveApplicationService {
             LeaveAttachmentRepository leaveAttachmentRepository,
             AnnualLeaveBalanceService annualLeaveBalanceService,
             SickLeaveBalanceService sickLeaveBalanceService,
-            EmployeePersonalDetailsRepository personalDetailsRepository) {
+            EmployeePersonalDetailsRepository personalDetailsRepository,
+            SeparationService separationService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService         = notificationService;
         this.employeeRepository          = employeeRepository;
@@ -68,6 +71,7 @@ public class LeaveApplicationService {
         this.annualLeaveBalanceService   = annualLeaveBalanceService;
         this.sickLeaveBalanceService     = sickLeaveBalanceService;
         this.personalDetailsRepository   = personalDetailsRepository;
+        this.separationService            = separationService;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -164,6 +168,7 @@ public class LeaveApplicationService {
     private void validateLeaveTypeAndBalance(LeaveApplication leave,
                                              Employee employee,
                                              BigDecimal days) {
+        LeaveType type = leave.getLeaveType();
         int year  = leave.getStartDate().getYear();
         int month = leave.getStartDate().getMonthValue();
 
@@ -277,6 +282,13 @@ public class LeaveApplicationService {
                     compOffService.useCompOff(empId, leave.getDays(), leave.getId());
             case MATERNITY, PATERNITY -> { /* no balance table */ }
         }
+        if (separationService.isInNoticePeriod(empId)) {
+
+            // Half-day should also extend notice
+            int extensionDays = (int) Math.ceil(days);
+
+            separationService.extendNoticePeriod(empId, extensionDays);
+        }
     }
 
     public void restoreBalance(LeaveApplication leave) {
@@ -320,13 +332,17 @@ public class LeaveApplicationService {
         if (!leave.getEmployeeId().equals(employeeId)) {
             throw new BadRequestException("Unauthorized: You cannot cancel another employee's leave.");
         }
+
         if (leave.getStatus() == LeaveStatus.REJECTED
                 || leave.getStatus() == LeaveStatus.CANCELLED) {
             throw new BadRequestException("Leave is already finalized as " + leave.getStatus());
         }
+
+        // Restore balance only if was already approved
         if (leave.getStatus() == LeaveStatus.APPROVED) {
             restoreBalance(leave);
         }
+
         leave.setStatus(LeaveStatus.CANCELLED);
         leaveApplicationRepository.save(leave);
     }
@@ -352,6 +368,7 @@ public class LeaveApplicationService {
         }
 
         long workingDays = holidayChecker.countWorkingDays(startDate, endDate);
+
         if (workingDays <= 0) {
             throw new BadRequestException(
                     "No working days found in the selected date range. "
@@ -359,17 +376,20 @@ public class LeaveApplicationService {
         }
 
         BigDecimal days = BigDecimal.valueOf(workingDays);
+
         if (startIsHalf && !holidayChecker.isNonWorkingDay(startDate)) {
             days = days.subtract(new BigDecimal("0.5"));
         }
         if (endIsHalf && !holidayChecker.isNonWorkingDay(endDate)) {
             days = days.subtract(new BigDecimal("0.5"));
         }
+
         if (days.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException(
                     "Calculated leave duration is zero or negative. "
                             + "Check your dates and half-day selections.");
         }
+
         return days;
     }
 
@@ -430,6 +450,7 @@ public class LeaveApplicationService {
 
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);
+
         return new LeaveResponse(leaveApplicationRepository.save(leave), null);
     }
 
