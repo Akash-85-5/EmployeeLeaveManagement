@@ -192,4 +192,19 @@ public interface LopRecordRepository extends JpaRepository<LopRecord, Long> {
             @Param("empId") Long employeeId,
             @Param("year")  int  year);
 
+    // ── Notice period LOP sum — used by EmployeeSeparationService ─
+
+    @Query("""
+        SELECT COALESCE(SUM(l.lopDays), 0)
+        FROM   LopRecord l
+        WHERE  l.employeeId = :empId
+          AND  l.lopDate   >= :from
+          AND  l.lopDate   <= :to
+          AND  l.reversed   = false
+    """)
+    Double sumLopDaysForPeriod(
+            @Param("empId") Long      employeeId,
+            @Param("from")  LocalDate from,
+            @Param("to")    LocalDate to);
+
 }

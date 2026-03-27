@@ -71,6 +71,11 @@ public class LopService {
             // HR and CFO — all employees, highest LOP first
             case HR, CFO ->
                     lopRepo.findMonthlyLopAllHighFirst(year, month);
+
+            // Any future roles that don't have LOP visibility
+            default ->
+                    throw new IllegalArgumentException(
+                            "LOP view not supported for role: " + role);
         };
 
         return toResponseList(records);
@@ -106,6 +111,11 @@ public class LopService {
             // HR and CFO — all employees, highest LOP first
             case HR, CFO ->
                     lopRepo.findYearlyLopAllHighFirst(year);
+
+            // Any future roles that don't have LOP visibility
+            default ->
+                    throw new IllegalArgumentException(
+                            "LOP view not supported for role: " + role);
         };
 
         return toResponseList(records);

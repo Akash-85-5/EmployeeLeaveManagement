@@ -9,6 +9,7 @@ import com.example.employeeLeaveApplication.feature.leave.annual.repository.Leav
 import com.example.employeeLeaveApplication.feature.leave.compoff.repository.CompOffRepository;
 import com.example.employeeLeaveApplication.feature.notification.service.NotificationService;
 import com.example.employeeLeaveApplication.feature.leave.compoff.service.CompOffService;
+import com.example.employeeLeaveApplication.feature.separation.service.SeparationService;
 import com.example.employeeLeaveApplication.shared.constants.PolicyConstants;
 import com.example.employeeLeaveApplication.feature.leave.annual.dto.LeaveResponse;
 import com.example.employeeLeaveApplication.feature.leave.compoff.entity.CompOff;
@@ -43,6 +44,7 @@ public class LeaveApplicationService {
     private final LeaveAllocationRepository leaveAllocationRepository;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
 
+    private final SeparationService separationService;
     @Value("${app.server.ip}")
     private String serverIp;
 
@@ -59,19 +61,21 @@ public class LeaveApplicationService {
             LeaveAttachmentRepository leaveAttachmentRepository,
             AnnualLeaveBalanceService annualLeaveBalanceService,
             LeaveAllocationRepository leaveAllocationRepository,
-            EmployeePersonalDetailsRepository personalDetailsRepository) {
-        this.leaveApplicationRepository   = leaveApplicationRepository;
-        this.notificationService           = notificationService;
-        this.employeeRepository            = employeeRepository;
-        this.holidayChecker                = holidayChecker;
-        this.compOffService                = compOffService;
-        this.compOffRepository             = compOffRepository;
-        this.leaveAttachmentRepository     = leaveAttachmentRepository;
-        this.annualLeaveBalanceService     = annualLeaveBalanceService;
-        this.leaveAllocationRepository     = leaveAllocationRepository;
-        this.personalDetailsRepository     = personalDetailsRepository;
-    }
+            EmployeePersonalDetailsRepository personalDetailsRepository,
+            SeparationService separationService) {
 
+        this.leaveApplicationRepository   = leaveApplicationRepository;
+        this.notificationService          = notificationService;
+        this.employeeRepository           = employeeRepository;
+        this.holidayChecker               = holidayChecker;
+        this.compOffService               = compOffService;
+        this.compOffRepository            = compOffRepository;
+        this.leaveAttachmentRepository    = leaveAttachmentRepository;
+        this.annualLeaveBalanceService    = annualLeaveBalanceService;
+        this.leaveAllocationRepository    = leaveAllocationRepository;
+        this.personalDetailsRepository    = personalDetailsRepository;
+        this.separationService            = separationService;
+    }
     // ═══════════════════════════════════════════════════════════════
     // APPLY LEAVE
     // ═══════════════════════════════════════════════════════════════
@@ -254,12 +258,13 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // BALANCE DEDUCTION (called on APPROVAL)
-    // ═══════════════════════════════════════════════════════════════
+// BALANCE DEDUCTION (called on APPROVAL)
+// ═══════════════════════════════════════════════════════════════
 
     /**
      * Called when a leave is finally approved (either auto or by approver).
      * Deducts from the appropriate balance.
+     * Also extends notice period if employee is in notice.
      */
     public void applyBalanceDeduction(LeaveApplication leave) {
         LeaveType type  = leave.getLeaveType();
@@ -268,6 +273,7 @@ public class LeaveApplicationService {
         int month       = leave.getStartDate().getMonthValue();
         Long empId      = leave.getEmployeeId();
 
+        // 1️⃣ Deduct Leave Balance
         switch (type) {
             case ANNUAL_LEAVE ->
                     annualLeaveBalanceService.deductLeave(empId, year, month, days);
@@ -275,43 +281,49 @@ public class LeaveApplicationService {
             case COMP_OFF ->
                     compOffService.useCompOff(empId, leave.getDays(), leave.getId());
 
-            // SICK, MATERNITY, PATERNITY: no separate balance table,
-            // balance is computed live from approved leave records vs allocation.
-            case SICK, MATERNITY, PATERNITY -> { /* no-op */ }
+            // These types do not use separate balance tables
+            case SICK, MATERNITY, PATERNITY -> {
+                // No deduction needed
+            }
+
+            default ->
+                    throw new BadRequestException("Unsupported leave type: " + type);
+        }
+
+        // 2️⃣ Extend Notice Period (if employee is in notice)
+        if (separationService.isInNoticePeriod(empId)) {
+
+            // Half-day should also extend notice
+            int extensionDays = (int) Math.ceil(days);
+
+            separationService.extendNoticePeriod(empId, extensionDays);
         }
     }
 
-    /**
-     * Called on leave cancellation to restore balance.
-     */
-    public void restoreBalance(LeaveApplication leave) {
-        LeaveType type = leave.getLeaveType();
-        double days    = leave.getDays().doubleValue();
-        int year       = leave.getStartDate().getYear();
-        int month      = leave.getStartDate().getMonthValue();
-        Long empId     = leave.getEmployeeId();
+    private void addBackLeaveBalance(LeaveApplication leave) {
+
+        LeaveType type  = leave.getLeaveType();
+        double days     = leave.getDays().doubleValue();
+        int year        = leave.getStartDate().getYear();
+        int month       = leave.getStartDate().getMonthValue();
+        Long empId      = leave.getEmployeeId();
 
         switch (type) {
             case ANNUAL_LEAVE ->
                     annualLeaveBalanceService.restoreLeave(empId, year, month, days);
 
             case COMP_OFF -> {
-                List<CompOff> linked = compOffRepository.findByUsedLeaveApplicationId(leave.getId());
-                BigDecimal restored = BigDecimal.ZERO;
-                for (CompOff c : linked) {
-                    c.setStatus(CompOffStatus.EARNED);
-                    c.setUsedLeaveApplicationId(null);
-                    compOffRepository.save(c);
-                    restored = restored.add(c.getDays());
-                }
-                if (restored.compareTo(BigDecimal.ZERO) > 0) {
-                    compOffService.restoreCompOffBalance(empId, restored);
-                }
+                compOffService.restoreCompOffRecords(leave.getId(), empId, leave.getDays());
             }
-            case SICK, MATERNITY, PATERNITY -> { /* no balance table to restore */ }
+
+            case SICK, MATERNITY, PATERNITY -> {
+                // No restoration needed
+            }
+
+            default ->
+                    throw new BadRequestException("Unsupported leave type: " + type);
         }
     }
-
     // ═══════════════════════════════════════════════════════════════
     // CANCEL LEAVE
     // ═══════════════════════════════════════════════════════════════
@@ -333,7 +345,7 @@ public class LeaveApplicationService {
 
         // Restore balance only if was already approved
         if (leave.getStatus() == LeaveStatus.APPROVED) {
-            restoreBalance(leave);
+            addBackLeaveBalance(leave);
         }
 
         leave.setStatus(LeaveStatus.CANCELLED);
