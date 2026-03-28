@@ -26,7 +26,7 @@ public class DashboardController {
     // ── EMPLOYEE ──────────────────────────────────────────────────
 
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.id")
+    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<EmployeeDashboardResponse> getEmployeeDashboard(
             @PathVariable Long employeeId) {
         log.info("[API] GET employee dashboard: {}", employeeId);

@@ -16,7 +16,7 @@ public class CustomUserDetails implements UserDetails {
 
     // ✅ REQUIRED (this was missing)
     public Long getId() {
-        return user.getEmployee().getId();
+        return user.getId();
     }
 
     public User getUser() {

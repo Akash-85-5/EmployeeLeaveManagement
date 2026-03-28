@@ -96,30 +96,19 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(
-                List.of(
-                        "http://localhost:5173",
-                        "http://localhost:4173",
-                        "https://fqkvs6nm-8080.inc1.devtunnels.ms",
-                        "https://lh4dz46t-5173.inc1.devtunnels.ms"  // ← removed trailing slash
-                )
-        );
+        configuration.setAllowedOriginPatterns(List.of("*")); // ✅ allows ALL (including IP)
 
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         );
 
-        configuration.setAllowedHeaders(
-                List.of("Authorization", "Content-Type")
-        );
+        configuration.setAllowedHeaders(List.of("*"));
 
-        configuration.setExposedHeaders(
-                List.of("Set-Cookie")  // ← tells browser it's allowed to read this header
-        );
+        configuration.setAllowCredentials(true); // ✅ required if using cookies/auth
 
-        configuration.setAllowCredentials(true);  // ← required for cookies
+        configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
 
-        configuration.setMaxAge(3600L); // cache preflight for 1 hour
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
