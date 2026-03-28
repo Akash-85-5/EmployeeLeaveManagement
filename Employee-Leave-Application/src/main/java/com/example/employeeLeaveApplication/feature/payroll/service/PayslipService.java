@@ -1,6 +1,11 @@
 package com.example.employeeLeaveApplication.feature.payroll.service;
-
+import java.util.stream.Collectors;
+import com.example.employeeLeaveApplication.feature.employee.dto.ExperiencedPersonalDetailsRequest;
+import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
+import com.example.employeeLeaveApplication.feature.employee.repository.EmployeePersonalDetailsRepository;
+import com.example.employeeLeaveApplication.feature.employee.service.EmployeeService;
 import com.example.employeeLeaveApplication.feature.payroll.dto.CreatePayslipRequest;
+import com.example.employeeLeaveApplication.feature.payroll.dto.MonthlyPayslipResponse;
 import com.example.employeeLeaveApplication.feature.payroll.dto.PayslipResponse;
 import com.example.employeeLeaveApplication.feature.payroll.dto.YearlySummaryResponse;
 import com.example.employeeLeaveApplication.feature.payroll.entity.Payslip;
@@ -24,13 +29,19 @@ public class PayslipService {
     private final PayslipRepository payslipRepository;
     private final PayslipPdfService pdfService;
     private final LopService lopService;
+    private final EmployeeService employeeService;
+    private final EmployeePersonalDetailsRepository employeePersonalDetailsRepository;
 
     public PayslipService(PayslipRepository payslipRepository,
                           PayslipPdfService pdfService,
-                          LopService lopService) {
+                          LopService lopService,
+                          EmployeeService employeeService,
+                          EmployeePersonalDetailsRepository employeePersonalDetailsRepository) {
         this.payslipRepository = payslipRepository;
         this.pdfService = pdfService;
         this.lopService = lopService;
+        this.employeeService = employeeService;
+        this.employeePersonalDetailsRepository = employeePersonalDetailsRepository;
     }
 
     private BigDecimal safe(BigDecimal v){
@@ -40,14 +51,20 @@ public class PayslipService {
     // CREATE
     public PayslipResponse createPayslip(CreatePayslipRequest req){
 
-        Optional<Payslip> existing =
-                payslipRepository.findByEmployeeIdAndYearAndMonth(
+        Payslip existing = payslipRepository
+                .findByEmployeeIdAndYearAndMonth(
                         req.getEmployeeId(),
                         req.getYear(),
-                        req.getMonth());
+                        req.getMonth())
+                .orElse(null);
 
-        if(existing.isPresent() && existing.get().getStatus()!=PayrollStatus.DELETED){
-            throw new BadRequestException("Payslip already exists");
+        if(existing != null && existing.getStatus() != PayrollStatus.DELETED){
+
+            if(existing.getStatus() == PayrollStatus.GENERATED){
+                throw new BadRequestException("Payslip already GENERATED for this month");
+            }
+
+            throw new BadRequestException("Payslip already exists in DRAFT");
         }
 
         Payslip p = new Payslip();
@@ -58,7 +75,6 @@ public class PayslipService {
 
         return PayslipMapper.toResponse(payslipRepository.save(p));
     }
-
     // UPDATE
     public PayslipResponse updatePayslip(CreatePayslipRequest req){
 
@@ -160,10 +176,11 @@ public class PayslipService {
                 .findByEmployeeIdAndYearAndMonth(employeeId,year,month)
                 .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
-        if(p.getStatus()!=PayrollStatus.GENERATED){
-            throw new BadRequestException("Not generated");
+        if(p.getStatus() == PayrollStatus.DELETED){
+            throw new BadRequestException("Payslip deleted");
         }
 
+        // ✅ Allow both DRAFT and GENERATED
         return PayslipMapper.toResponse(p);
     }
 
@@ -173,14 +190,84 @@ public class PayslipService {
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
                 .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
 
-        ByteArrayInputStream bis = pdfService.generatePdf(p);
+        EmployeePersonalDetails emp = employeePersonalDetailsRepository
+                .findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee details not found"));
+
+        ByteArrayInputStream bis = pdfService.generatePdf(p, emp);
+
         return bis.readAllBytes();
     }
 
-    public YearlySummaryResponse yearlySummary(Long employeeId,Integer year){
-        // simplified
+    public YearlySummaryResponse yearlySummary(Integer year){
+
+        List<Payslip> payslips = payslipRepository
+                .findByYearAndStatusNot(year, PayrollStatus.DELETED);
+
         YearlySummaryResponse res = new YearlySummaryResponse();
         res.setYear(year);
+
+        BigDecimal totalBasic = BigDecimal.ZERO;
+        BigDecimal totalHra = BigDecimal.ZERO;
+        BigDecimal totalConveyance = BigDecimal.ZERO;
+        BigDecimal totalMedical = BigDecimal.ZERO;
+        BigDecimal totalOtherAllowance = BigDecimal.ZERO;
+
+        BigDecimal totalBonus = BigDecimal.ZERO;
+        BigDecimal totalIncentive = BigDecimal.ZERO;
+        BigDecimal totalStipend = BigDecimal.ZERO;
+
+        BigDecimal totalPf = BigDecimal.ZERO;
+        BigDecimal totalEsi = BigDecimal.ZERO;
+        BigDecimal totalProfessionalTax = BigDecimal.ZERO;
+        BigDecimal totalTds = BigDecimal.ZERO;
+        BigDecimal totalLop = BigDecimal.ZERO;
+
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
+
+        for(Payslip p : payslips){
+
+            totalBasic = totalBasic.add(safe(p.getBasicSalary()));
+            totalHra = totalHra.add(safe(p.getHra()));
+            totalConveyance = totalConveyance.add(safe(p.getConveyance()));
+            totalMedical = totalMedical.add(safe(p.getMedical()));
+            totalOtherAllowance = totalOtherAllowance.add(safe(p.getOtherAllowance()));
+
+            totalBonus = totalBonus.add(safe(p.getBonus()));
+            totalIncentive = totalIncentive.add(safe(p.getIncentive()));
+            totalStipend = totalStipend.add(safe(p.getStipend()));
+
+            totalPf = totalPf.add(safe(p.getPf()));
+            totalEsi = totalEsi.add(safe(p.getEsi()));
+            totalProfessionalTax = totalProfessionalTax.add(safe(p.getProfessionalTax()));
+            totalTds = totalTds.add(safe(p.getTds()));
+            totalLop = totalLop.add(safe(p.getLop()));
+
+            totalGross = totalGross.add(safe(p.getGrossSalary()));
+            totalNet = totalNet.add(safe(p.getNetSalary()));
+        }
+
+        // ✅ set all values
+        res.setTotalBasic(totalBasic);
+        res.setTotalHra(totalHra);
+        res.setTotalConveyance(totalConveyance);
+        res.setTotalMedical(totalMedical);
+        res.setTotalOtherAllowance(totalOtherAllowance);
+
+        res.setTotalBonus(totalBonus);
+        res.setTotalIncentive(totalIncentive);
+        res.setTotalStipend(totalStipend);
+
+        res.setTotalPf(totalPf);
+        res.setTotalEsi(totalEsi);
+        res.setTotalProfessionalTax(totalProfessionalTax);
+        res.setTotalTds(totalTds);
+        res.setTotalLop(totalLop);
+
+        res.setTotalGrossSalary(totalGross);
+        res.setTotalNetSalary(totalNet);
+
         return res;
     }
 
@@ -239,5 +326,123 @@ public class PayslipService {
         calculatePayroll(p);
 
         return PayslipMapper.toResponse(p);
+    }
+    public YearlySummaryResponse getEmployeeYearlySummary(Long employeeId, Integer year){
+
+        List<Payslip> payslips = payslipRepository
+                .findByEmployeeIdAndStatus(employeeId, PayrollStatus.GENERATED)
+                .stream()
+                .filter(p -> p.getYear().equals(year))
+                .toList();
+
+        YearlySummaryResponse res = new YearlySummaryResponse();
+        res.setYear(year);
+
+        BigDecimal totalBasic = BigDecimal.ZERO;
+        BigDecimal totalHra = BigDecimal.ZERO;
+        BigDecimal totalConveyance = BigDecimal.ZERO;
+        BigDecimal totalMedical = BigDecimal.ZERO;
+        BigDecimal totalOtherAllowance = BigDecimal.ZERO;
+
+        BigDecimal totalBonus = BigDecimal.ZERO;
+        BigDecimal totalIncentive = BigDecimal.ZERO;
+        BigDecimal totalStipend = BigDecimal.ZERO;
+
+        BigDecimal totalPf = BigDecimal.ZERO;
+        BigDecimal totalEsi = BigDecimal.ZERO;
+        BigDecimal totalProfessionalTax = BigDecimal.ZERO;
+        BigDecimal totalTds = BigDecimal.ZERO;
+        BigDecimal totalLop = BigDecimal.ZERO;
+
+        BigDecimal totalGross = BigDecimal.ZERO;
+        BigDecimal totalNet = BigDecimal.ZERO;
+
+        for(Payslip p : payslips){
+
+            totalBasic = totalBasic.add(safe(p.getBasicSalary()));
+            totalHra = totalHra.add(safe(p.getHra()));
+            totalConveyance = totalConveyance.add(safe(p.getConveyance()));
+            totalMedical = totalMedical.add(safe(p.getMedical()));
+            totalOtherAllowance = totalOtherAllowance.add(safe(p.getOtherAllowance()));
+
+            totalBonus = totalBonus.add(safe(p.getBonus()));
+            totalIncentive = totalIncentive.add(safe(p.getIncentive()));
+            totalStipend = totalStipend.add(safe(p.getStipend()));
+
+            totalPf = totalPf.add(safe(p.getPf()));
+            totalEsi = totalEsi.add(safe(p.getEsi()));
+            totalProfessionalTax = totalProfessionalTax.add(safe(p.getProfessionalTax()));
+            totalTds = totalTds.add(safe(p.getTds()));
+            totalLop = totalLop.add(safe(p.getLop()));
+
+            totalGross = totalGross.add(safe(p.getGrossSalary()));
+            totalNet = totalNet.add(safe(p.getNetSalary()));
+        }
+
+        res.setTotalBasic(totalBasic);
+        res.setTotalHra(totalHra);
+        res.setTotalConveyance(totalConveyance);
+        res.setTotalMedical(totalMedical);
+        res.setTotalOtherAllowance(totalOtherAllowance);
+
+        res.setTotalBonus(totalBonus);
+        res.setTotalIncentive(totalIncentive);
+        res.setTotalStipend(totalStipend);
+
+        res.setTotalPf(totalPf);
+        res.setTotalEsi(totalEsi);
+        res.setTotalProfessionalTax(totalProfessionalTax);
+        res.setTotalTds(totalTds);
+        res.setTotalLop(totalLop);
+
+        res.setTotalGrossSalary(totalGross);
+        res.setTotalNetSalary(totalNet);
+
+        return res;
+    }
+
+    public List<MonthlyPayslipResponse> getEmployeeMonthlyBreakdown(Long employeeId, Integer year){
+
+        return payslipRepository
+                .findByEmployeeIdAndStatusNot(employeeId, PayrollStatus.DELETED)
+                .stream()
+                .filter(p -> p.getYear().equals(year))
+                .sorted((a, b) -> a.getMonth().compareTo(b.getMonth()))
+                .map(p -> {
+                    MonthlyPayslipResponse res = new MonthlyPayslipResponse();
+
+                    res.setMonth(p.getMonth());
+                    res.setYear(p.getYear());
+
+                    res.setBasicSalary(safe(p.getBasicSalary()));
+                    res.setHra(safe(p.getHra()));
+                    res.setConveyance(safe(p.getConveyance()));
+                    res.setMedical(safe(p.getMedical()));
+                    res.setOtherAllowance(safe(p.getOtherAllowance()));
+
+                    res.setBonus(safe(p.getBonus()));
+                    res.setIncentive(safe(p.getIncentive()));
+                    res.setStipend(safe(p.getStipend()));
+                    res.setVariablePay(safe(p.getVariablePay()));
+
+                    res.setGrossSalary(safe(p.getGrossSalary()));
+
+                    res.setPf(safe(p.getPf()));
+                    res.setEsi(safe(p.getEsi()));
+                    res.setProfessionalTax(safe(p.getProfessionalTax()));
+                    res.setTds(safe(p.getTds()));
+
+                    res.setLopDays(p.getLopDays());
+                    res.setLop(safe(p.getLop()));
+
+                    res.setNetSalary(safe(p.getNetSalary()));
+
+                    res.setGeneratedDate(p.getGeneratedDate());
+
+                    res.setStatus(p.getStatus().name());
+
+                    return res;
+                })
+                .collect(Collectors.toList());
     }
 }

@@ -31,5 +31,9 @@ public interface PayslipRepository extends JpaRepository<Payslip,Long> {
             Integer month,
             PayrollStatus status
     );
-
+    List<Payslip> findByYearAndStatusNot(Integer year, PayrollStatus status);
+    List<Payslip> findByEmployeeIdAndStatusNot(
+            Long employeeId,
+            PayrollStatus status
+    );
 }

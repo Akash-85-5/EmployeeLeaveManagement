@@ -1,50 +1,51 @@
 package com.example.employeeLeaveApplication.feature.payroll.service;
 
+import com.example.employeeLeaveApplication.feature.employee.entity.EmployeePersonalDetails;
 import com.example.employeeLeaveApplication.feature.payroll.entity.Payslip;
-import com.lowagie.text.Document;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfWriter;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 
 @Service
 public class PayslipPdfService {
 
-    public ByteArrayInputStream generatePdf(Payslip payslip) {
+    @Autowired
+    private SpringTemplateEngine templateEngine;
 
-        Document document = new Document();
+    public ByteArrayInputStream generatePdf(Payslip payslip,
+                                            EmployeePersonalDetails emp) {
+
+        // ✅ 1. Set Thymeleaf data
+        Context context = new Context();
+        context.setVariable("p", payslip);
+        context.setVariable("e", emp);
+
+        String html = templateEngine.process("payslip", context);
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
+            // ✅ 2. IMPORTANT: Set base path for images (logo fix)
+            String baseUrl = new File("src/main/resources/static/").toURI().toString();
 
-            PdfWriter.getInstance(document, out);
-            document.open();
+            PdfRendererBuilder builder = new PdfRendererBuilder();
 
-            document.add(new Paragraph("Employee Payslip"));
-            document.add(new Paragraph("Employee ID: " + payslip.getEmployeeId()));
-            document.add(new Paragraph("Year: " + payslip.getYear()));
-            document.add(new Paragraph("Month: " + payslip.getMonth()));
+            builder.withHtmlContent(html, baseUrl); // ✅ FIXED
+            builder.toStream(out);
 
-            document.add(new Paragraph("Basic Salary: " + payslip.getBasicSalary()));
-            document.add(new Paragraph("HRA: " + payslip.getHra()));
-            document.add(new Paragraph("Conveyance: " + payslip.getConveyance()));
-            document.add(new Paragraph("Medical: " + payslip.getMedical()));
-            document.add(new Paragraph("Other Allowance: " + payslip.getOtherAllowance()));
+            // ✅ Optional but improves layout consistency
+            builder.useFastMode();
 
-            document.add(new Paragraph("PF Deduction: " + payslip.getPf()));
-            document.add(new Paragraph("Professional Tax: " + payslip.getProfessionalTax()));
-            document.add(new Paragraph("ESI Deduction: " + payslip.getEsi()));
-            document.add(new Paragraph("LOP Deduction: " + payslip.getLop()));
-            document.add(new Paragraph("Variable Pay Deduction: " + payslip.getVariablePay()));
+            builder.run();
 
-            document.add(new Paragraph("Net Salary: " + payslip.getNetSalary()));
-
-            document.close();
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception ex) {
+            throw new RuntimeException("PDF generation failed", ex);
         }
 
         return new ByteArrayInputStream(out.toByteArray());
