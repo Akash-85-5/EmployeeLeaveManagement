@@ -1,4 +1,4 @@
-package com.example.employeeLeaveApplication.doc_controller;
+package com.example.employeeLeaveApplication.shared.doc_controller;
 
 import com.example.employeeLeaveApplication.shared.exceptions.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;

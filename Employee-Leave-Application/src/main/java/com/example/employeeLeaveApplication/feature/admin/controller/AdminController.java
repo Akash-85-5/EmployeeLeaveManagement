@@ -43,29 +43,6 @@ public class AdminController {
     // EXISTING ENDPOINTS (UNCHANGED)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    @PostMapping("/carry-forward")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> processCarryForward(@RequestParam Integer fromYear) {
-        try {
-            carryForwardService.processYearEndCarryForward(fromYear);
-            return ResponseEntity.ok("Carry forward processed successfully for year " + fromYear);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/carry-forward/{employeeId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> processEmployeeCarryForward(
-            @PathVariable Long employeeId, @RequestParam Integer fromYear) {
-        try {
-            carryForwardService.processEmployeeCarryForward(employeeId, fromYear);
-            return ResponseEntity.ok("Carry forward processed for employee " + employeeId);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
-        }
-    }
-
     @PostMapping("/users/add")
 //    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> createUser(@RequestBody CreateUserRequest request) {
@@ -115,5 +92,27 @@ public class AdminController {
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable Long employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+    }
+    @PostMapping("/carry-forward")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> processCarryForward(@RequestParam Integer fromYear) {
+        try {
+            carryForwardService.processYearEndCarryForward(fromYear);
+            return ResponseEntity.ok("Carry forward processed successfully for year " + fromYear);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/carry-forward/{employeeId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> processEmployeeCarryForward(
+            @PathVariable Long employeeId, @RequestParam Integer fromYear) {
+        try {
+            carryForwardService.processEmployeeCarryForward(employeeId, fromYear);
+            return ResponseEntity.ok("Carry forward processed for employee " + employeeId);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Carry forward failed: " + e.getMessage());
+        }
     }
 }

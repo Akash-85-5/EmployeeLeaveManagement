@@ -1,4 +1,4 @@
-package com.example.employeeLeaveApplication.doc_controller;
+package com.example.employeeLeaveApplication.shared.doc_controller;
 
 import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveAttachment;
 import com.example.employeeLeaveApplication.feature.leave.annual.repository.LeaveAttachmentRepository;
