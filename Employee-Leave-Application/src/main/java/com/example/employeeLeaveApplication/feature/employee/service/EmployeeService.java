@@ -12,6 +12,7 @@ import com.example.employeeLeaveApplication.feature.employee.repository.Employee
 import com.example.employeeLeaveApplication.feature.employee.repository.EmployeeRepository;
 import com.example.employeeLeaveApplication.feature.auth.repository.UserRepository;
 import com.example.employeeLeaveApplication.shared.enums.*;
+import com.example.employeeLeaveApplication.shared.exceptions.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.data.domain.Page;
@@ -119,13 +120,14 @@ public class EmployeeService {
     }
 
     // ─── FRESHER: submit personal details + documents together ────
+
     /**
      * Single multipart request contains:
-     *   - data         : JSON string of FresherPersonalDetailsRequest
-     *   - aadhaarCard  : MultipartFile
-     *   - tc           : MultipartFile
-     *   - offerLetter  : MultipartFile
-     *
+     * - data         : JSON string of FresherPersonalDetailsRequest
+     * - aadhaarCard  : MultipartFile
+     * - tc           : MultipartFile
+     * - offerLetter  : MultipartFile
+     * <p>
      * Employee can resubmit only if status = REJECTED.
      * After submit → status = PENDING → HR (id=2) notified.
      */
@@ -194,12 +196,13 @@ public class EmployeeService {
     }
 
     // ─── EXPERIENCED: submit personal details + documents together ─
+
     /**
      * Single multipart request contains:
-     *   - data                  : JSON string of ExperiencedPersonalDetailsRequest
-     *   - aadhaarCard           : MultipartFile
-     *   - experienceCertificate : MultipartFile
-     *   - leavingLetter         : MultipartFile
+     * - data                  : JSON string of ExperiencedPersonalDetailsRequest
+     * - aadhaarCard           : MultipartFile
+     * - experienceCertificate : MultipartFile
+     * - leavingLetter         : MultipartFile
      */
     @Transactional
     public EmployeePersonalDetails submitExperiencedDetails(
@@ -405,9 +408,9 @@ public class EmployeeService {
     public Employee updateEmployee(Long id, Employee employee) {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
-        if (employee.getName() != null)      existing.setName(employee.getName());
-        if (employee.getEmail() != null)     existing.setEmail(employee.getEmail());
-        if (employee.getRole() != null)      existing.setRole(employee.getRole());
+        if (employee.getName() != null) existing.setName(employee.getName());
+        if (employee.getEmail() != null) existing.setEmail(employee.getEmail());
+        if (employee.getRole() != null) existing.setRole(employee.getRole());
         if (employee.getManagerId() != null) existing.setManagerId(employee.getManagerId());
         return employeeRepository.save(existing);
     }
@@ -438,7 +441,9 @@ public class EmployeeService {
 
     // ─── Private helpers ──────────────────────────────────────────
 
-    /** Fills all common text fields from either fresher or experienced request */
+    /**
+     * Fills all common text fields from either fresher or experienced request
+     */
     private void fillCommonFields(EmployeePersonalDetails pd, Object request) {
         if (request instanceof FresherPersonalDetailsRequest r) {
             pd.setFirstName(r.getFirstName());
@@ -614,31 +619,35 @@ public class EmployeeService {
         };
     }
 
-    public List<Employee> getOnboardingPending(){
+    public List<Employee> getOnboardingPending() {
         return employeeRepository.findOnboardingPending();
     }
-    public void decideBio (Long employeeId, BiometricVpnStatus decision){
+
+    public void decideBio(Long employeeId, BiometricVpnStatus decision) {
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(()->new RuntimeException("Employee not Found"));
-        if (employee.getVpnStatus()== BiometricVpnStatus.PROVIDED){
+                .orElseThrow(() -> new RuntimeException("Employee not Found"));
+        if (employee.getVpnStatus() == BiometricVpnStatus.PROVIDED) {
             employee.setOnboardingCompletedAt(LocalDateTime.now());
         }
         employee.setBiometricStatus(decision);
         employeeRepository.save(employee);
     }
-    public void decideVpn (Long employeeId, BiometricVpnStatus decision){
+
+    public void decideVpn(Long employeeId, BiometricVpnStatus decision) {
         Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(()->new RuntimeException("Employee not Found"));
-        if (employee.getBiometricStatus()== BiometricVpnStatus.PROVIDED){
+                .orElseThrow(() -> new RuntimeException("Employee not Found"));
+        if (employee.getBiometricStatus() == BiometricVpnStatus.PROVIDED) {
             employee.setOnboardingCompletedAt(LocalDateTime.now());
         }
         employee.setVpnStatus(decision);
         employeeRepository.save(employee);
     }
+
     public Employee getById(Long id) {
         return employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
     }
+
     public EmployeeProfileResponse getMyProfile(User user) {
 
         Employee employee = user.getEmployee();

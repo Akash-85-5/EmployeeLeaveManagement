@@ -1,5 +1,6 @@
 package com.example.employeeLeaveApplication.feature.payroll.controller;
-
+import com.example.employeeLeaveApplication.feature.payroll.dto.MonthlyPayslipResponse;
+import com.example.employeeLeaveApplication.security.CustomUserDetails;
 import com.example.employeeLeaveApplication.feature.payroll.dto.CreatePayslipRequest;
 import com.example.employeeLeaveApplication.feature.payroll.dto.PayslipResponse;
 import com.example.employeeLeaveApplication.feature.payroll.dto.YearlySummaryResponse;
@@ -110,11 +111,11 @@ public class PayslipController {
 
     @PreAuthorize("hasRole('CFO')")
     @GetMapping("/employee/{employeeId}/{year}")
-    public List<PayslipResponse> getEmployeeYearlyPayslips(
+    public YearlySummaryResponse getEmployeeAnnualSummary(
             @PathVariable Long employeeId,
-            @PathVariable Integer year){
+            @PathVariable Integer year) {
 
-        return payslipService.getEmployeeHistory(employeeId, year);
+        return payslipService.getEmployeeYearlySummary(employeeId, year);
     }
 
     // ───────────── EMPLOYEE ACTIONS ─────────────
@@ -168,15 +169,25 @@ public class PayslipController {
 
     @PreAuthorize("hasAnyRole('EMPLOYEE','TEAM_LEADER','MANAGER','HR','ADMIN','CFO')")
     @GetMapping("/summary/{year}")
-    public YearlySummaryResponse summary(
+    public YearlySummaryResponse summary(@PathVariable Integer year) {
+
+        return payslipService.yearlySummary(year); // ✅ matches service
+    }
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/employee/{employeeId}/{year}/{month}")
+    public PayslipResponse getEmployeePayslipByMonth(
+            @PathVariable Long employeeId,
             @PathVariable Integer year,
-            Authentication authentication){
+            @PathVariable Integer month) {
 
-        CustomUserDetails user =
-                (CustomUserDetails) authentication.getPrincipal();
+        return payslipService.getEmployeePayslip(employeeId, year, month);
+    }
+    @PreAuthorize("hasRole('CFO')")
+    @GetMapping("/employee/{employeeId}/{year}/monthly")
+    public List<MonthlyPayslipResponse> getEmployeeMonthlyBreakdown(
+            @PathVariable Long employeeId,
+            @PathVariable Integer year){
 
-        Long employeeId = user.getUser().getId();
-
-        return payslipService.yearlySummary(employeeId, year);
+        return payslipService.getEmployeeMonthlyBreakdown(employeeId, year);
     }
 }
