@@ -43,11 +43,11 @@ public class LeaveApplicationService {
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
 
     private final SeparationService separationService;
-    @Value("${app.server.ip}")
-    private String serverIp;
-
-    @Value("${app.server.port}")
-    private String serverPort;
+//    @Value("${aserver.ip}")
+//    private String serverIp;
+//
+//    @Value("${server.port}")
+//    private String serverPort;
 
     public LeaveApplicationService(
             LeaveApplicationRepository leaveApplicationRepository,

@@ -26,7 +26,7 @@ public class DashboardController {
     // ── EMPLOYEE ──────────────────────────────────────────────────
 
     @GetMapping("/employee/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id")
+    @PreAuthorize("#employeeId == authentication.principal.employeeId")
     public ResponseEntity<EmployeeDashboardResponse> getEmployeeDashboard(
             @PathVariable Long employeeId) {
         log.info("[API] GET employee dashboard: {}", employeeId);
@@ -40,7 +40,7 @@ public class DashboardController {
     }
 
     @GetMapping("/monthly-stats/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.id")
+    @PreAuthorize("#employeeId == authentication.principal.employeeId")
     public MonthlyStatsResponse getMonthlyStats(
             @PathVariable Long employeeId,
             @RequestParam Integer year,
@@ -49,7 +49,7 @@ public class DashboardController {
     }
 
     @GetMapping("/employee/calendar/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.id")
+    @PreAuthorize("#employeeId == authentication.principal.employeeId")
     public ResponseEntity<Map<String, List<TeamMemberBalance>>> getEmployeeLeaveCalendar(
             @PathVariable Long employeeId) {
         return ResponseEntity.ok(
@@ -57,7 +57,7 @@ public class DashboardController {
     }
     // ✅ UPDATED: Added @PreAuthorize — was missing before
     @GetMapping("/leave-counts/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.id " +
+    @PreAuthorize("#employeeId == authentication.principal.employeeId " +
             "or hasRole('HR') or hasRole('ADMIN') " +
             "or hasRole('MANAGER')")
     public ResponseEntity<Map<LeaveStatus, Long>> getLeaveCountsByStatus(
@@ -78,7 +78,7 @@ public class DashboardController {
     // ── MANAGER ──────────────────────────────────────────────────
 
     @GetMapping("/manager/summary/{managerId}")
-    @PreAuthorize("#managerId == authentication.principal.id")
+    @PreAuthorize("#managerId == authentication.principal.employeeId")
     public ResponseEntity<ManagerDashboardResponse> getManagerDashboard(
             @PathVariable Long managerId) {
         log.info("[API] GET manager dashboard: {}", managerId);
@@ -93,7 +93,7 @@ public class DashboardController {
 
     // ✅ UPDATED: Added hasRole('MANAGER') check
     @GetMapping("/manager/team-balances/{managerId}")
-    @PreAuthorize("#managerId == authentication.principal.id")
+    @PreAuthorize("#managerId == authentication.principal.employeeId")
     public ResponseEntity<List<TeamMemberBalance>> getTeamBalances(
             @PathVariable Long managerId,
             @RequestParam Integer year) {
@@ -110,7 +110,7 @@ public class DashboardController {
 
     // ✅ UPDATED: Added hasRole('MANAGER') check
     @GetMapping("/manager/pending-count/{managerId}")
-    @PreAuthorize("#managerId == authentication.principal.id")
+    @PreAuthorize("#managerId == authentication.principal.employeeId")
     public ResponseEntity<Integer> getPendingCount(
             @PathVariable Long managerId) {
         log.info("[API] GET pending count: manager={}", managerId);
@@ -127,7 +127,7 @@ public class DashboardController {
     // ✅ UPDATED: Added hasRole('MANAGER') check
     @GetMapping("/manager/pending-requests/{managerId}")
     @PreAuthorize("hasRole('MANAGER') " +
-            "and #managerId == authentication.principal.id")
+            "and #managerId == authentication.principal.employeeId")
     public ResponseEntity<List<ManagerDashboardResponse
             .TeamPendingLeaveDTO>> getPendingRequests(
             @PathVariable Long managerId) {
@@ -143,7 +143,7 @@ public class DashboardController {
     }
 
     @GetMapping("/team-on-leave/{id}")
-    @PreAuthorize("#id == authentication.principal.id")
+    @PreAuthorize("#id == authentication.principal.employeeId")
     public ResponseEntity<List<TeamMemberBalance>> getTeamMembersOnLeaveToday(
             @PathVariable Long id) {
         return ResponseEntity.ok(
@@ -151,7 +151,7 @@ public class DashboardController {
     }
 
     @GetMapping("/team-calendar/{id}")
-    @PreAuthorize("#id == authentication.principal.id")
+    @PreAuthorize("#id == authentication.principal.employeeId")
     public ResponseEntity<Map<String, List<TeamMemberBalance>>> getManagerTeamLeaveCalendar(
             @PathVariable Long id) {
         return ResponseEntity.ok(
@@ -220,7 +220,7 @@ public class DashboardController {
                 dashboardService.getCompanyWideStats(year));
     }
     @GetMapping("/team-members/{Id}")
-    @PreAuthorize("#Id == authentication.principal.id")
+    @PreAuthorize("#Id == authentication.principal.employeeId")
     public ResponseEntity<List<TeamMember>> getTeamMembers(
             @PathVariable Long Id) {
         log.info("[API] GET team balances: manager={}",
@@ -259,7 +259,7 @@ public class DashboardController {
     // ── ADMIN ────────────────────────────────────────────────────
 
     @GetMapping("/admin/{adminId}")
-    @PreAuthorize("#adminId == authentication.principal.id")
+    @PreAuthorize("#adminId == authentication.principal.employeeId")
     public ResponseEntity<AdminDashboardResponse> getAdminDashboard(
             @PathVariable Long adminId) {
         log.info("[API] GET admin dashboard: {}", adminId);

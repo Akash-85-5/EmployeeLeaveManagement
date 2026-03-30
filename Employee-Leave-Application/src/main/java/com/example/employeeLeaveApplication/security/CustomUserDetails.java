@@ -18,6 +18,9 @@ public class CustomUserDetails implements UserDetails {
     public Long getId() {
         return user.getId();
     }
+    public Long getEmployeeId() {
+        return user.getEmployee().getId();
+    }
 
     public User getUser() {
         return user;
