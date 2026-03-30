@@ -24,7 +24,7 @@ public class LeaveAttachmentService {
     private final LeaveAttachmentRepository attachmentRepository;
     private final LeaveApplicationRepository leaveApplicationRepository;
 
-    @Value("${file.upload-dir:uploads/leaves}")
+    @Value("${file.upload-dir}")
     private String uploadDir;
 
     // Max file size: 5MB

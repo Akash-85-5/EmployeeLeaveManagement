@@ -17,7 +17,7 @@ import java.nio.file.Paths;
 @RequestMapping("/api/documents")
 public class DocumentController {
 
-    @Value("${app.document.upload-dir:uploads/profile-documents}")
+    @Value("${app.document.upload-dir}")
     private String uploadDir;
     @GetMapping("/view")
 //    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
