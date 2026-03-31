@@ -96,7 +96,7 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("http://192.168.1.3:5173")); // ✅ allows ALL (including IP)
+        configuration.setAllowedOriginPatterns(List.of("*")); // ✅ allows ALL (including IP)
 
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
