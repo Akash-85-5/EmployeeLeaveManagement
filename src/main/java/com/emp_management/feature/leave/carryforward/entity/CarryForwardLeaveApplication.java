@@ -37,7 +37,7 @@ public class CarryForwardLeaveApplication {
 
     // ── Applicant ─────────────────────────────────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", nullable = false)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     /** Role of the applicant at the time of submission — drives the approval chain. */

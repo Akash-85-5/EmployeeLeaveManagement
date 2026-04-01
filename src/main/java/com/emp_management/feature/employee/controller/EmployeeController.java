@@ -28,14 +28,12 @@ public class EmployeeController {
 
     // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/profile/{employeeId}")
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
@@ -50,7 +48,6 @@ public class EmployeeController {
 
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("#employeeId == authentication.principal.id")
     public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
@@ -72,7 +69,6 @@ public class EmployeeController {
     }
 
     @GetMapping("/all")
-//    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
     public Page<Employee> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,

@@ -22,6 +22,9 @@ public class ProfileResponse {
     private String vpnStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String branch;
+    private String country;
+    private String companyName ;
 
     // ── Personal details status — UNCHANGED ───────────────────────
     private boolean personalDetailsComplete;
@@ -241,4 +244,28 @@ public class ProfileResponse {
 
     public LocalDate getOldCompanyEndDate() { return oldCompanyEndDate; }
     public void setOldCompanyEndDate(LocalDate oldCompanyEndDate) { this.oldCompanyEndDate = oldCompanyEndDate; }
+
+    public String getBranch() {
+        return branch;
+    }
+
+    public void setBranch(String branch) {
+        this.branch = branch;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
 }

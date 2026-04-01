@@ -20,7 +20,7 @@ public class LeaveApplication {
 
     // ── FK to Employee (String PK: emp_code) ─────────────────────
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_code", nullable = false)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     // ── FK to LeaveType entity ────────────────────────────────────

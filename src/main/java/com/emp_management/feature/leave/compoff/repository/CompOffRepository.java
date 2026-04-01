@@ -2,6 +2,7 @@ package com.emp_management.feature.leave.compoff.repository;
 
 
 import com.emp_management.feature.leave.compoff.entity.CompOff;
+import com.emp_management.feature.leave.compoff.entity.CompOffBalance;
 import com.emp_management.shared.enums.RequestStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +26,7 @@ public interface CompOffRepository extends JpaRepository<CompOff, Long> {
 
     // 🔄 Find the exact Comp-Off records linked to a specific leave application for reversal
     List<CompOff> findByUsedLeaveApplicationId(Long applicationId);
-
+    
 
     Page<CompOff> findByreportingIdAndStatus(String managerId,RequestStatus status, Pageable pageable);
 

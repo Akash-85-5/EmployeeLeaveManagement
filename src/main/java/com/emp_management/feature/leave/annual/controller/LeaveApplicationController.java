@@ -55,7 +55,7 @@ public class LeaveApplicationController {
     @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LeaveResponse> applyLeave(
             @RequestParam String employeeId,              // now String (emp_code)
-            @RequestParam Long leaveTypeId,               // FK to LeaveType entity
+            @RequestParam String leaveTypeName,               // FK to LeaveType entity
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam String reason,
@@ -69,9 +69,9 @@ public class LeaveApplicationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Employee not found: " + employeeId));
 
-        LeaveType leaveType = leaveTypeRepository.findById(leaveTypeId)
+        LeaveType leaveType = leaveTypeRepository.findByLeaveType(leaveTypeName)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Invalid leaveTypeId: " + leaveTypeId));
+                        HttpStatus.BAD_REQUEST, "Invalid leaveTypeId: " + leaveTypeName));
 
         if (startDate == null) throw new BadRequestException("Start date is required");
 

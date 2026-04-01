@@ -77,6 +77,9 @@ public class EmployeeService {
         response.setVpnStatus(employee.getOnboarding().getVpnStatus().name());
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
+        response.setBranch(employee.getBranch().getName());
+        response.setCompanyName(employee.getBranch().getCompany().getName());
+        response.setCountry(employee.getBranch().getCompany().getCountry().getName());
 
         if (employee.getReportingId() != null) {
             employeeRepository.findByEmpId(employee.getReportingId())

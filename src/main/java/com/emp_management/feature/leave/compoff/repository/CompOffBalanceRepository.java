@@ -27,4 +27,6 @@ public interface CompOffBalanceRepository extends JpaRepository<CompOffBalance, 
      */
     @Query("SELECT SUM(c.balance) FROM CompOffBalance c WHERE c.employeeId = :employeeId")
     Double getTotalAvailableBalance(@Param("employeeId") String employeeId);
+
+
 }

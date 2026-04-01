@@ -63,4 +63,29 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 //    List<Employee> findAllHr();
 //    @Query("SELECT e FROM Employee e WHERE e.teamLeaderId = :teamLeaderId AND e.active = true")
 //    List<Employee> findActiveTeamMembersByTeamLeader(@Param("teamLeaderId") Long teamLeaderId);
+
+
+    // Find active team members (employees whose reportingId = this manager)
+    @Query("""
+    SELECT e FROM Employee e
+    WHERE e.reportingId = :managerId
+      AND e.active      = true
+""")
+    List<Employee> findActiveTeamMembers(@Param("managerId") String managerId);
+
+    // All active employees
+    @Query("SELECT e FROM Employee e WHERE e.active = true")
+    List<Employee> findActiveEmployees();
+
+    // All managers by role name
+//    @Query("SELECT e FROM Employee e WHERE LOWER(e.role.name) = 'manager' AND e.active = true")
+//    List<Employee> findAllManagers();
+
+    // Team members under a specific manager (same as findActiveTeamMembers)
+    @Query("""
+    SELECT e FROM Employee e
+    WHERE e.reportingId = :managerId
+      AND e.active      = true
+""")
+    List<Employee> findTeamMembersByManager(@Param("managerId") String managerId);
 }
