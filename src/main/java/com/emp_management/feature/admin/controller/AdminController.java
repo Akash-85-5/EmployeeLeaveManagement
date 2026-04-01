@@ -26,7 +26,7 @@ public class AdminController {
 
     @PostMapping("/reset-password/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> resetPassword(@PathVariable Long userId) {
+    public ResponseEntity<String> resetPassword(@PathVariable String userId) {
         adminService.resetPassword(userId);
         return ResponseEntity.ok("Password reset successfully");
     }

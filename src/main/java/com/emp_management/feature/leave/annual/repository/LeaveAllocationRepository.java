@@ -11,17 +11,17 @@ import java.util.Optional;
 
 public interface LeaveAllocationRepository extends JpaRepository<LeaveAllocation, Long> {
 
-    List<LeaveAllocation> findByEmployeeIdAndYear(String employeeId, Integer year);
+    List<LeaveAllocation> findByEmployee_EmpIdAndYear(String employeeId, Integer year);
 
     List<LeaveAllocation> findByYear(Integer year);
 
     // ✅ Fixed: LeaveType enum instead of String
-    Optional<LeaveAllocation> findByEmployeeIdAndYearAndLeaveCategory(
-            String employeeId, Integer year, LeaveType leaveCategory);
-
-    @Query("SELECT COALESCE(SUM(la.allocatedDays), 0.0) " +
-            "FROM LeaveAllocation la " +
-            "WHERE la.employeeId = :employeeId AND la.year = :year")
-    Double getTotalAllocatedDays(@Param("employeeId") Long employeeId,
-                                 @Param("year") Integer year);
+//    Optional<LeaveAllocation> findByEmployeeIdAndYearAndLeaveCategory(
+//            String employeeId, Integer year, LeaveType leaveCategory);
+//
+//    @Query("SELECT COALESCE(SUM(la.allocatedDays), 0.0) " +
+//            "FROM LeaveAllocation la " +
+//            "WHERE la.employeeId = :employeeId AND la.year = :year")
+//    Double getTotalAllocatedDays(@Param("employeeId") Long employeeId,
+//                                 @Param("year") Integer year);
 }

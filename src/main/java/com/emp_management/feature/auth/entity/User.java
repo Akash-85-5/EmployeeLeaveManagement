@@ -50,7 +50,7 @@ public class User {
     public String getName()      { return employee.getName(); }
     public String getEmail()     { return employee.getEmail(); }
     public String getRole()        { return employee.getRole().getRoleName(); }
-    public Long getReportingId()   { return employee.getReportingId(); }
+    public String getReportingId()   { return employee.getReportingId(); }
 
     // Getters & Setters
     public Long getId() { return id; }

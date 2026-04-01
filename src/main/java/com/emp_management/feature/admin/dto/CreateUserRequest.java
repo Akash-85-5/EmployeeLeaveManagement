@@ -1,6 +1,5 @@
 package com.emp_management.feature.admin.dto;
 
-import com.emp_management.shared.entity.Role;
 import com.emp_management.shared.enums.EmployeeExperience;
 
 import java.time.LocalDate;
@@ -9,13 +8,11 @@ public class CreateUserRequest {
     private String empId;
     private String name;
     private String email;
-    private Long role;
-    private Long reportingId;
+    private Long roleId;
+    private String reportingId;
     private Long teamId;
     private Long departmentId;
     private Long branchId;
-    private Long countryId;
-    private Long companyId;
     private EmployeeExperience employeeExperience;
     private LocalDate joiningDate;
 
@@ -43,19 +40,19 @@ public class CreateUserRequest {
         this.email = email;
     }
 
-    public Long getRole() {
-        return role;
+    public Long getRoleId() {
+        return roleId;
     }
 
-    public void setRole(Long role) {
-        this.role = role;
+    public void setRoleId(Long role) {
+        this.roleId = role;
     }
 
-    public Long getReportingId() {
+    public String getReportingId() {
         return reportingId;
     }
 
-    public void setReportingId(Long reportingId) {
+    public void setReportingId(String reportingId) {
         this.reportingId = reportingId;
     }
 
@@ -83,21 +80,6 @@ public class CreateUserRequest {
         this.branchId = branchId;
     }
 
-    public Long getCountryId() {
-        return countryId;
-    }
-
-    public void setCountryId(Long countryId) {
-        this.countryId = countryId;
-    }
-
-    public Long getCompanyId() {
-        return companyId;
-    }
-
-    public void setCompanyId(Long companyId) {
-        this.companyId = companyId;
-    }
 
     public EmployeeExperience getEmployeeExperience() {
         return employeeExperience;

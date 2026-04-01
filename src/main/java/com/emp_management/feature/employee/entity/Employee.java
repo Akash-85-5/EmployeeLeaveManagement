@@ -43,7 +43,7 @@ public class Employee {
     private EmployeeExperience employeeExperience;
 
     @Column(name = "reporting_id")
-    private Long reportingId;
+    private String reportingId;
 
     @Column(name = "active")
     private boolean active = true;
@@ -131,11 +131,11 @@ public class Employee {
         this.employeeExperience = employeeExperience;
     }
 
-    public Long getReportingId() {
+    public String getReportingId() {
         return reportingId;
     }
 
-    public void setReportingId(Long reportingId) {
+    public void setReportingId(String reportingId) {
         this.reportingId = reportingId;
     }
 
@@ -145,6 +145,14 @@ public class Employee {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public Branch getBranch() {
+        return branch;
+    }
+
+    public void setBranch(Branch branch) {
+        this.branch = branch;
     }
 
     public LocalDateTime getCreatedAt() {
