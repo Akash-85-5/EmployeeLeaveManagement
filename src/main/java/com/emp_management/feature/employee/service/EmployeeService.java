@@ -6,6 +6,7 @@ import com.emp_management.feature.employee.dto.*;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeeOnboarding;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
+import com.emp_management.feature.employee.mapper.EmployeeMapper;
 import com.emp_management.feature.employee.repository.EmployeeOnboardingRepository;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
@@ -407,10 +408,14 @@ public class EmployeeService {
 
     // ─── Unchanged methods ────────────────────────────────────────
 
-    public Page<Employee> getAllEmployees(String name, String email, String role,
-                                          String reportingId, Boolean active, Pageable pageable) {
-        return employeeRepository.findAll(
+    public Page<EmployeeResponseDTO> getAllEmployees(String name, String email, String role,
+                                                     String reportingId, Boolean active,
+                                                     Pageable pageable) {
+
+        Page<Employee> page = employeeRepository.findAll(
                 createSpecification(name, email, role, reportingId, active), pageable);
+
+        return page.map(EmployeeMapper::toDTO); // 🔥 clean conversion
     }
 
     @Transactional

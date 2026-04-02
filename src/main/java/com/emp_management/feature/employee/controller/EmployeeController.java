@@ -1,5 +1,6 @@
 package com.emp_management.feature.employee.controller;
 
+import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
 import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
@@ -66,14 +67,13 @@ public class EmployeeController {
 
     // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/personal-details/{employeeId}")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
     @GetMapping("/all")
-    public Page<Employee> getAllEmployees(
+    public Page<EmployeeResponseDTO> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String role,
@@ -81,12 +81,14 @@ public class EmployeeController {
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
+
+        return employeeService.getAllEmployees(
+                name, email, role, managerId, active, pageable);
     }
 
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.id")
     public List<Employee> getTeamMembers(@PathVariable String managerId) {
         return employeeService.getTeamMembers(managerId);
     }
@@ -98,13 +100,11 @@ public class EmployeeController {
 //    }
 
     @GetMapping("/search")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEmployee(@PathVariable String id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully");
