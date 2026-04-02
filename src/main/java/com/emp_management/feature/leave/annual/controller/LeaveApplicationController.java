@@ -2,6 +2,7 @@ package com.emp_management.feature.leave.annual.controller;
 
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
 import com.emp_management.feature.leave.annual.dto.LeaveResponse;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
@@ -175,7 +176,7 @@ public class LeaveApplicationController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public List<LeaveApplication> getEmployeeLeaves(
+    public List<LeaveApplicationResponseDTO> getEmployeeLeaves(
             @PathVariable String employeeId,
             @RequestParam(required = false) RequestStatus status,
             @RequestParam(required = false) Long leaveTypeId,

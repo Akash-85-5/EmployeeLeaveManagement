@@ -5,8 +5,10 @@ import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.holiday.utils.HolidayChecker;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
 import com.emp_management.feature.leave.annual.dto.LeaveResponse;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
+import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
@@ -161,7 +163,7 @@ public class LeaveApplicationService {
 
         switch (typeName) {
             case "SICK"         -> validateSickLeave(leave, days, year, month);
-            case "ANNUAL_LEAVE" -> validateAnnualLeave(leave, days, year, month);
+            case "ANNUAL" -> validateAnnualLeave(leave, days, year, month);
             case "MATERNITY"    -> validateMaternity(leave, employee, days);
             case "PATERNITY"    -> validatePaternity(leave, employee, days);
             case "COMP_OFF"     -> validateCompOff(leave, days);
@@ -382,8 +384,13 @@ public class LeaveApplicationService {
                         "Leave application not found with ID: " + id));
     }
 
-    public List<LeaveApplication> getLeavesByEmployee(String employeeId, Pageable pageable) {
-        return leaveApplicationRepository.findByEmployee_EmpId(employeeId);
+    public List<LeaveApplicationResponseDTO> getLeavesByEmployee(String employeeId, Pageable pageable) {
+        return leaveApplicationRepository
+                .findByEmployee_EmpId(employeeId, pageable)
+                .getContent()
+                .stream()
+                .map(LeaveApplicationMapper::toDTO)
+                .toList();
     }
 
     // ═══════════════════════════════════════════════════════════════

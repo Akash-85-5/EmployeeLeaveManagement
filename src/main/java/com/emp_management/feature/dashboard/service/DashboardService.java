@@ -12,14 +12,8 @@ import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeeOnboarding;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
-import com.emp_management.feature.leave.annual.entity.AnnualLeaveMonthlyBalance;
-import com.emp_management.feature.leave.annual.entity.LeaveAllocation;
-import com.emp_management.feature.leave.annual.entity.LeaveApplication;
-import com.emp_management.feature.leave.annual.entity.SickLeaveMonthlyBalance;
-import com.emp_management.feature.leave.annual.repository.AnnualLeaveMonthlyBalanceRepository;
-import com.emp_management.feature.leave.annual.repository.LeaveAllocationRepository;
-import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
-import com.emp_management.feature.leave.annual.repository.SickLeaveMonthlyBalanceRepository;
+import com.emp_management.feature.leave.annual.entity.*;
+import com.emp_management.feature.leave.annual.repository.*;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.feature.leave.compoff.entity.CompOffBalance;
@@ -43,6 +37,7 @@ public class DashboardService {
     private final CarryForwardBalanceRepository carryForwardRepository;
 //    private final LopRecordRepository                   lopRepository;
 //    private final ODRequestRepository                   odRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
     private final AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository;
     private final SickLeaveMonthlyBalanceRepository     sickLeaveMonthlyBalanceRepository;
     private final EmployeePersonalDetailsRepository employeePersonalDetailsRepository;
@@ -55,6 +50,7 @@ public class DashboardService {
 //                            LopRecordRepository lopRepository,
 //                            ODRequestRepository odRepository,
                             AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository,
+                            LeaveTypeRepository leaveTypeRepository,
                             SickLeaveMonthlyBalanceRepository sickLeaveMonthlyBalanceRepository,
                             EmployeePersonalDetailsRepository employeePersonalDetailsRepository) {
         this.employeeRepository                 = employeeRepository;
@@ -67,6 +63,7 @@ public class DashboardService {
         this.annualLeaveMonthlyBalanceRepository = annualLeaveMonthlyBalanceRepository;
         this.sickLeaveMonthlyBalanceRepository  = sickLeaveMonthlyBalanceRepository;
         this.employeePersonalDetailsRepository  = employeePersonalDetailsRepository;
+        this.leaveTypeRepository = leaveTypeRepository;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -88,22 +85,39 @@ public class DashboardService {
         response.setCurrentYear(currentYear);
         response.setLastUpdated(LocalDateTime.now());
 
-        // ── Yearly totals ──────────────────────────────────────────
+        // ── Fetch allocations ──────────────────────────────────────────
         List<LeaveAllocation> allocations =
                 allocationRepository.findByEmployee_EmpIdAndYear(employeeId, currentYear);
 
-        double yearlyAllocated = allocations.stream()
-                .mapToDouble(LeaveAllocation::getAllocatedDays).sum();
+        // ── Restricted type names (MATERNITY, PATERNITY etc.) ─────────
+        // These are excluded from yearly allocated/used/balance totals
+        Set<String> restrictedTypeNames = leaveTypeRepository.findRestrictedLeaveTypes()
+                .stream()
+                .map(LeaveType::getLeaveType)
+                .collect(Collectors.toSet());
 
-        Double yearlyUsed = applicationRepository
-                .getTotalUsedDays(employeeId, RequestStatus.APPROVED, currentYear);
-        if (yearlyUsed == null) yearlyUsed = 0.0;
+        // ── Yearly totals — EXCLUDE restricted leave types ────────────
+        double yearlyAllocated = allocations.stream()
+                .filter(a -> !restrictedTypeNames.contains(
+                        a.getLeaveCategory().getLeaveType()))
+                .mapToDouble(LeaveAllocation::getAllocatedDays)
+                .sum();
+
+        // For used days — query all approved, then filter out restricted types in memory
+        List<LeaveApplication> allApprovedThisYear = applicationRepository
+                .findByEmployee_EmpIdAndStatusAndYear(employeeId, RequestStatus.APPROVED, currentYear);
+
+        double yearlyUsed = allApprovedThisYear.stream()
+                .filter(l -> !restrictedTypeNames.contains(
+                        l.getLeaveType().getLeaveType()))
+                .mapToDouble(l -> l.getDays().doubleValue())
+                .sum();
 
         response.setYearlyAllocated(yearlyAllocated);
         response.setYearlyUsed(yearlyUsed);
         response.setYearlyBalance(yearlyAllocated - yearlyUsed);
 
-        // ── Monthly ANNUAL_LEAVE balance ───────────────────────────
+        // ── Monthly ANNUAL_LEAVE balance ───────────────────────────────
         AnnualLeaveMonthlyBalance annualMonthly = annualLeaveMonthlyBalanceRepository
                 .findByEmployeeIdAndYearAndMonth(employeeId, currentYear, currentMonth)
                 .orElse(null);
@@ -116,7 +130,7 @@ public class DashboardService {
         response.setMonthlyAnnualUsed(annualUsed);
         response.setMonthlyAnnualBalance(annualRemaining);
 
-        // ── Monthly SICK balance ───────────────────────────────────
+        // ── Monthly SICK balance ───────────────────────────────────────
         SickLeaveMonthlyBalance sickMonthly = sickLeaveMonthlyBalanceRepository
                 .findByEmployeeIdAndYearAndMonth(employeeId, currentYear, currentMonth)
                 .orElse(null);
@@ -130,23 +144,20 @@ public class DashboardService {
         response.setMonthlySickBalance(sickRemaining);
         response.setMonthlyTotalBalance(annualRemaining + sickRemaining);
 
-        // ── Carry forward ──────────────────────────────────────────
+        // ── Carry forward ──────────────────────────────────────────────
         CarryForwardBalance cf = carryForwardRepository
                 .findByEmployee_EmpIdAndYear(employeeId, currentYear).orElse(null);
         response.setCarryForwardTotal(cf != null ? cf.getTotalCarriedForward() : 0.0);
         response.setCarryForwardUsed(cf != null ? cf.getTotalUsed()            : 0.0);
         response.setCarryForwardRemaining(cf != null ? cf.getRemaining()       : 0.0);
 
-        // ── Comp-off ───────────────────────────────────────────────
+        // ── Comp-off ───────────────────────────────────────────────────
         CompOffBalance compOff = compOffRepository
                 .findByEmployeeIdAndYear(employeeId, currentYear).orElse(null);
-        response.setCompoffBalance(compOff != null ? compOff.getBalance() : 0.0);
+        double coBal = compOff != null ? compOff.getBalance() : 0.0;
+        response.setCompoffBalance(coBal);
 
-        // ── LOP ───────────────────────────────────────────────────
-//        Double totalLOP = lopRepository.sumLopDaysForYear(employeeId, currentYear);
-//        response.setLossOfPayPercentage(totalLOP != null ? totalLOP : 0.0);
-
-        // ── Leave counts ───────────────────────────────────────────
+        // ── Leave counts (all types including restricted) ──────────────
         response.setApprovedCount(safeCount(applicationRepository
                 .countByStatus(employeeId, currentYear, RequestStatus.APPROVED)));
         response.setRejectedCount(safeCount(applicationRepository
@@ -154,37 +165,40 @@ public class DashboardService {
         response.setPendingCount(safeCount(applicationRepository
                 .countByStatus(employeeId, currentYear, RequestStatus.PENDING)));
 
-        // ── Breakdown by leave type ────────────────────────────────
-        List<LeaveApplication> approvedLeaves = applicationRepository
-                .findByEmployee_EmpIdAndStatusAndYear(employeeId, RequestStatus.APPROVED, currentYear);
+        // ── Breakdown by leave type ────────────────────────────────────
         List<LeaveApplication> pendingLeaves = applicationRepository
-                .findByEmployee_EmpIdAndStatusAndYear(employeeId, RequestStatus.PENDING, currentYear);
+                .findByEmployee_EmpIdAndStatusAndYear(
+                        employeeId, RequestStatus.PENDING, currentYear);
 
-        // Group by leaveType name (String) — LeaveType is now an entity
-        Map<String, List<LeaveApplication>> byType =
-                approvedLeaves.stream().collect(Collectors.groupingBy(
-                        l -> l.getLeaveType().getLeaveType()));
-        Map<String, List<LeaveApplication>> pendingByType =
-                pendingLeaves.stream().collect(Collectors.groupingBy(
-                        l -> l.getLeaveType().getLeaveType()));
+        // Group approved/pending by leave type name
+        Map<String, List<LeaveApplication>> byType = allApprovedThisYear.stream()
+                .collect(Collectors.groupingBy(l -> l.getLeaveType().getLeaveType()));
+        Map<String, List<LeaveApplication>> pendingByType = pendingLeaves.stream()
+                .collect(Collectors.groupingBy(l -> l.getLeaveType().getLeaveType()));
 
         List<LeaveTypeBreakdown> breakdown = new ArrayList<>();
         for (LeaveAllocation allocation : allocations) {
-            String typeName = allocation.getLeaveCategory().getLeaveType();
+            String typeName  = allocation.getLeaveCategory().getLeaveType();
             double allocated = allocation.getAllocatedDays();
 
             List<LeaveApplication> typeLeaves = byType.getOrDefault(typeName, List.of());
             double used = typeLeaves.stream()
                     .mapToDouble(l -> l.getDays().doubleValue()).sum();
 
-            // Use monthly balance for ANNUAL/SICK, else simple calc
-            double remaining = switch (typeName.toUpperCase()) {
-                case "ANNUAL_LEAVE" -> annualRemaining;
-                case "SICK"         -> sickRemaining;
-                default             -> allocated - used;
-            };
+            // Restricted types show their own used/allocated directly
+            // Non-restricted ANNUAL/SICK use the monthly cumulative balance
+            double remaining;
+            if (restrictedTypeNames.contains(typeName)) {
+                remaining = allocated - used;   // simple calc — no monthly accrual
+            } else {
+                remaining = switch (typeName.toUpperCase()) {
+                    case "ANNUAL_LEAVE" -> annualRemaining;
+                    case "SICK"         -> sickRemaining;
+                    default             -> allocated - used;
+                };
+            }
 
-            int halfDays = (int) typeLeaves.stream()
+            int  halfDays    = (int) typeLeaves.stream()
                     .filter(l -> l.getDays().compareTo(new BigDecimal("0.5")) == 0)
                     .count();
             long pendingCount = pendingByType.getOrDefault(typeName, List.of()).size();
@@ -194,18 +208,18 @@ public class DashboardService {
         }
 
         // Add COMP_OFF row
-        double coEarned = compOff != null ? compOff.getEarned()  : 0.0;
-        double coUsed   = compOff != null ? compOff.getUsed()    : 0.0;
-        double coBal    = compOff != null ? compOff.getBalance() : 0.0;
-        long coPending  = pendingByType.getOrDefault("COMP_OFF", List.of()).size();
+        double coEarned = compOff != null ? compOff.getEarned() : 0.0;
+        double coUsed   = compOff != null ? compOff.getUsed()   : 0.0;
+        long   coPending = pendingByType.getOrDefault("COMP_OFF", List.of()).size();
         breakdown.add(new LeaveTypeBreakdown("COMP_OFF", coEarned, coUsed, coBal, 0, coPending));
 
         response.setBreakdown(breakdown);
-        response.setCompoffBalance(coBal);
 
         return response;
     }
-
+    // ── LOP ───────────────────────────────────────────────────
+//        Double totalLOP = lopRepository.sumLopDaysForYear(employeeId, currentYear);
+//        response.setLossOfPayPercentage(totalLOP != null ? totalLOP : 0.0);
     // ═══════════════════════════════════════════════════════════════
     // MONTHLY STATS
     // ═══════════════════════════════════════════════════════════════
@@ -292,7 +306,7 @@ public class DashboardService {
 
         // Pending team requests
         List<LeaveApplication> pendingRequests =
-                applicationRepository.findPendingTeamRequests(managerId);
+                applicationRepository.findByCurrentApproverIdAndStatus(managerId, RequestStatus.PENDING);
         response.setTeamPendingRequestCount(pendingRequests.size());
 
         List<ManagerDashboardResponse.TeamPendingLeaveDTO> pendingDTOs =

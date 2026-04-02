@@ -249,14 +249,14 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("year") Integer year,
             @Param("month") Integer month);
 
-    @Query("""
-        SELECT l FROM LeaveApplication l
-        WHERE l.employee.empId IN
-              (SELECT e.empId FROM  e WHERE e.currentApproverId = :managerId)
-          AND l.status = 'PENDING'
-        ORDER BY l.createdAt ASC
-    """)
-    List<LeaveApplication> findPendingTeamRequests(@Param("managerId") String managerId);
+//    @Query("""
+//        SELECT l FROM LeaveApplication l
+//        WHERE l.employee.empId IN
+//              (SELECT e.empId FROM  e WHERE e.currentApproverId = :managerId)
+//          AND l.status = 'PENDING'
+//        ORDER BY l.createdAt ASC
+//    """)
+//    List<LeaveApplication> findPendingTeamRequests(@Param("managerId") String managerId);
 
 
 

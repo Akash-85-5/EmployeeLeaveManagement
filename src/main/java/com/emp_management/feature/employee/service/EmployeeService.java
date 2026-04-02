@@ -9,6 +9,7 @@ import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.repository.EmployeeOnboardingRepository;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
+import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.infrastructure.storage.DocumentStorageService;
 import com.emp_management.shared.enums.*;
@@ -39,18 +40,29 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
     private final NotificationService notificationService;
+    private final LeaveAllocationService leaveAllocationService;
     private final DocumentStorageService documentStorageService;
     private final EmployeeOnboardingRepository employeeOnboardingRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository,LeaveAllocationService leaveAllocationService, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.personalDetailsRepository = personalDetailsRepository;
         this.notificationService = notificationService;
         this.documentStorageService = documentStorageService;
         this.employeeOnboardingRepository = employeeOnboardingRepository;
+        this.leaveAllocationService = leaveAllocationService;
+
     }
 
+    public NameDto getEmployeeName(String empId){
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(()-> new EntityNotFoundException("Employee not found"));
+        NameDto name = new NameDto();
+        name.setEmpId(employee.getEmpId());
+        name.setEmpName(employee.getName());
+        return name;
+    }
     // ─── getProfile ───────────────────────────────────────────────
 
     public ProfileResponse getProfile(String  employeeId) {
@@ -178,6 +190,15 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        leaveAllocationService.allocateForNewEmployee(employeeId);
+
+//        Long roleId = request.getRoleId();
+//        if (roleId != 1 && roleId != 2) {
+//            try {
+//                leaveAllocationService.allocateForNewEmployee(savedEmp.getEmpId());
+//            } catch (Exception e) {
+//                throw new RuntimeException("Failed to create leave allocations: " + e.getMessage());
+//            }
 
         // Notify HR (hardcoded id=2)
         notifyHr(employee.getName(), employeeId);

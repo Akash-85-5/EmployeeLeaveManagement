@@ -59,13 +59,13 @@ public class LeaveApprovalController {
 
     // ── Get single leave with attachments ────────────────────────
 
-    @GetMapping("/{leaveId}/with-attachments")
-    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
-            @PathVariable Long leaveId) {
-        LeaveApplicationWithAttachmentsDto dto =
-                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
-        return ResponseEntity.ok(dto);
-    }
+//    @GetMapping("/{leaveId}/with-attachments")
+//    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
+//            @PathVariable Long leaveId) {
+//        LeaveApplicationWithAttachmentsDto dto =
+//                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
+//        return ResponseEntity.ok(dto);
+//    }
 
     // ── Core decision ─────────────────────────────────────────────
 

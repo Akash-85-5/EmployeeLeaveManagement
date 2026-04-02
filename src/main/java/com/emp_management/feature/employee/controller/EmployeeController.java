@@ -1,5 +1,6 @@
 package com.emp_management.feature.employee.controller;
 
+import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
@@ -10,7 +11,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,6 +32,10 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
+    @GetMapping("/name/{emp_id}")
+    public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id){
+        return ResponseEntity.ok(employeeService.getEmployeeName(emp_id));
+    }
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
