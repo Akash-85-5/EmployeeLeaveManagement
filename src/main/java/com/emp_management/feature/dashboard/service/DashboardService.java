@@ -192,9 +192,9 @@ public class DashboardService {
                 remaining = allocated - used;   // simple calc — no monthly accrual
             } else {
                 remaining = switch (typeName.toUpperCase()) {
-                    case "ANNUAL_LEAVE" -> annualRemaining;
-                    case "SICK"         -> sickRemaining;
-                    default             -> allocated - used;
+                    case "ANNUAL" -> allocated - used;
+                    case "SICK" -> allocated - used;
+                    default -> allocated - used;
                 };
             }
 
