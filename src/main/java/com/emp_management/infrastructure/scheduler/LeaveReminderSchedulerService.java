@@ -306,7 +306,7 @@ public class LeaveReminderSchedulerService {
         employeeRepository.findByEmpId(leave.getEmployeeId()).ifPresent(emp ->
                 notificationService.createNotification(
                         emp.getEmpId(),
-                        "noreply@company.com",
+                        "info@wenxttech.com",
                         emp.getEmail(),
                         EventType.LEAVE_REJECTED,
                         Channel.EMAIL,
@@ -350,7 +350,7 @@ public class LeaveReminderSchedulerService {
 
         notificationService.createNotification(
                 approver.getEmpId(),
-                "noreply@company.com",
+                "info@wenxttech.com",
                 approver.getEmail(),
                 EventType.PENDING_LEAVE_REMINDER,
                 Channel.EMAIL,
@@ -372,7 +372,7 @@ public class LeaveReminderSchedulerService {
 
                 notificationService.createNotification(
                         approver.getEmpId(),
-                        "noreply@company.com",
+                        "info@wenxttech.com",
                         approver.getEmail(),
                         EventType.PENDING_LEAVE_REMINDER,
                         Channel.EMAIL,

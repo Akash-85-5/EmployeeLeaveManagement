@@ -13,8 +13,15 @@ import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.infrastructure.storage.DocumentStorageService;
+import com.emp_management.shared.dto.BranchListDto;
+import com.emp_management.shared.dto.EmployeeListDto;
+import com.emp_management.shared.entity.Department;
+import com.emp_management.shared.entity.Role;
 import com.emp_management.shared.enums.*;
 import com.emp_management.shared.exceptions.BadRequestException;
+import com.emp_management.shared.repository.BranchRepository;
+import com.emp_management.shared.repository.DepartmentRepository;
+import com.emp_management.shared.repository.RoleRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.EntityNotFoundException;
@@ -44,16 +51,21 @@ public class EmployeeService {
     private final LeaveAllocationService leaveAllocationService;
     private final DocumentStorageService documentStorageService;
     private final EmployeeOnboardingRepository employeeOnboardingRepository;
+    private final DepartmentRepository departmentRepository;
+    private final RoleRepository roleRepository;
+    private final BranchRepository branchRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository,LeaveAllocationService leaveAllocationService, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, LeaveAllocationService leaveAllocationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository, DepartmentRepository departmentRepository, RoleRepository roleRepository, BranchRepository branchRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.personalDetailsRepository = personalDetailsRepository;
         this.notificationService = notificationService;
+        this.leaveAllocationService = leaveAllocationService;
         this.documentStorageService = documentStorageService;
         this.employeeOnboardingRepository = employeeOnboardingRepository;
-        this.leaveAllocationService = leaveAllocationService;
-
+        this.departmentRepository = departmentRepository;
+        this.roleRepository = roleRepository;
+        this.branchRepository = branchRepository;
     }
 
     public NameDto getEmployeeName(String empId){
@@ -63,6 +75,19 @@ public class EmployeeService {
         name.setEmpId(employee.getEmpId());
         name.setEmpName(employee.getName());
         return name;
+    }
+
+    public List<Department> getDepartmentList(){
+        return departmentRepository.findAll();
+    }
+    public List<Role> getRoleList(){
+        return roleRepository.findAll();
+    }
+    public List<EmployeeListDto> getAllEmployees() {
+        return employeeRepository.findAllActiveEmployeeBasicDetails();
+    }
+    public List<BranchListDto> getAllBranches() {
+        return branchRepository.findAllBranchDetails();
     }
     // ─── getProfile ───────────────────────────────────────────────
 
@@ -593,7 +618,7 @@ public class EmployeeService {
             userRepository.findByEmployee_EmpId(hr.getEmpId()).ifPresent(hrUser ->
                     notificationService.createNotification(
                             hr.getEmpId(),                  // recipientId  → String
-                            "noreply@company.com",           // senderEmail
+                            hr.getEmail(),           // senderEmail
                             hrUser.getEmail(),               // recipientEmail
                             EventType.PROFILE_SUBMITTED,
                             Channel.EMAIL,
@@ -606,7 +631,7 @@ public class EmployeeService {
         User empUser = userRepository.findByEmployee_EmpId(employee.getEmpId()).orElse(null);
         if (empUser == null) return;
         notificationService.createNotification(
-                employee.getEmpId(), "noreply@company.com", empUser.getEmail(),
+                employee.getEmpId(), "info@wenxttech.com", empUser.getEmail(),
                 eventType, Channel.EMAIL, message);
     }
 

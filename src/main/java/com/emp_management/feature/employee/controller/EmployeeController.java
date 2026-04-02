@@ -6,12 +6,15 @@ import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.service.EmployeeService;
+import com.emp_management.shared.dto.BranchListDto;
+import com.emp_management.shared.dto.EmployeeListDto;
+import com.emp_management.shared.entity.Department;
+import com.emp_management.shared.entity.Role;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +40,23 @@ public class EmployeeController {
     public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id){
         return ResponseEntity.ok(employeeService.getEmployeeName(emp_id));
     }
+    @GetMapping("/departments/list")
+    public  ResponseEntity<List<Department>> getDepartmentList(){
+        return ResponseEntity.ok(employeeService.getDepartmentList());
+    }
+    @GetMapping("/role/list")
+    public  ResponseEntity<List<Role>> getRoleList(){
+        return ResponseEntity.ok(employeeService.getRoleList());
+    }
+    @GetMapping("/managers/list")
+    public ResponseEntity<List<EmployeeListDto>> getAllEmployees() {
+        return ResponseEntity.ok(employeeService.getAllEmployees());
+    }
+    @GetMapping("/branch/list")
+    public ResponseEntity<List<BranchListDto>> getAllBranches() {
+        return ResponseEntity.ok(employeeService.getAllBranches());
+    }
+
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(

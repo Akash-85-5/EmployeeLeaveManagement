@@ -2,6 +2,7 @@
 package com.emp_management.feature.employee.repository;
 
 import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.shared.dto.EmployeeListDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
       AND e.active = true
 """)
     List<Employee> findAllByRoleName(@Param("roleName") String roleName);
+
+    @Query("SELECT e.empId AS empId, e.name AS empName, e.role.roleName AS role FROM Employee e WHERE e.active = true")
+    List<EmployeeListDto> findAllActiveEmployeeBasicDetails();
 
     Optional<Employee> findByEmpId(String id);
 //    Optional<Employee> findByEmail(String email);

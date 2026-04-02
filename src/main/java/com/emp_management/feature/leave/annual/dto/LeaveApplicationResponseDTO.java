@@ -12,7 +12,6 @@ public class LeaveApplicationResponseDTO {
 
     private Long id;
     private String employeeId;  // only the ID, not the whole Employee object
-
     private String leaveTypeName; // just the name from LeaveType, not the whole object
 
     private HalfDayType startDateHalfDayType;
@@ -52,6 +51,14 @@ public class LeaveApplicationResponseDTO {
 
     public String getEmployeeId() { return employeeId; }
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+
+    public Boolean getAppointment() {
+        return isAppointment;
+    }
+
+    public void setAppointment(Boolean appointment) {
+        isAppointment = appointment;
+    }
 
     public String getLeaveTypeName() { return leaveTypeName; }
     public void setLeaveTypeName(String leaveTypeName) { this.leaveTypeName = leaveTypeName; }
