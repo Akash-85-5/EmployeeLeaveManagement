@@ -114,8 +114,8 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(true) // required for SameSite=None
-                .sameSite("None")
+                .secure(cookieSecure) // ✅ dynamic
+                .sameSite(cookieSecure ? "None" : "Lax") // ✅ KEY FIX
                 .path("/")
                 .maxAge(Duration.ofSeconds(maxAgeSeconds))
                 .build();
@@ -126,8 +126,8 @@ public class AuthController {
 
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
+                .secure(cookieSecure)
+                .sameSite(cookieSecure ? "None" : "Lax")
                 .path("/")
                 .maxAge(0)
                 .build();

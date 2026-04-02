@@ -216,7 +216,7 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
-        leaveAllocationService.allocateForNewEmployee(employeeId);
+//        leaveAllocationService.allocateForNewEmployee(employeeId);
 
 //        Long roleId = request.getRoleId();
 //        if (roleId != 1 && roleId != 2) {
