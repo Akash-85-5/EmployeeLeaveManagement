@@ -11,6 +11,7 @@ import com.emp_management.feature.leave.carryforward.entity.CarryForwardLeaveApp
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardLeaveApplicationRepository;
 import com.emp_management.shared.enums.RequestStatus;
+import com.emp_management.shared.exceptions.BadRequestException;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +70,7 @@ public class CarryForwardLeaveService {
                 employeeId, request.getStartDate(), request.getEndDate());
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + employeeId));
 
         // ── Determine applicant's role ────────────────────────────
         String applicantRole = resolveRole(employee);
@@ -81,15 +82,15 @@ public class CarryForwardLeaveService {
         // ── Validate balance ──────────────────────────────────────
         CarryForwardBalance balance = cfBalanceRepository
                 .findByEmployee_EmpIdAndYear(employeeId, year)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "No carry-forward balance for employee " + employeeId + " in " + year));
 
         double remaining = balance.getRemaining() != null ? balance.getRemaining() : 0.0;
         if (remaining <= 0) {
-            throw new RuntimeException("No carry-forward balance remaining for year " + year);
+            throw new BadRequestException("No carry-forward balance remaining for year " + year);
         }
         if (requestedDays > remaining) {
-            throw new RuntimeException(String.format(
+            throw new BadRequestException(String.format(
                     "Requested %.1f days exceeds remaining carry-forward balance of %.1f days",
                     requestedDays, remaining));
         }
@@ -145,27 +146,27 @@ public class CarryForwardLeaveService {
         CarryForwardLeaveApplication app = getOrThrow(applicationId);
 
         if (app.getStatus() != RequestStatus.PENDING) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Application " + applicationId + " is not PENDING: " + app.getStatus());
         }
 
         // ── Validate approver's role matches current level ────────
         Employee approver = employeeRepository.findByEmpId(approverId)
-                .orElseThrow(() -> new RuntimeException("Approver not found: " + approverId));
+                .orElseThrow(() -> new BadRequestException("Approver not found: " + approverId));
 
         String approverRole   = resolveRole(approver);
         String requiredRole   = approvalMatrix.getRequiredRoleForLevel(
                 app.getApplicantRole(), app.getCurrentApprovalLevel());
 
         if (!approverRole.equalsIgnoreCase(requiredRole)) {
-            throw new RuntimeException(String.format(
+            throw new BadRequestException(String.format(
                     "Approver role '%s' cannot act at level %d — expected role '%s'",
                     approverRole, app.getCurrentApprovalLevel(), requiredRole));
         }
 
         // ── Prevent self-approval ─────────────────────────────────
         if (approverId.equals(app.getEmployee().getEmpId())) {
-            throw new RuntimeException("An employee cannot approve their own leave application");
+            throw new BadRequestException("An employee cannot approve their own leave application");
         }
 
         int  currentLevel = app.getCurrentApprovalLevel();
@@ -185,12 +186,12 @@ public class CarryForwardLeaveService {
 
             CarryForwardBalance balance = cfBalanceRepository
                     .findByEmployee_EmpIdAndYear(app.getEmployee().getEmpId(), app.getYear())
-                    .orElseThrow(() -> new RuntimeException(
+                    .orElseThrow(() -> new EntityNotFoundException(
                             "Carry-forward balance missing at final approval"));
 
             double remaining = balance.getRemaining() != null ? balance.getRemaining() : 0.0;
             if (requestedDays > remaining) {
-                throw new RuntimeException(String.format(
+                throw new BadRequestException(String.format(
                         "Cannot approve: %.1f days requested but only %.1f days remain",
                         requestedDays, remaining));
             }
@@ -243,20 +244,20 @@ public class CarryForwardLeaveService {
         CarryForwardLeaveApplication app = getOrThrow(applicationId);
 
         if (app.getStatus() != RequestStatus.PENDING) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Application " + applicationId + " is not PENDING: " + app.getStatus());
         }
 
         // ── Validate rejector's role matches current level ────────
         Employee rejector = employeeRepository.findByEmpId(rejectorId)
-                .orElseThrow(() -> new RuntimeException("Rejector not found: " + rejectorId));
+                .orElseThrow(() -> new EntityNotFoundException("Rejector not found: " + rejectorId));
 
         String rejectorRole = resolveRole(rejector);
         String requiredRole = approvalMatrix.getRequiredRoleForLevel(
                 app.getApplicantRole(), app.getCurrentApprovalLevel());
 
         if (!rejectorRole.equalsIgnoreCase(requiredRole)) {
-            throw new RuntimeException(String.format(
+            throw new BadRequestException(String.format(
                     "Rejector role '%s' cannot act at level %d — expected role '%s'",
                     rejectorRole, app.getCurrentApprovalLevel(), requiredRole));
         }
@@ -293,11 +294,11 @@ public class CarryForwardLeaveService {
         CarryForwardLeaveApplication app = getOrThrow(applicationId);
 
         if (!app.getEmployee().getEmpId().equals(employeeId)) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Employee " + employeeId + " is not the owner of application " + applicationId);
         }
         if (app.getStatus() == RequestStatus.REJECTED || app.getStatus() == RequestStatus.CANCELLED) {
-            throw new RuntimeException("Application is already " + app.getStatus());
+            throw new BadRequestException("Application is already " + app.getStatus());
         }
 
         boolean wasApproved = (app.getStatus() == RequestStatus.APPROVED);
@@ -469,7 +470,7 @@ public class CarryForwardLeaveService {
 
     private CarryForwardLeaveApplication getOrThrow(Long id) {
         return cfLeaveAppRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new BadRequestException(
                         "Carry-forward leave application not found: " + id));
     }
 
@@ -480,7 +481,7 @@ public class CarryForwardLeaveService {
      */
     private String resolveRole(Employee employee) {
         if (employee.getRole() == null) {
-            throw new RuntimeException("Employee " + employee.getEmpId() + " has no role assigned");
+            throw new BadRequestException("Employee " + employee.getEmpId() + " has no role assigned");
         }
 
         return employee.getRole().getRoleName(); // enum → String
@@ -493,14 +494,14 @@ public class CarryForwardLeaveService {
     private double calculateWorkingDays(LocalDate start, LocalDate end, Boolean isHalfDay) {
         if (Boolean.TRUE.equals(isHalfDay)) return 0.5;
         if (end.isBefore(start)) {
-            throw new RuntimeException("End date must be on or after start date");
+            throw new BadRequestException("End date must be on or after start date");
         }
         long workingDays = start.datesUntil(end.plusDays(1))
                 .filter(d -> d.getDayOfWeek() != DayOfWeek.SATURDAY
                         && d.getDayOfWeek() != DayOfWeek.SUNDAY)
                 .count();
         if (workingDays <= 0) {
-            throw new RuntimeException("No working days in the selected date range");
+            throw new BadRequestException("No working days in the selected date range");
         }
         return (double) workingDays;
     }

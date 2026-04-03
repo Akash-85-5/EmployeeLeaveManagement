@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,12 +31,16 @@ public class LeaveAllocationService {
     private final EmployeeRepository employeeRepository;
     private final LeaveTypeRepository leaveTypeRepository;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
+    private final AnnualLeaveBalanceService annualLeaveBalanceService;
+    private final SickLeaveBalanceService   sickLeaveBalanceService;
 
-    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository, EmployeeRepository employeeRepository, LeaveTypeRepository leaveTypeRepository, EmployeePersonalDetailsRepository personalDetailsRepository) {
+    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository, EmployeeRepository employeeRepository, LeaveTypeRepository leaveTypeRepository, EmployeePersonalDetailsRepository personalDetailsRepository, AnnualLeaveBalanceService annualLeaveBalanceService, SickLeaveBalanceService sickLeaveBalanceService) {
         this.leaveAllocationRepository = leaveAllocationRepository;
         this.employeeRepository = employeeRepository;
         this.leaveTypeRepository = leaveTypeRepository;
         this.personalDetailsRepository = personalDetailsRepository;
+        this.annualLeaveBalanceService = annualLeaveBalanceService;
+        this.sickLeaveBalanceService = sickLeaveBalanceService;
     }
 
 
@@ -195,6 +200,10 @@ public class LeaveAllocationService {
     @Transactional
     public void allocateForNewEmployee(String employeeId) {
         createBulkAllocations(employeeId, Year.now().getValue());
+        int year  = Year.now().getValue();
+        int month = LocalDate.now().getMonthValue();
+        annualLeaveBalanceService.initializeForCurrentMonth(employeeId, year, month);
+        sickLeaveBalanceService.initializeForCurrentMonth(employeeId, year, month);
     }
 
     // ── Allocate ALL employees at once ────────────────────────────

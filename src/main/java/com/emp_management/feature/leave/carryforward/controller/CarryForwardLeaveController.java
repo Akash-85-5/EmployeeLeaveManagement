@@ -5,6 +5,7 @@ import com.emp_management.feature.leave.carryforward.dto.CarryForwardLeaveApplic
 import com.emp_management.feature.leave.carryforward.dto.CarryForwardLeaveRequest;
 import com.emp_management.feature.leave.carryforward.service.CarryForwardLeaveService;
 import com.emp_management.security.CustomUserDetails;
+import com.emp_management.shared.exceptions.BadRequestException;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,7 +35,7 @@ public class CarryForwardLeaveController {
                 ((CustomUserDetails) authentication.getPrincipal()).getId();
 
         if (!loggedInUserId.equals(request.getEmployeeId())) {
-            throw new RuntimeException("You can only apply for yourself");
+            throw new BadRequestException("You can only apply for yourself");
         }
 
         return ResponseEntity.ok(cfLeaveService.applyLeave(request));

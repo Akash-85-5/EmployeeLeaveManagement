@@ -94,9 +94,9 @@ public class EmployeeService {
     public ProfileResponse getProfile(String  employeeId) {
 
         User user = userRepository.findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 
 
         ProfileResponse response = new ProfileResponse();
@@ -701,7 +701,7 @@ public class EmployeeService {
 
     public void decideVpn(String employeeId, BiometricVpnStatus decision) {
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not Found"));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not Found"));
         if (employee.getOnboarding().getBiometricStatus() == BiometricVpnStatus.PROVIDED) {
             EmployeeOnboarding eo = employeeOnboardingRepository.findByEmployee_EmpId(employeeId)
                     .orElseThrow(()-> new EntityNotFoundException("Onboarding not found"));
@@ -717,7 +717,7 @@ public class EmployeeService {
 
     public Employee getById(Long id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
     }
 
 }

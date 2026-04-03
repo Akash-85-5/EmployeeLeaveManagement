@@ -18,6 +18,7 @@ import com.emp_management.feature.leave.compoff.service.CompOffService;
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.shared.enums.*;
 import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -128,7 +129,7 @@ public class LeaveApplicationService {
         }
 
         Employee firstApprover = employeeRepository.findByEmpId(firstApproverNumericId)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "First approver not found: " + firstApproverNumericId));
 
         leave.setFirstApproverId(firstApprover.getEmpId());
@@ -142,7 +143,7 @@ public class LeaveApplicationService {
             leave.setRequiredApprovalLevels(1);
         } else {
             Employee secondApprover = employeeRepository.findByEmpId(secondApproverNumericId)
-                    .orElseThrow(() -> new RuntimeException(
+                    .orElseThrow(() -> new EntityNotFoundException(
                             "Second approver not found: " + secondApproverNumericId));
             leave.setSecondApproverId(secondApprover.getEmpId());
             leave.setRequiredApprovalLevels(2);

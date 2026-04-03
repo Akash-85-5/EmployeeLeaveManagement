@@ -3,6 +3,7 @@ package com.emp_management.feature.auth.service;
 import com.emp_management.feature.auth.entity.RefreshToken;
 import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.RefreshTokenRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,14 +68,14 @@ public class RefreshTokenService {
     public RefreshToken validateRefreshToken(String token) {
 
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new EntityNotFoundException("Invalid refresh token"));
 
         if (refreshToken.isRevoked()) {
-            throw new RuntimeException("Refresh token has been revoked");
+            throw new EntityNotFoundException("Refresh token has been revoked");
         }
 
         if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
-            throw new RuntimeException("Refresh token has expired");
+            throw new EntityNotFoundException("Refresh token has expired");
         }
 
         return refreshToken;

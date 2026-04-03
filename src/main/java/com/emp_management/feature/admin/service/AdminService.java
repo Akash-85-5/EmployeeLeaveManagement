@@ -14,6 +14,7 @@ import com.emp_management.shared.entity.Department;
 import com.emp_management.shared.entity.Role;
 import com.emp_management.shared.enums.BiometricVpnStatus;
 import com.emp_management.shared.enums.EmployeeStatus;
+import com.emp_management.shared.exceptions.BadRequestException;
 import com.emp_management.shared.repository.BranchRepository;
 import com.emp_management.shared.repository.DepartmentRepository;
 import com.emp_management.shared.repository.RoleRepository;
@@ -57,7 +58,7 @@ public class AdminService {
     public void createUser(CreateUserRequest request) {
 
         if (userRepository.findByEmployee_Email(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+            throw new BadRequestException("Email already exists");
         }
 
         Role role = roleRepository.findById(request.getRoleId())
@@ -112,7 +113,7 @@ public class AdminService {
 
     public void resetPassword(String userId) {
         User user = userRepository.findByEmployee_EmpId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
         user.setPasswordHash(passwordEncoder.encode("1234"));
         user.setForcePwdChange(true);
         userRepository.save(user);

@@ -8,7 +8,10 @@ import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.UserRepository;
 import com.emp_management.security.JwtTokenProvider;
 import com.emp_management.shared.enums.EmployeeStatus;
+import com.emp_management.shared.exceptions.UnauthorizedException;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.apache.coyote.BadRequestException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,7 +43,6 @@ public class AuthService {
     // Returns [accessJwt, refreshTokenString, LoginResponse]
 
     public Object[] login(LoginRequest request) {
-
         // authManager uses loadUserByUsername → already handles both email & empId
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -52,10 +54,10 @@ public class AuthService {
         // try email first, fall back to empId
         User user = userRepository.findByEmployee_Email(request.getIdentifier())
                 .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (user.getStatus() != EmployeeStatus.ACTIVE) {
-            throw new RuntimeException("Account is disabled. Contact admin.");
+            throw new UnauthorizedException("Account is disabled. Contact admin.");
         }
 
         String accessToken        = jwtTokenProvider.generateToken(user);
@@ -108,10 +110,10 @@ public class AuthService {
                 .getName();
 
         User user = userRepository.findByEmployee_Email(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Old password incorrect");
+            throw new EntityNotFoundException("Old password incorrect");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));

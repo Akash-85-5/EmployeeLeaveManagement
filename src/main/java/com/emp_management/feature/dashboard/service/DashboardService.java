@@ -14,11 +14,14 @@ import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRep
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.entity.*;
 import com.emp_management.feature.leave.annual.repository.*;
+import com.emp_management.feature.leave.annual.service.AnnualLeaveBalanceService;
+import com.emp_management.feature.leave.annual.service.SickLeaveBalanceService;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.feature.leave.compoff.entity.CompOffBalance;
 import com.emp_management.feature.leave.compoff.repository.CompOffBalanceRepository;
 import com.emp_management.shared.enums.RequestStatus;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,6 +44,8 @@ public class DashboardService {
     private final AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository;
     private final SickLeaveMonthlyBalanceRepository     sickLeaveMonthlyBalanceRepository;
     private final EmployeePersonalDetailsRepository employeePersonalDetailsRepository;
+    private final AnnualLeaveBalanceService annualLeaveBalanceService;
+    private final SickLeaveBalanceService sickLeaveBalanceService;
 
     public DashboardService(EmployeeRepository employeeRepository,
                             LeaveAllocationRepository allocationRepository,
@@ -52,7 +57,9 @@ public class DashboardService {
                             AnnualLeaveMonthlyBalanceRepository annualLeaveMonthlyBalanceRepository,
                             LeaveTypeRepository leaveTypeRepository,
                             SickLeaveMonthlyBalanceRepository sickLeaveMonthlyBalanceRepository,
-                            EmployeePersonalDetailsRepository employeePersonalDetailsRepository) {
+                            EmployeePersonalDetailsRepository employeePersonalDetailsRepository,
+                            AnnualLeaveBalanceService annualLeaveBalanceService,
+                            SickLeaveBalanceService sickLeaveBalanceService) {
         this.employeeRepository                 = employeeRepository;
         this.allocationRepository               = allocationRepository;
         this.applicationRepository              = applicationRepository;
@@ -64,6 +71,8 @@ public class DashboardService {
         this.sickLeaveMonthlyBalanceRepository  = sickLeaveMonthlyBalanceRepository;
         this.employeePersonalDetailsRepository  = employeePersonalDetailsRepository;
         this.leaveTypeRepository = leaveTypeRepository;
+        this.annualLeaveBalanceService = annualLeaveBalanceService;
+        this.sickLeaveBalanceService = sickLeaveBalanceService;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -74,10 +83,12 @@ public class DashboardService {
         log.info("DASHBOARD employee={}", employeeId);
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + employeeId));
 
         int currentYear  = LocalDate.now().getYear();
         int currentMonth = LocalDate.now().getMonthValue();
+        annualLeaveBalanceService.initializeForCurrentMonth(employeeId, currentYear, currentMonth);
+        sickLeaveBalanceService.initializeForCurrentMonth(employeeId, currentYear, currentMonth);
 
         EmployeeDashboardResponse response = new EmployeeDashboardResponse();
         response.setEmployeeId(employeeId);
@@ -226,7 +237,7 @@ public class DashboardService {
 
     public MonthlyStatsResponse getMonthlyStats(String employeeId, Integer year, Integer month) {
         employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 
         MonthlyStatsResponse response = new MonthlyStatsResponse();
         response.setEmployeeId(employeeId);
@@ -572,7 +583,7 @@ public class DashboardService {
 
     public Map<String, List<TeamMemberBalance>> getMyLeaveCalendar(String employeeId) {
         Employee m = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
         Map<String, List<TeamMemberBalance>> cal = new TreeMap<>();
         processLeavesIntoCalendar(cal, m,
                 applicationRepository.findByEmployee_EmpIdAndStatus(
