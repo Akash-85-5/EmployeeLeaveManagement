@@ -36,7 +36,6 @@ public class LeaveApprovalController {
 //    }
 
     @GetMapping("/pending/manager/{managerId}")
-    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForManager(
             @PathVariable String managerId,
             @RequestParam(defaultValue = "0") int page,
@@ -60,13 +59,13 @@ public class LeaveApprovalController {
 
     // ── Get single leave with attachments ────────────────────────
 
-    @GetMapping("/{leaveId}/with-attachments")
-    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
-            @PathVariable Long leaveId) {
-        LeaveApplicationWithAttachmentsDto dto =
-                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
-        return ResponseEntity.ok(dto);
-    }
+//    @GetMapping("/{leaveId}/with-attachments")
+//    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
+//            @PathVariable Long leaveId) {
+//        LeaveApplicationWithAttachmentsDto dto =
+//                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
+//        return ResponseEntity.ok(dto);
+//    }
 
     // ── Core decision ─────────────────────────────────────────────
 
@@ -78,7 +77,6 @@ public class LeaveApprovalController {
     }
 
     @PatchMapping("/{leaveId}/approve")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveLeave(
             @PathVariable Long leaveId,
             @RequestParam String approverId,
@@ -88,7 +86,6 @@ public class LeaveApprovalController {
     }
 
     @PatchMapping("/{leaveId}/reject")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> rejectLeave(
             @PathVariable Long leaveId,
             @RequestParam String approverId,
@@ -125,7 +122,6 @@ public class LeaveApprovalController {
     }
 
     @GetMapping("/my-decisions/{approverId}")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<Page<LeaveApproval>> getMyDecisions(
             @PathVariable String approverId,
             @RequestParam(defaultValue = "0") int page,

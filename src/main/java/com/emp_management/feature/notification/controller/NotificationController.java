@@ -19,8 +19,6 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
     @GetMapping("/user/{employeeId}")
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
-
     public Page<NotificationResponse> getNotifications(
             @PathVariable String employeeId,
             @RequestParam(defaultValue = "0") int page,

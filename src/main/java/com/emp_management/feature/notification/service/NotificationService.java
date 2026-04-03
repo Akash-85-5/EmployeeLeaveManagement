@@ -55,7 +55,7 @@ public class NotificationService {
         // for testing i have used my mail in here.
         if (channel == Channel.EMAIL) {
             emailSender.sendEmail(
-                    "crazyyy1235@gmail.com",
+                    fromEmail,
                     toEmail,
                     emailMessage.getSubject(),
                     emailMessage.getBody()

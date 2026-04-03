@@ -1,16 +1,20 @@
 package com.emp_management.feature.employee.controller;
 
+import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
+import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.service.EmployeeService;
+import com.emp_management.shared.dto.BranchListDto;
+import com.emp_management.shared.dto.EmployeeListDto;
+import com.emp_management.shared.entity.Department;
+import com.emp_management.shared.entity.Role;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,14 +32,33 @@ public class EmployeeController {
 
     // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/profile/{employeeId}")
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
+    @GetMapping("/name/{emp_id}")
+    public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id){
+        return ResponseEntity.ok(employeeService.getEmployeeName(emp_id));
+    }
+    @GetMapping("/departments/list")
+    public  ResponseEntity<List<Department>> getDepartmentList(){
+        return ResponseEntity.ok(employeeService.getDepartmentList());
+    }
+    @GetMapping("/role/list")
+    public  ResponseEntity<List<Role>> getRoleList(){
+        return ResponseEntity.ok(employeeService.getRoleList());
+    }
+    @GetMapping("/managers/list")
+    public ResponseEntity<List<EmployeeListDto>> getAllEmployees() {
+        return ResponseEntity.ok(employeeService.getAllEmployees());
+    }
+    @GetMapping("/branch/list")
+    public ResponseEntity<List<BranchListDto>> getAllBranches() {
+        return ResponseEntity.ok(employeeService.getAllBranches());
+    }
+
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
@@ -50,7 +73,6 @@ public class EmployeeController {
 
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("#employeeId == authentication.principal.id")
     public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
@@ -65,15 +87,13 @@ public class EmployeeController {
 
     // ── UNCHANGED ─────────────────────────────────────────────────
     @GetMapping("/personal-details/{employeeId}")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
     @GetMapping("/all")
-//    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
-    public Page<Employee> getAllEmployees(
+    public Page<EmployeeResponseDTO> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String role,
@@ -81,12 +101,14 @@ public class EmployeeController {
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
         Pageable pageable = PageRequest.of(page, size);
-        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
+
+        return employeeService.getAllEmployees(
+                name, email, role, managerId, active, pageable);
     }
 
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.id")
     public List<Employee> getTeamMembers(@PathVariable String managerId) {
         return employeeService.getTeamMembers(managerId);
     }
@@ -98,13 +120,11 @@ public class EmployeeController {
 //    }
 
     @GetMapping("/search")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEmployee(@PathVariable String id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully");

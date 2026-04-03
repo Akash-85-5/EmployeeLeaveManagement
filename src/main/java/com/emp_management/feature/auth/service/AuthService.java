@@ -41,21 +41,24 @@ public class AuthService {
 
     public Object[] login(LoginRequest request) {
 
+        // authManager uses loadUserByUsername → already handles both email & empId
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
+                        request.getIdentifier(),   // ← was getEmail()
                         request.getPassword()
                 )
         );
 
-        User user = userRepository.findByEmployee_Email(request.getEmail())
+        // try email first, fall back to empId
+        User user = userRepository.findByEmployee_Email(request.getIdentifier())
+                .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus()== EmployeeStatus.ACTIVE) {
+        if (user.getStatus() != EmployeeStatus.ACTIVE) {
             throw new RuntimeException("Account is disabled. Contact admin.");
         }
 
-        String accessToken    = jwtTokenProvider.generateToken(user);
+        String accessToken        = jwtTokenProvider.generateToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         LoginResponse loginResponse = new LoginResponse(

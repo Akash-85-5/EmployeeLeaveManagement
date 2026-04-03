@@ -7,6 +7,7 @@ import com.emp_management.feature.leave.annual.dto.LeaveDecisionRequest;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveApproval;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
+import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveApprovalRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
@@ -57,13 +58,6 @@ public class LeaveApprovalService {
     // MANAGER     = level-2 approver (level-1's manager)
     // ═══════════════════════════════════════════════════════════════
 
-//    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForTeamLeaderWithAttachments(
-//            Long approverId, Pageable pageable) {
-//        List<LeaveApplication> all = leaveApplicationRepository
-//                .findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
-//                        approverId, LeaveStatus.PENDING, ApprovalLevel.FIRST_APPROVER);
-//        return toPageDto(convertToDto(all), pageable);
-//    }
 
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
             String approverId, Pageable pageable) {
@@ -73,19 +67,13 @@ public class LeaveApprovalService {
         return toPageDto(convertToDto(all), pageable);
     }
 
-//    public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForHrWithAttachments(
-//            Pageable pageable) {
-//        List<LeaveApplication> all = leaveApplicationRepository
-//                .findByStatusAndCurrentApprovalLevel(LeaveStatus.PENDING, ApprovalLevel.HR);
-//        return toPageDto(convertToDto(all), pageable);
-//    }
 
-    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
-        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
-                .orElseThrow(() -> new BadRequestException("Leave not found with ID: " + leaveId));
-        return new LeaveApplicationWithAttachmentsDto(
-                leave, leaveAttachmentRepository.findByLeaveApplicationId(leaveId));
-    }
+//    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
+//        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+//                .orElseThrow(() -> new BadRequestException("Leave not found with ID: " + leaveId));
+//        return new LeaveApplicationWithAttachmentsDto(
+//                leave, leaveAttachmentRepository.findByLeaveApplicationId(leaveId));
+//    }
 
 //    public Page<LeaveApplication> getPendingLeavesForTeamLeader(Long approverId, Pageable pageable) {
 //        return toPage(leaveApplicationRepository.findByFirstApproverIdAndStatusAndCurrentApprovalLevel(
@@ -152,7 +140,7 @@ public class LeaveApprovalService {
         req.setApproverId(approverId);
         req.setDecision(RequestStatus.REJECTED);
         req.setComments(comments);
-        decideLeave(req);
+    decideLeave(req);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -361,15 +349,21 @@ public class LeaveApprovalService {
 
     private List<LeaveApplicationWithAttachmentsDto> convertToDto(List<LeaveApplication> leaves) {
         if (leaves.isEmpty()) return List.of();
+
         List<Long> leaveIds = leaves.stream()
-                .map(LeaveApplication::getId).collect(Collectors.toList());
+                .map(LeaveApplication::getId)
+                .collect(Collectors.toList());
+
         Map<Long, List<LeaveAttachment>> byLeaveId =
                 leaveAttachmentRepository.findByLeaveApplicationIdIn(leaveIds)
                         .stream()
                         .collect(Collectors.groupingBy(LeaveAttachment::getLeaveApplicationId));
+
         return leaves.stream()
                 .map(l -> new LeaveApplicationWithAttachmentsDto(
-                        l, byLeaveId.getOrDefault(l.getId(), List.of())))
+                        LeaveApplicationMapper.toDTO(l), // ✅ USE MAPPER HERE
+                        byLeaveId.getOrDefault(l.getId(), List.of())
+                ))
                 .collect(Collectors.toList());
     }
 

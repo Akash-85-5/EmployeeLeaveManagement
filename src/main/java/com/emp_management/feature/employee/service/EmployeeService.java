@@ -6,13 +6,22 @@ import com.emp_management.feature.employee.dto.*;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeeOnboarding;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
+import com.emp_management.feature.employee.mapper.EmployeeMapper;
 import com.emp_management.feature.employee.repository.EmployeeOnboardingRepository;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
+import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.infrastructure.storage.DocumentStorageService;
+import com.emp_management.shared.dto.BranchListDto;
+import com.emp_management.shared.dto.EmployeeListDto;
+import com.emp_management.shared.entity.Department;
+import com.emp_management.shared.entity.Role;
 import com.emp_management.shared.enums.*;
 import com.emp_management.shared.exceptions.BadRequestException;
+import com.emp_management.shared.repository.BranchRepository;
+import com.emp_management.shared.repository.DepartmentRepository;
+import com.emp_management.shared.repository.RoleRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.EntityNotFoundException;
@@ -39,18 +48,47 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
     private final NotificationService notificationService;
+    private final LeaveAllocationService leaveAllocationService;
     private final DocumentStorageService documentStorageService;
     private final EmployeeOnboardingRepository employeeOnboardingRepository;
+    private final DepartmentRepository departmentRepository;
+    private final RoleRepository roleRepository;
+    private final BranchRepository branchRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, UserRepository userRepository, EmployeePersonalDetailsRepository personalDetailsRepository, NotificationService notificationService, LeaveAllocationService leaveAllocationService, DocumentStorageService documentStorageService, EmployeeOnboardingRepository employeeOnboardingRepository, DepartmentRepository departmentRepository, RoleRepository roleRepository, BranchRepository branchRepository) {
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.personalDetailsRepository = personalDetailsRepository;
         this.notificationService = notificationService;
+        this.leaveAllocationService = leaveAllocationService;
         this.documentStorageService = documentStorageService;
         this.employeeOnboardingRepository = employeeOnboardingRepository;
+        this.departmentRepository = departmentRepository;
+        this.roleRepository = roleRepository;
+        this.branchRepository = branchRepository;
     }
 
+    public NameDto getEmployeeName(String empId){
+        Employee employee = employeeRepository.findByEmpId(empId)
+                .orElseThrow(()-> new EntityNotFoundException("Employee not found"));
+        NameDto name = new NameDto();
+        name.setEmpId(employee.getEmpId());
+        name.setEmpName(employee.getName());
+        return name;
+    }
+
+    public List<Department> getDepartmentList(){
+        return departmentRepository.findAll();
+    }
+    public List<Role> getRoleList(){
+        return roleRepository.findAll();
+    }
+    public List<EmployeeListDto> getAllEmployees() {
+        return employeeRepository.findAllActiveEmployeeBasicDetails();
+    }
+    public List<BranchListDto> getAllBranches() {
+        return branchRepository.findAllBranchDetails();
+    }
     // ─── getProfile ───────────────────────────────────────────────
 
     public ProfileResponse getProfile(String  employeeId) {
@@ -77,6 +115,9 @@ public class EmployeeService {
         response.setVpnStatus(employee.getOnboarding().getVpnStatus().name());
         response.setCreatedAt(employee.getCreatedAt());
         response.setUpdatedAt(employee.getUpdatedAt());
+        response.setBranch(employee.getBranch().getName());
+        response.setCompanyName(employee.getBranch().getCompany().getName());
+        response.setCountry(employee.getBranch().getCompany().getCountry().getName());
 
         if (employee.getReportingId() != null) {
             employeeRepository.findByEmpId(employee.getReportingId())
@@ -159,7 +200,7 @@ public class EmployeeService {
         // Fill all text fields
         fillCommonFields(pd, request);
         // UNA not needed for fresher
-        pd.setUnaNumber(null);
+        pd.setUanNumber(null);
         // Clear experienced-only fields
         clearExperiencedFields(pd);
 
@@ -175,6 +216,15 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        leaveAllocationService.allocateForNewEmployee(employeeId);
+
+//        Long roleId = request.getRoleId();
+//        if (roleId != 1 && roleId != 2) {
+//            try {
+//                leaveAllocationService.allocateForNewEmployee(savedEmp.getEmpId());
+//            } catch (Exception e) {
+//                throw new RuntimeException("Failed to create leave allocations: " + e.getMessage());
+//            }
 
         // Notify HR (hardcoded id=2)
         notifyHr(employee.getName(), employeeId);
@@ -209,7 +259,7 @@ public class EmployeeService {
         validateFile(experienceCertificate, "Experience Certificate");
         validateFile(leavingLetter, "Leaving Letter");
 
-        if (request.getUnaNumber() == null || request.getUnaNumber().isBlank())
+        if (request.getUanNumber() == null || request.getUanNumber().isBlank())
             throw new BadRequestException("UNA number is required for experienced employees.");
 
         Optional<EmployeePersonalDetails> existing =
@@ -229,7 +279,7 @@ public class EmployeeService {
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
 
         fillCommonFields(pd, request);
-        pd.setUnaNumber(request.getUnaNumber());
+        pd.setUanNumber(request.getUanNumber());
         pd.setPreviousRole(request.getPreviousRole());
         pd.setOldCompanyName(request.getOldCompanyName());
         pd.setOldCompanyFromDate(request.getOldCompanyFromDate());
@@ -248,6 +298,7 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        leaveAllocationService.allocateForNewEmployee(employeeId);
 
         notifyHr(employee.getName(), employeeId);
 
@@ -339,7 +390,7 @@ public class EmployeeService {
         if (employeeExperience == EmployeeExperience.FRESHER) {
             FresherPersonalDetailsRequest req = parseJson(dataJson, FresherPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setUnaNumber(null);
+            pd.setUanNumber(null);
             clearExperiencedFields(pd);
             if (aadhaarCard != null && !aadhaarCard.isEmpty())
                 pd.setAadhaarDocPath(documentStorageService.save(aadhaarCard, "aadhaar", employeeId));
@@ -350,7 +401,7 @@ public class EmployeeService {
         } else {
             ExperiencedPersonalDetailsRequest req = parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setUnaNumber(req.getUnaNumber());
+            pd.setUanNumber(req.getUanNumber());
             pd.setPreviousRole(req.getPreviousRole());
             pd.setOldCompanyName(req.getOldCompanyName());
             pd.setOldCompanyFromDate(req.getOldCompanyFromDate());
@@ -383,10 +434,14 @@ public class EmployeeService {
 
     // ─── Unchanged methods ────────────────────────────────────────
 
-    public Page<Employee> getAllEmployees(String name, String email, String role,
-                                          String reportingId, Boolean active, Pageable pageable) {
-        return employeeRepository.findAll(
+    public Page<EmployeeResponseDTO> getAllEmployees(String name, String email, String role,
+                                                     String reportingId, Boolean active,
+                                                     Pageable pageable) {
+
+        Page<Employee> page = employeeRepository.findAll(
                 createSpecification(name, email, role, reportingId, active), pageable);
+
+        return page.map(EmployeeMapper::toDTO); // 🔥 clean conversion
     }
 
     @Transactional
@@ -529,7 +584,7 @@ public class EmployeeService {
         r.setAccountNumber(pd.getAccountNumber());
         r.setBankName(pd.getBankName());
         r.setPfNumber(pd.getPfNumber());
-        r.setUnaNumber(pd.getUnaNumber());
+        r.setUnaNumber(pd.getUanNumber());
 
         if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
             r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))
@@ -564,7 +619,7 @@ public class EmployeeService {
             userRepository.findByEmployee_EmpId(hr.getEmpId()).ifPresent(hrUser ->
                     notificationService.createNotification(
                             hr.getEmpId(),                  // recipientId  → String
-                            "noreply@company.com",           // senderEmail
+                            hr.getEmail(),           // senderEmail
                             hrUser.getEmail(),               // recipientEmail
                             EventType.PROFILE_SUBMITTED,
                             Channel.EMAIL,
@@ -577,7 +632,7 @@ public class EmployeeService {
         User empUser = userRepository.findByEmployee_EmpId(employee.getEmpId()).orElse(null);
         if (empUser == null) return;
         notificationService.createNotification(
-                employee.getEmpId(), "noreply@company.com", empUser.getEmail(),
+                employee.getEmpId(), "info@wenxttech.com", empUser.getEmail(),
                 eventType, Channel.EMAIL, message);
     }
 

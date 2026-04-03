@@ -26,7 +26,6 @@ public class CarryForwardLeaveController {
 
     // ✅ APPLY (SELF ONLY)
     @PostMapping("/apply")
-    @PreAuthorize("authentication.principal.id == #request.employeeId")
     public ResponseEntity<CarryForwardLeaveApplicationResponse> apply(
             @Valid @RequestBody CarryForwardLeaveRequest request,
             Authentication authentication) {
@@ -43,7 +42,6 @@ public class CarryForwardLeaveController {
 
     // ✅ VIEW OWN
     @GetMapping("/my/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.id")
     public ResponseEntity<List<CarryForwardLeaveApplicationResponse>> getMyApplications(
             @PathVariable String employeeId) {
 
@@ -52,8 +50,6 @@ public class CarryForwardLeaveController {
 
     // ✅ VIEW SINGLE
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN') " +
-            "or @cfLeaveOwnerGuard.isOwner(authentication, #id)")
     public ResponseEntity<CarryForwardLeaveApplicationResponse> getApplication(
             @PathVariable Long id) {
 
@@ -62,7 +58,6 @@ public class CarryForwardLeaveController {
 
     // ✅ VIEW ALL
     @GetMapping("/all")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<List<CarryForwardLeaveApplicationResponse>> getAllApplications() {
 
         return ResponseEntity.ok(cfLeaveService.getAllApplications());
@@ -70,7 +65,6 @@ public class CarryForwardLeaveController {
 
     // ✅ APPROVE
     @PutMapping("/{id}/approve")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<CarryForwardLeaveApplicationResponse> approve(
             @PathVariable Long id,
             @RequestParam String approverId) {
@@ -80,7 +74,6 @@ public class CarryForwardLeaveController {
 
     // ✅ REJECT (FIXED NAME)
     @PutMapping("/{id}/reject")
-    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<CarryForwardLeaveApplicationResponse> reject(
             @PathVariable Long id,
             @RequestParam String rejecterId,
@@ -95,7 +88,6 @@ public class CarryForwardLeaveController {
 
     // ✅ CANCEL
     @PutMapping("/{id}/cancel")
-    @PreAuthorize("authentication.principal.id == @cfLeaveOwnerGuard.getOwnerId(#id)")
     public ResponseEntity<CarryForwardLeaveApplicationResponse> cancel(
             @PathVariable Long id,
             @RequestParam String employeeId) {
@@ -114,7 +106,6 @@ public class CarryForwardLeaveController {
 
     // ✅ ALL PENDING
     @GetMapping("/pending/all")
-    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('TEAM_LEADER')")
     public ResponseEntity<List<CarryForwardLeaveApplicationResponse>> getAllPending() {
 
         return ResponseEntity.ok(cfLeaveService.getAllPending());

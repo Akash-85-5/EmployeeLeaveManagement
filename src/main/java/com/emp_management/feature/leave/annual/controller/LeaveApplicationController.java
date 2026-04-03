@@ -2,6 +2,7 @@ package com.emp_management.feature.leave.annual.controller;
 
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
 import com.emp_management.feature.leave.annual.dto.LeaveResponse;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
@@ -55,7 +56,7 @@ public class LeaveApplicationController {
     @PostMapping(value = "/apply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LeaveResponse> applyLeave(
             @RequestParam String employeeId,              // now String (emp_code)
-            @RequestParam Long leaveTypeId,               // FK to LeaveType entity
+            @RequestParam String leaveTypeName,               // FK to LeaveType entity
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam String reason,
@@ -69,9 +70,9 @@ public class LeaveApplicationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Employee not found: " + employeeId));
 
-        LeaveType leaveType = leaveTypeRepository.findById(leaveTypeId)
+        LeaveType leaveType = leaveTypeRepository.findByLeaveType(leaveTypeName)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST, "Invalid leaveTypeId: " + leaveTypeId));
+                        HttpStatus.BAD_REQUEST, "Invalid leaveTypeId: " + leaveTypeName));
 
         if (startDate == null) throw new BadRequestException("Start date is required");
 
@@ -175,7 +176,7 @@ public class LeaveApplicationController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public List<LeaveApplication> getEmployeeLeaves(
+    public List<LeaveApplicationResponseDTO> getEmployeeLeaves(
             @PathVariable String employeeId,
             @RequestParam(required = false) RequestStatus status,
             @RequestParam(required = false) Long leaveTypeId,

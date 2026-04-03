@@ -19,7 +19,20 @@ public class LeaveType {
     @Column(name = "auto_allocate", nullable = false)
     private boolean autoAllocate = false;
 
-    // --- getters / setters ---
+    /**
+     * If set, only employees of this gender are eligible.
+     * NULL means no gender restriction.
+     * Values: "MALE", "FEMALE"
+     */
+    @Column(name = "eligible_gender")
+    private String eligibleGender;
+
+    /**
+     * If true, only married employees are eligible.
+     * False or NULL means no marital restriction.
+     */
+    @Column(name = "married_only")
+    private Boolean marriedOnly = false;
 
     public Long getLeaveTypeId() { return leaveTypeId; }
     public void setLeaveTypeId(Long leaveTypeId) { this.leaveTypeId = leaveTypeId; }
@@ -32,4 +45,10 @@ public class LeaveType {
 
     public boolean isAutoAllocate() { return autoAllocate; }
     public void setAutoAllocate(boolean autoAllocate) { this.autoAllocate = autoAllocate; }
+
+    public String getEligibleGender() { return eligibleGender; }
+    public void setEligibleGender(String eligibleGender) { this.eligibleGender = eligibleGender; }
+
+    public Boolean getMarriedOnly() { return marriedOnly; }
+    public void setMarriedOnly(Boolean marriedOnly) { this.marriedOnly = marriedOnly; }
 }

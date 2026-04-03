@@ -12,7 +12,6 @@ public class FresherPersonalDetailsRequest {
     // ── NEW name fields ───────────────────────────────────────────
     private String firstName;
     private String lastName;
-    private String surName;
 
     // ── EXISTING fields ───────────────────────────────────────────
     private String contactNumber;
@@ -60,9 +59,6 @@ public class FresherPersonalDetailsRequest {
 
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getSurName() { return surName; }
-    public void setSurName(String surName) { this.surName = surName; }
 
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
