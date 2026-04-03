@@ -267,7 +267,7 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL_LEAVE" -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
+            case "ANNUAL" -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
             case "SICK"         -> sickLeaveBalanceService.deductLeave(empId, year, month, days);
             case "COMP_OFF"     -> compOffService.useCompOff(empId, leave.getDays(), leave.getId());
             default             -> { /* one-time types like MATERNITY/PATERNITY — no balance table */ }
@@ -287,7 +287,7 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL_LEAVE" -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
+            case "ANNUAL" -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
             case "SICK"         -> sickLeaveBalanceService.restoreLeave(empId, year, month, days);
             case "COMP_OFF"     -> {
                 List<CompOff> linked = compOffRepository.findByUsedLeaveApplicationId(leave.getId());

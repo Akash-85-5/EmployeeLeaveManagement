@@ -30,7 +30,7 @@ public class ExperiencedPersonalDetailsRequest {
     private String bankName;
 
     // ── NEW: UNA number — REQUIRED for EXPERIENCED ────────────────
-    private String unaNumber;
+    private String uanNumber;
 
     // ── NOTE: pfNumber NOT included — Admin fills this later ──────
 
@@ -108,8 +108,8 @@ public class ExperiencedPersonalDetailsRequest {
     public String getBankName() { return bankName; }
     public void setBankName(String bankName) { this.bankName = bankName; }
 
-    public String getUnaNumber() { return unaNumber; }
-    public void setUnaNumber(String unaNumber) { this.unaNumber = unaNumber; }
+    public String getUanNumber() { return uanNumber; }
+    public void setUanNumber(String uanNumber) { this.uanNumber = uanNumber; }
 
     public String getPreviousRole() { return previousRole; }
     public void setPreviousRole(String previousRole) { this.previousRole = previousRole; }

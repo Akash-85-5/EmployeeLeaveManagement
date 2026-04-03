@@ -97,15 +97,15 @@ public class AdminService {
         user.setStatus(EmployeeStatus.ACTIVE);
         userRepository.save(user);
 
-        // Fixed || → && bug from before
-        Long roleId = request.getRoleId();
-        if (roleId != 1 && roleId != 2) {
-            try {
-                leaveAllocationService.allocateForNewEmployee(savedEmp.getEmpId());
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create leave allocations: " + e.getMessage());
-            }
-        }
+//        // Fixed || → && bug from before
+//        Long roleId = request.getRoleId();
+//        if (roleId != 1 && roleId != 2) {
+//            try {
+//                leaveAllocationService.allocateForNewEmployee(savedEmp.getEmpId());
+//            } catch (Exception e) {
+//                throw new RuntimeException("Failed to create leave allocations: " + e.getMessage());
+//            }
+//        }
     }
 
 

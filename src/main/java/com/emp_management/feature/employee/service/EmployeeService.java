@@ -200,7 +200,7 @@ public class EmployeeService {
         // Fill all text fields
         fillCommonFields(pd, request);
         // UNA not needed for fresher
-        pd.setUnaNumber(null);
+        pd.setUanNumber(null);
         // Clear experienced-only fields
         clearExperiencedFields(pd);
 
@@ -216,7 +216,7 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
-//        leaveAllocationService.allocateForNewEmployee(employeeId);
+        leaveAllocationService.allocateForNewEmployee(employeeId);
 
 //        Long roleId = request.getRoleId();
 //        if (roleId != 1 && roleId != 2) {
@@ -259,7 +259,7 @@ public class EmployeeService {
         validateFile(experienceCertificate, "Experience Certificate");
         validateFile(leavingLetter, "Leaving Letter");
 
-        if (request.getUnaNumber() == null || request.getUnaNumber().isBlank())
+        if (request.getUanNumber() == null || request.getUanNumber().isBlank())
             throw new BadRequestException("UNA number is required for experienced employees.");
 
         Optional<EmployeePersonalDetails> existing =
@@ -279,7 +279,7 @@ public class EmployeeService {
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
 
         fillCommonFields(pd, request);
-        pd.setUnaNumber(request.getUnaNumber());
+        pd.setUanNumber(request.getUanNumber());
         pd.setPreviousRole(request.getPreviousRole());
         pd.setOldCompanyName(request.getOldCompanyName());
         pd.setOldCompanyFromDate(request.getOldCompanyFromDate());
@@ -298,6 +298,7 @@ public class EmployeeService {
         pd.setSubmittedAt(LocalDateTime.now());
 
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        leaveAllocationService.allocateForNewEmployee(employeeId);
 
         notifyHr(employee.getName(), employeeId);
 
@@ -389,7 +390,7 @@ public class EmployeeService {
         if (employeeExperience == EmployeeExperience.FRESHER) {
             FresherPersonalDetailsRequest req = parseJson(dataJson, FresherPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setUnaNumber(null);
+            pd.setUanNumber(null);
             clearExperiencedFields(pd);
             if (aadhaarCard != null && !aadhaarCard.isEmpty())
                 pd.setAadhaarDocPath(documentStorageService.save(aadhaarCard, "aadhaar", employeeId));
@@ -400,7 +401,7 @@ public class EmployeeService {
         } else {
             ExperiencedPersonalDetailsRequest req = parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
             fillCommonFields(pd, req);
-            pd.setUnaNumber(req.getUnaNumber());
+            pd.setUanNumber(req.getUanNumber());
             pd.setPreviousRole(req.getPreviousRole());
             pd.setOldCompanyName(req.getOldCompanyName());
             pd.setOldCompanyFromDate(req.getOldCompanyFromDate());
@@ -583,7 +584,7 @@ public class EmployeeService {
         r.setAccountNumber(pd.getAccountNumber());
         r.setBankName(pd.getBankName());
         r.setPfNumber(pd.getPfNumber());
-        r.setUnaNumber(pd.getUnaNumber());
+        r.setUnaNumber(pd.getUanNumber());
 
         if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
             r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))

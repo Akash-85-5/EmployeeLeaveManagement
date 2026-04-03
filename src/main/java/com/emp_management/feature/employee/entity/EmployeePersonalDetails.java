@@ -94,8 +94,8 @@ public class EmployeePersonalDetails {
     private String pfNumber;
 
     // ── NEW: UNA number — required for EXPERIENCED, null for FRESHER
-    @Column(name = "una_number", length = 50)
-    private String unaNumber;
+    @Column(name = "uan_number", length = 50)
+    private String uanNumber;
 
     // ── UNCHANGED: professional info ─────────────────────────────
     @Column(name = "designation", length = 100)
@@ -255,8 +255,8 @@ public class EmployeePersonalDetails {
     public String getPfNumber() { return pfNumber; }
     public void setPfNumber(String pfNumber) { this.pfNumber = pfNumber; }
 
-    public String getUnaNumber() { return unaNumber; }
-    public void setUnaNumber(String unaNumber) { this.unaNumber = unaNumber; }
+    public String getUanNumber() { return uanNumber; }
+    public void setUanNumber(String uanNumber) { this.uanNumber = uanNumber; }
 
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
