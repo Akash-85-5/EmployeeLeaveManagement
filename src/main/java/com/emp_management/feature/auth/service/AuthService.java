@@ -112,15 +112,16 @@ public class AuthService {
             throw new RuntimeException("Force password change is not required.");
         }
 
+        // ✅ ADD THIS
+        PasswordValidationUtil.validate(request.getNewPassword());
+
         String newHash = passwordEncoder.encode(request.getNewPassword());
         user.setPasswordHash(newHash);
         user.setForcePwdChange(false);
         userRepository.save(user);
 
-        // Record in audit so future changes can check history
         passwordAuditService.recordPassword(empId, newHash);
     }
-
     // ── CHANGE PASSWORD (known old password) ─────────────────────────────
 
     /**
