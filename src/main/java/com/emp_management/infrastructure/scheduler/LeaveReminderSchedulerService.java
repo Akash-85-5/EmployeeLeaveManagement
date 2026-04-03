@@ -11,6 +11,7 @@ import com.emp_management.shared.enums.ApprovalLevel;
 import com.emp_management.shared.enums.Channel;
 import com.emp_management.shared.enums.EventType;
 import com.emp_management.shared.enums.RequestStatus;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -328,11 +329,11 @@ public class LeaveReminderSchedulerService {
         String currentApproverId = leave.getCurrentApproverId();
 
         Employee approver = employeeRepository.findByEmpId(currentApproverId)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "Approver not found: " + currentApproverId));
 
         Employee employee = employeeRepository.findByEmpId(leave.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "Employee not found: " + leave.getEmployeeId()));
 
         String urgency = getUrgencyLabel(daysUntilLeave);

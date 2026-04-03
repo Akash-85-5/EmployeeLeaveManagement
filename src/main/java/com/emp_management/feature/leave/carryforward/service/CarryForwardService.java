@@ -9,6 +9,7 @@ import com.emp_management.feature.leave.carryforward.dto.CarryForwardBalanceResp
 import com.emp_management.feature.leave.carryforward.dto.CarryForwardEligibilityResponse;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
+import com.emp_management.shared.exceptions.BadRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -119,7 +120,7 @@ public class CarryForwardService {
     @Transactional(readOnly = true)
     public CarryForwardBalanceResponse getBalance(String  employeeId, Integer year) {
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
+                .orElseThrow(() -> new BadRequestException("Employee not found: " + employeeId));
 
         CarryForwardBalance balance = carryForwardRepository
                 .findByEmployee_EmpIdAndYear(employeeId, year).orElse(null);
@@ -146,7 +147,7 @@ public class CarryForwardService {
     @Transactional(readOnly = true)
     public CarryForwardEligibilityResponse checkEligibility(String  employeeId, Integer year) {
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found: " + employeeId));
+                .orElseThrow(() -> new BadRequestException("Employee not found: " + employeeId));
 
         // Get December remaining from annual leave monthly balance
         List<?> summary = annualLeaveBalanceService.getYearSummary(employeeId, year);

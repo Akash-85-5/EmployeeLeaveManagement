@@ -17,6 +17,7 @@ import com.emp_management.shared.enums.Channel;
 import com.emp_management.shared.enums.EventType;
 import com.emp_management.shared.enums.RequestStatus;
 import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -99,7 +100,7 @@ public class LeaveApprovalService {
         validateDecision(request.getDecision());
 
         LeaveApplication leave = leaveApplicationRepository.findById(request.getLeaveId())
-                .orElseThrow(() -> new RuntimeException("Leave not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Leave not found"));
 
         if (leave.getStatus() != RequestStatus.PENDING) {
             throw new BadRequestException(
@@ -107,7 +108,7 @@ public class LeaveApprovalService {
         }
 
         Employee approver = employeeRepository.findByEmpId(request.getApproverId())
-                .orElseThrow(() -> new RuntimeException("Approver not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Approver not found"));
 
         ApprovalLevel currentLevel = leave.getCurrentApprovalLevel();
         validateApproverForLevel(leave, approver, currentLevel);
@@ -116,10 +117,10 @@ public class LeaveApprovalService {
                 request.getDecision(), request.getComments());
 
         if (request.getDecision() == RequestStatus.REJECTED) {
-            finalizeLeave(leave, RequestStatus.REJECTED, approver);
+            finalizeLeave(leave, RequestStatus.REJECTED, approver, request.getComments());
         }
         else {
-            advanceOrFinalize(leave, approver);
+            advanceOrFinalize(leave, approver, request.getComments());
         }
     }
 
@@ -206,7 +207,7 @@ public class LeaveApprovalService {
     // Level MANAGER approved → always finalize (max 2 levels)
     // ═══════════════════════════════════════════════════════════════
 
-    private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover) {
+    private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover, String comments) {
         ApprovalLevel current = leave.getCurrentApprovalLevel();
         int required          = leave.getRequiredApprovalLevels();
 
@@ -219,18 +220,20 @@ public class LeaveApprovalService {
                 notifyEmployeeProgress(leave, currentApprover,
                         "Your leave has been approved at level 1. Pending final approval.");
             } else {
-                finalizeLeave(leave, RequestStatus.APPROVED, currentApprover);
+                finalizeLeave(leave, RequestStatus.APPROVED, currentApprover,comments);
             }
         } else {
             // MANAGER or HR → final level
-            finalizeLeave(leave, RequestStatus.APPROVED, currentApprover);
+            finalizeLeave(leave, RequestStatus.APPROVED, currentApprover,comments);
         }
     }
 
     private void finalizeLeave(LeaveApplication leave,
                                RequestStatus finalStatus,
-                               Employee finalApprover) {
+                               Employee finalApprover,
+                               String reason) {
         leave.setStatus(finalStatus);
+        leave.setReason(reason);
         leave.setApprovedBy(finalApprover.getEmpId());
         leave.setApprovedRole(finalApprover.getRole().getRoleName());
         leave.setApprovedAt(LocalDateTime.now());
@@ -241,7 +244,7 @@ public class LeaveApprovalService {
         }
 
         leaveApplicationRepository.save(leave);
-        notifyEmployee(leave, finalApprover, finalStatus, null);
+        notifyEmployee(leave, finalApprover, finalStatus);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -314,7 +317,7 @@ public class LeaveApprovalService {
     }
 
     private void notifyEmployee(LeaveApplication leave, Employee approver,
-                                RequestStatus decision, String comments) {
+                                RequestStatus decision) {
         employeeRepository.findByEmpId(leave.getEmployee().getEmpId()).ifPresent(emp -> {
             String context = switch (decision) {
                 case APPROVED -> "Your " + leave.getLeaveType().getLeaveType() + " leave from "
@@ -323,7 +326,7 @@ public class LeaveApprovalService {
                 case REJECTED -> "Your " + leave.getLeaveType().getLeaveType() + " leave from "
                         + leave.getStartDate() + " to " + leave.getEndDate()
                         + " has been rejected. Reason: "
-                        + (comments != null ? comments : "N/A");
+                        + (leave.getReason() != null ? leave.getReason() : "");
                 default -> "A meeting is required regarding your leave from "
                         + leave.getStartDate() + " to " + leave.getEndDate() + ".";
             };

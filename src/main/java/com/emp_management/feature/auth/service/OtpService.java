@@ -4,6 +4,8 @@ import com.emp_management.feature.auth.entity.OtpToken;
 import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.OtpTokenRepository;
 import com.emp_management.feature.auth.repository.UserRepository;
+import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,7 +44,7 @@ public class OtpService {
     public void sendOtp(String email) {
 
         userRepository.findByEmployee_Email(email)
-                .orElseThrow(() -> new RuntimeException("No account found for this email"));
+                .orElseThrow(() -> new EntityNotFoundException("No account found for this email"));
 
         otpTokenRepository.deleteExpiredOrUsed();
 
@@ -75,22 +77,22 @@ public class OtpService {
 
         OtpToken otpToken = otpTokenRepository
                 .findTopByEmailAndUsedFalseOrderByExpiresAtDesc(email)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new EntityNotFoundException(
                         "No active OTP found. Please request a new one."));
 
         if (otpToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("OTP has expired. Please request a new one.");
+            throw new BadRequestException("OTP has expired. Please request a new one.");
         }
 
         if (!otpToken.getOtp().equals(otp)) {
-            throw new RuntimeException("Invalid OTP");
+            throw new BadRequestException("Invalid OTP");
         }
 
         otpToken.setUsed(true);
         otpTokenRepository.save(otpToken);
 
         User user = userRepository.findByEmployee_Email(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setForcePwdChange(false);

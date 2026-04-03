@@ -16,7 +16,7 @@ import java.util.UUID;
 @Service
 public class DocumentStorageService {
 
-    private static final long MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    private static final long MAX_SIZE = 15 * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "application/pdf", "image/jpeg", "image/png");
 
