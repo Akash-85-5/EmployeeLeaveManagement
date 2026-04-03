@@ -1,25 +1,26 @@
 package com.emp_management.feature.auth.dto;
 
+/**
+ * Returned on successful login.
+ * token — JWT the frontend stores in sessionStorage.
+ */
 public class LoginResponse {
 
-    private String id;
+    private String employeeId;
     private String role;
+    private String token;
     private boolean forcePasswordChange;
 
-    public LoginResponse(String id, String role, boolean forcePasswordChange) {
-        this.id = id;
-        this.role = role;
+    public LoginResponse(String employeeId, String role, String token,
+                         boolean forcePasswordChange) {
+        this.employeeId          = employeeId;
+        this.role                = role;
+        this.token               = token;
         this.forcePasswordChange = forcePasswordChange;
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
+    public String getEmployeeId()        { return employeeId; }
+    public String getRole()              { return role; }
+    public String getToken()             { return token; }
     public boolean isForcePasswordChange() { return forcePasswordChange; }
-    public void setForcePasswordChange(boolean forcePasswordChange) {
-        this.forcePasswordChange = forcePasswordChange;
-    }
 }
