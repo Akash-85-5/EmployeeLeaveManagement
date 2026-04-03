@@ -30,68 +30,103 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ── UNCHANGED ─────────────────────────────────────────────────
+    // ── Lookups ───────────────────────────────────────────────────
     @GetMapping("/profile/{employeeId}")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
     @GetMapping("/name/{emp_id}")
-    public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id){
+    public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id) {
         return ResponseEntity.ok(employeeService.getEmployeeName(emp_id));
     }
+
     @GetMapping("/departments/list")
-    public  ResponseEntity<List<Department>> getDepartmentList(){
+    public ResponseEntity<List<Department>> getDepartmentList() {
         return ResponseEntity.ok(employeeService.getDepartmentList());
     }
+
     @GetMapping("/role/list")
-    public  ResponseEntity<List<Role>> getRoleList(){
+    public ResponseEntity<List<Role>> getRoleList() {
         return ResponseEntity.ok(employeeService.getRoleList());
     }
+
     @GetMapping("/managers/list")
-    public ResponseEntity<List<EmployeeListDto>> getAllEmployees() {
+    public ResponseEntity<List<EmployeeListDto>> getAllEmployeesList() {
         return ResponseEntity.ok(employeeService.getAllEmployees());
     }
+
     @GetMapping("/branch/list")
     public ResponseEntity<List<BranchListDto>> getAllBranches() {
         return ResponseEntity.ok(employeeService.getAllBranches());
     }
 
+    // ── FRESHER: submit personal details ──────────────────────────
+    /**
+     * Multipart keys:
+     *   data              – JSON (FresherPersonalDetailsRequest)
+     *   idProof           – ID proof document
+     *   tenthMarksheet    – 10th marksheet
+     *   twelfthMarksheet  – 12th marksheet
+     *   degreeCertificate – Degree / Provisional certificate
+     *   offerLetter       – Offer letter
+     *   passportPhoto     – Passport-size photo
+     */
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
             @PathVariable String employeeId,
-            @RequestPart("data") String dataJson,
-            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
-            @RequestPart("tc") MultipartFile tc,
-            @RequestPart("offerLetter") MultipartFile offerLetter) {
+            @RequestPart("data")               String dataJson,
+            @RequestPart("idProof")            MultipartFile idProof,
+            @RequestPart("tenthMarksheet")     MultipartFile tenthMarksheet,
+            @RequestPart("twelfthMarksheet")   MultipartFile twelfthMarksheet,
+            @RequestPart("degreeCertificate")  MultipartFile degreeCertificate,
+            @RequestPart("offerLetter")        MultipartFile offerLetter,
+            @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
 
         return ResponseEntity.ok(
                 employeeService.submitFresherDetails(
-                        employeeId, dataJson, aadhaarCard, tc, offerLetter));
+                        employeeId, dataJson,
+                        idProof, tenthMarksheet, twelfthMarksheet,
+                        degreeCertificate, offerLetter, passportPhoto));
     }
 
+    // ── EXPERIENCED: submit personal details ──────────────────────
+    /**
+     * Multipart keys:
+     *   data              – JSON (ExperiencedPersonalDetailsRequest)
+     *                       includes an "experiences" array whose index
+     *                       matches the "experienceCerts" file list.
+     *   idProof           – ID proof document (single file)
+     *   passportPhoto     – Passport-size photo (single file)
+     *   experienceCerts   – List of experience certificate files,
+     *                       one per experience entry in the JSON array.
+     *   relievingLetter   – Relieving letter from the last company (single file)
+     */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
             @PathVariable String employeeId,
-            @RequestPart("data") String dataJson,
-            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
-            @RequestPart("experienceCertificate") MultipartFile experienceCertificate,
-            @RequestPart("leavingLetter") MultipartFile leavingLetter) {
+            @RequestPart("data")             String dataJson,
+            @RequestPart("idProof")          MultipartFile idProof,
+            @RequestPart("passportPhoto")    MultipartFile passportPhoto,
+            @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
+            @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
 
         return ResponseEntity.ok(
                 employeeService.submitExperiencedDetails(
-                        employeeId, dataJson, aadhaarCard, experienceCertificate, leavingLetter));
+                        employeeId, dataJson,
+                        idProof, passportPhoto, experienceCerts, relievingLetter));
     }
 
-    // ── UNCHANGED ─────────────────────────────────────────────────
+    // ── Personal details read ─────────────────────────────────────
     @GetMapping("/personal-details/{employeeId}")
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
     }
 
+    // ── Employee list / search ────────────────────────────────────
     @GetMapping("/all")
     public Page<EmployeeResponseDTO> getAllEmployees(
             @RequestParam(required = false) String name,
@@ -103,21 +138,13 @@ public class EmployeeController {
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-
-        return employeeService.getAllEmployees(
-                name, email, role, managerId, active, pageable);
+        return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
     }
 
     @GetMapping("/manager/{managerId}/team")
     public List<Employee> getTeamMembers(@PathVariable String managerId) {
         return employeeService.getTeamMembers(managerId);
     }
-
-//    @GetMapping("/teamleader/{teamLeaderId}/team")
-//    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
-//    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
-//        return employeeService.getTeamLeaderMembers(teamLeaderId);
-//    }
 
     @GetMapping("/search")
     public List<Employee> searchEmployees(@RequestParam String query) {
@@ -129,14 +156,4 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully");
     }
-//    @GetMapping("/me")
-//    public EmployeeProfileResponse getMyProfile(Authentication authentication) {
-//
-//        CustomUserDetails userDetails =
-//                (CustomUserDetails) authentication.getPrincipal();
-//
-//        User user = userDetails.getUser();
-//
-//        return employeeService.getMyProfile(user);
-//    }
 }
