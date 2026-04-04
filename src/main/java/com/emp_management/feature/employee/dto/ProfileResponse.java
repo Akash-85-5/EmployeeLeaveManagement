@@ -40,7 +40,7 @@ public class ProfileResponse {
     private String contactNumber;
     private Gender gender;
     private MaritalStatus maritalStatus;
-    private String idProofNumber;
+    private String aadharNumber;
     private String personalEmail;
     private LocalDate dateOfBirth;
     private String presentAddress;
@@ -160,8 +160,13 @@ public class ProfileResponse {
     public MaritalStatus getMaritalStatus() { return maritalStatus; }
     public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
-    public String getIdProofNumber() { return idProofNumber; }
-    public void setIdProofNumber(String idProofNumber) { this.idProofNumber = idProofNumber; }
+    public String getAadharNumber() {
+        return aadharNumber;
+    }
+
+    public void setAadharNumber(String aadharNumber) {
+        this.aadharNumber = aadharNumber;
+    }
 
     public String getPersonalEmail() { return personalEmail; }
     public void setPersonalEmail(String personalEmail) { this.personalEmail = personalEmail; }

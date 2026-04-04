@@ -40,8 +40,8 @@ public class FresherPersonalDetailsRequest {
     @NotNull(message = "Marital status is required")
     private MaritalStatus maritalStatus;
 
-    @NotBlank(message = "ID proof number is required")
-    private String idProofNumber;
+    @NotBlank(message = "Aadhar number is required")
+    private String aadharNumber;
 
     @NotBlank(message = "Personal email is required")
     @Email(message = "Enter a valid email address")
@@ -123,8 +123,13 @@ public class FresherPersonalDetailsRequest {
     public MaritalStatus getMaritalStatus() { return maritalStatus; }
     public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
-    public String getIdProofNumber() { return idProofNumber; }
-    public void setIdProofNumber(String idProofNumber) { this.idProofNumber = idProofNumber; }
+    public String getAadharNumber() {
+        return aadharNumber;
+    }
+
+    public void setAadharNumber(String aadharNumber) {
+        this.aadharNumber = aadharNumber;
+    }
 
     public String getPersonalEmail() { return personalEmail; }
     public void setPersonalEmail(String personalEmail) { this.personalEmail = personalEmail; }

@@ -534,7 +534,7 @@ public class EmployeeService {
         pd.setContactNumber(r.getContactNumber());
         pd.setGender(r.getGender());
         pd.setMaritalStatus(r.getMaritalStatus());
-        pd.setIdProofNumber(r.getIdProofNumber());
+        pd.setAadharNumber(r.getAadharNumber());
         pd.setPersonalEmail(r.getPersonalEmail());
         pd.setDateOfBirth(r.getDateOfBirth());
         pd.setPresentAddress(r.getPresentAddress());
@@ -573,7 +573,7 @@ public class EmployeeService {
         pd.setContactNumber(r.getContactNumber());
         pd.setGender(r.getGender());
         pd.setMaritalStatus(r.getMaritalStatus());
-        pd.setIdProofNumber(r.getIdProofNumber());
+        pd.setAadharNumber(r.getAadharNumber());
         pd.setPersonalEmail(r.getPersonalEmail());
         pd.setDateOfBirth(r.getDateOfBirth());
         pd.setPresentAddress(r.getPresentAddress());
@@ -663,7 +663,7 @@ public class EmployeeService {
         r.setContactNumber(pd.getContactNumber());
         r.setGender(pd.getGender());
         r.setMaritalStatus(pd.getMaritalStatus());
-        r.setIdProofNumber(pd.getIdProofNumber());
+        r.setAadharNumber(pd.getAadharNumber());
         r.setPersonalEmail(pd.getPersonalEmail());
         r.setDateOfBirth(pd.getDateOfBirth());
         r.setPresentAddress(pd.getPresentAddress());

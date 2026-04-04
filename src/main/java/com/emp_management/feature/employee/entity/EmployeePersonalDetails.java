@@ -112,8 +112,8 @@ public class EmployeePersonalDetails {
      * Actual document file is stored in FresherDocument / ExperiencedDocument.
      */
     @NotBlank(message = "ID proof number is required")
-    @Column(name = "id_proof_number", length = 30)
-    private String idProofNumber;
+    @Column(name = "aadhar_number", length = 12)
+    private String aadharNumber;
 
     // ── Bank details ──────────────────────────────────────────────
     @NotBlank(message = "Account number is required")
@@ -294,8 +294,12 @@ public class EmployeePersonalDetails {
         this.emergencyContactNumber = emergencyContactNumber;
     }
 
-    public String getIdProofNumber() { return idProofNumber; }
-    public void setIdProofNumber(String idProofNumber) { this.idProofNumber = idProofNumber; }
+    public String getAadharNumber() {
+        return aadharNumber;
+    }
+    public void setAadharNumber(String aadharNumber) {
+        this.aadharNumber = aadharNumber;
+    }
 
     public String getAccountNumber() { return accountNumber; }
     public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
