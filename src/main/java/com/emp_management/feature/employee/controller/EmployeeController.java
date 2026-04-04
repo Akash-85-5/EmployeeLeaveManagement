@@ -61,8 +61,14 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getAllBranches());
     }
 
-    // ── FRESHER: submit personal details ──────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // FRESHER
+    // ─────────────────────────────────────────────────────────────
+
     /**
+     * POST — first-time submission by a fresher.
+     * Fails if a record already exists in PENDING or VERIFIED state.
+     *
      * Multipart keys:
      *   data              – JSON (FresherPersonalDetailsRequest)
      *   idProof           – ID proof document
@@ -91,16 +97,47 @@ public class EmployeeController {
                         degreeCertificate, offerLetter, passportPhoto));
     }
 
-    // ── EXPERIENCED: submit personal details ──────────────────────
     /**
+     * PUT — resubmission after HR rejection.
+     * Fails unless the current verification status is REJECTED.
+     * All 6 documents must be re-uploaded (full replacement — no partial update).
+     *
+     * Multipart keys: same as POST above.
+     */
+    @PutMapping(value = "/personal-details/{employeeId}/fresher",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<EmployeePersonalDetails> updateFresherDetails(
+            @PathVariable String employeeId,
+            @RequestPart("data")               String dataJson,
+            @RequestPart("idProof")            MultipartFile idProof,
+            @RequestPart("tenthMarksheet")     MultipartFile tenthMarksheet,
+            @RequestPart("twelfthMarksheet")   MultipartFile twelfthMarksheet,
+            @RequestPart("degreeCertificate")  MultipartFile degreeCertificate,
+            @RequestPart("offerLetter")        MultipartFile offerLetter,
+            @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
+
+        return ResponseEntity.ok(
+                employeeService.updateFresherDetails(
+                        employeeId, dataJson,
+                        idProof, tenthMarksheet, twelfthMarksheet,
+                        degreeCertificate, offerLetter, passportPhoto));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // EXPERIENCED
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST — first-time submission by an experienced employee.
+     * Fails if a record already exists in PENDING or VERIFIED state.
+     *
      * Multipart keys:
      *   data              – JSON (ExperiencedPersonalDetailsRequest)
-     *                       includes an "experiences" array whose index
-     *                       matches the "experienceCerts" file list.
+     *                       The "experiences" array index must match
+     *                       the order of files in "experienceCerts".
      *   idProof           – ID proof document (single file)
      *   passportPhoto     – Passport-size photo (single file)
-     *   experienceCerts   – List of experience certificate files,
-     *                       one per experience entry in the JSON array.
+     *   experienceCerts   – One file per experience entry (ordered list)
      *   relievingLetter   – Relieving letter from the last company (single file)
      */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
@@ -119,12 +156,35 @@ public class EmployeeController {
                         idProof, passportPhoto, experienceCerts, relievingLetter));
     }
 
+    /**
+     * PUT — resubmission after HR rejection.
+     * Fails unless the current verification status is REJECTED.
+     * All documents must be re-uploaded (full replacement — no partial update).
+     *
+     * Multipart keys: same as POST above.
+     */
+    @PutMapping(value = "/personal-details/{employeeId}/experienced",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<EmployeePersonalDetails> updateExperiencedDetails(
+            @PathVariable String employeeId,
+            @RequestPart("data")             String dataJson,
+            @RequestPart("idProof")          MultipartFile idProof,
+            @RequestPart("passportPhoto")    MultipartFile passportPhoto,
+            @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
+            @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
+
+        return ResponseEntity.ok(
+                employeeService.updateExperiencedDetails(
+                        employeeId, dataJson,
+                        idProof, passportPhoto, experienceCerts, relievingLetter));
+    }
+
     // ── Personal details read ─────────────────────────────────────
     @GetMapping("/personal-details/{employeeId}")
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
-    } 
+    }
 
     // ── Employee list / search ────────────────────────────────────
     @GetMapping("/all")

@@ -82,23 +82,12 @@ public class EmployeeService {
         return name;
     }
 
-    public List<Department> getDepartmentList() {
-        return departmentRepository.findAll();
-    }
+    public List<Department> getDepartmentList() { return departmentRepository.findAll(); }
+    public List<Role> getRoleList() { return roleRepository.findAll(); }
+    public List<EmployeeListDto> getAllEmployees() { return employeeRepository.findAllActiveEmployeeBasicDetails(); }
+    public List<BranchListDto> getAllBranches() { return branchRepository.findAllBranchDetails(); }
 
-    public List<Role> getRoleList() {
-        return roleRepository.findAll();
-    }
-
-    public List<EmployeeListDto> getAllEmployees() {
-        return employeeRepository.findAllActiveEmployeeBasicDetails();
-    }
-
-    public List<BranchListDto> getAllBranches() {
-        return branchRepository.findAllBranchDetails();
-    }
-
-    // ─── getProfile ────────────────────────────────────────────────
+    // ─── Profile ───────────────────────────────────────────────────
 
     public ProfileResponse getProfile(String employeeId) {
         User user = userRepository.findByEmployee_EmpId(employeeId)
@@ -150,23 +139,116 @@ public class EmployeeService {
         return response;
     }
 
-    // ─── FRESHER: submit ───────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // FRESHER — public API
+    // ─────────────────────────────────────────────────────────────
 
     /**
-     * Multipart files:
-     * idProof, tenthMarksheet, twelfthMarksheet,
-     * degreeCertificate, offerLetter, passportPhoto
+     * POST: first-time submission.
+     * Allowed states: no record yet, OR existing record is REJECTED.
      */
     @Transactional
     public EmployeePersonalDetails submitFresherDetails(
-            String employeeId,
-            String dataJson,
-            MultipartFile idProof,
-            MultipartFile tenthMarksheet,
-            MultipartFile twelfthMarksheet,
-            MultipartFile degreeCertificate,
-            MultipartFile offerLetter,
-            MultipartFile passportPhoto) {
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile tenthMarksheet,
+            MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
+            MultipartFile offerLetter, MultipartFile passportPhoto) {
+
+        Optional<EmployeePersonalDetails> existing =
+                personalDetailsRepository.findByEmployee_EmpId(employeeId);
+
+        // POST allows: no existing record, OR existing is REJECTED
+        existing.ifPresent(pd -> guardNotPendingOrVerified(pd.getVerificationStatus()));
+
+        return saveFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto, existing);
+    }
+
+    /**
+     * PUT: resubmission after HR rejection only.
+     * Fails if there is no existing record or status is not REJECTED.
+     */
+    @Transactional
+    public EmployeePersonalDetails updateFresherDetails(
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile tenthMarksheet,
+            MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
+            MultipartFile offerLetter, MultipartFile passportPhoto) {
+
+        Optional<EmployeePersonalDetails> existing =
+                personalDetailsRepository.findByEmployee_EmpId(employeeId);
+
+        // PUT requires an existing record that is specifically REJECTED
+        EmployeePersonalDetails pd = existing.orElseThrow(() ->
+                new BadRequestException("No personal details found to update for employee: " + employeeId));
+//        guardOnlyRejected(pd.getVerificationStatus());
+
+        return saveFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto, existing);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // EXPERIENCED — public API
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST: first-time submission.
+     * Allowed states: no record yet, OR existing record is REJECTED.
+     */
+    @Transactional
+    public EmployeePersonalDetails submitExperiencedDetails(
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile passportPhoto,
+            List<MultipartFile> experienceCerts, MultipartFile relievingLetter) {
+
+        Optional<EmployeePersonalDetails> existing =
+                personalDetailsRepository.findByEmployee_EmpId(employeeId);
+
+        // POST allows: no existing record, OR existing is REJECTED
+        existing.ifPresent(pd -> guardNotPendingOrVerified(pd.getVerificationStatus()));
+
+        return saveExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter, existing);
+    }
+
+    /**
+     * PUT: resubmission after HR rejection only.
+     * Fails if there is no existing record or status is not REJECTED.
+     */
+    @Transactional
+    public EmployeePersonalDetails updateExperiencedDetails(
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile passportPhoto,
+            List<MultipartFile> experienceCerts, MultipartFile relievingLetter) {
+
+        Optional<EmployeePersonalDetails> existing =
+                personalDetailsRepository.findByEmployee_EmpId(employeeId);
+
+        // PUT requires an existing record that is specifically REJECTED
+        EmployeePersonalDetails pd = existing.orElseThrow(() ->
+                new BadRequestException("No personal details found to update for employee: " + employeeId));
+//        guardOnlyRejected(pd.getVerificationStatus());
+
+        return saveExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter, existing);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Shared internal save logic
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Core fresher save — used by both POST and PUT.
+     * By the time this is called, the state guard has already passed.
+     */
+    private EmployeePersonalDetails saveFresherDetails(
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile tenthMarksheet,
+            MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
+            MultipartFile offerLetter, MultipartFile passportPhoto,
+            Optional<EmployeePersonalDetails> existing) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
@@ -174,55 +256,43 @@ public class EmployeeService {
         FresherPersonalDetailsRequest request =
                 parseJson(dataJson, FresherPersonalDetailsRequest.class);
 
-        // ── Validate all 6 documents ──────────────────────────────
-        validateFile(idProof, "ID Proof");
-        validateFile(tenthMarksheet, "10th Marksheet");
-        validateFile(twelfthMarksheet, "12th Marksheet");
+        // Validate all 6 documents
+        validateFile(idProof,           "ID Proof");
+        validateFile(tenthMarksheet,    "10th Marksheet");
+        validateFile(twelfthMarksheet,  "12th Marksheet");
         validateFile(degreeCertificate, "Degree / Provisional Certificate");
-        validateFile(offerLetter, "Offer Letter");
-        validateFile(passportPhoto, "Passport-size Photo");
+        validateFile(offerLetter,       "Offer Letter");
+        validateFile(passportPhoto,     "Passport-size Photo");
 
-        // ── Validate spouse if MARRIED ────────────────────────────
+        // Validate spouse fields when MARRIED
         validateSpouse(request.getMaritalStatus(),
                 request.getSpouseName(),
                 request.getSpouseDateOfBirth(),
                 request.getSpouseOccupation(),
                 request.getSpouseContactNumber());
 
-        // ── Check existing submission state ───────────────────────
-        Optional<EmployeePersonalDetails> existing =
-                personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        if (existing.isPresent()) {
-            VerificationStatus status = existing.get().getVerificationStatus();
-            guardResubmit(status);
-            // Delete old fresher documents from disk
-            deleteFresherDocFiles(existing.get().getFresherDocument());
-        }
+        // Delete old files from disk before overwriting (only if resubmitting)
+        existing.ifPresent(pd -> deleteFresherDocFiles(pd.getFresherDocument()));
 
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
 
-        // ── Fill text fields ──────────────────────────────────────
         fillCommonFields(pd, request);
         pd.setUanNumber(null);
-
-        // ── Replace children list ─────────────────────────────────
         replaceChildren(pd, request.getChildren());
 
-        // ── Save documents ────────────────────────────────────────
+        // Build / reuse the FresherDocument row
         FresherDocument doc = Optional.ofNullable(pd.getFresherDocument())
                 .orElse(new FresherDocument());
-
-        doc.setIdProofPath(documentStorageService.save(idProof, "id-proof", employeeId));
-        doc.setTenthMarksheetPath(documentStorageService.save(tenthMarksheet, "10th-marksheet", employeeId));
-        doc.setTwelfthMarksheetPath(documentStorageService.save(twelfthMarksheet, "12th-marksheet", employeeId));
+        doc.setIdProofPath(documentStorageService.save(idProof,           "id-proof",           employeeId));
+        doc.setTenthMarksheetPath(documentStorageService.save(tenthMarksheet,    "10th-marksheet",     employeeId));
+        doc.setTwelfthMarksheetPath(documentStorageService.save(twelfthMarksheet,  "12th-marksheet",     employeeId));
         doc.setDegreeCertificatePath(documentStorageService.save(degreeCertificate, "degree-certificate", employeeId));
-        doc.setOfferLetterPath(documentStorageService.save(offerLetter, "offer-letter", employeeId));
-        doc.setPassportPhotoPath(documentStorageService.save(passportPhoto, "passport-photo", employeeId));
+        doc.setOfferLetterPath(documentStorageService.save(offerLetter,       "offer-letter",       employeeId));
+        doc.setPassportPhotoPath(documentStorageService.save(passportPhoto,     "passport-photo",     employeeId));
         doc.setPersonalDetails(pd);
         pd.setFresherDocument(doc);
 
-        // Clear experienced docs if employee switches type
+        // Clear any lingering experienced-document rows
         clearExperiencedDocEntities(pd);
 
         pd.setEmployee(employee);
@@ -234,26 +304,18 @@ public class EmployeeService {
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
         leaveAllocationService.allocateForNewEmployee(employeeId);
         notifyHr(employee.getName(), employeeId);
-
         return saved;
     }
 
-    // ─── EXPERIENCED: submit ───────────────────────────────────────
-
     /**
-     * Multipart files:
-     * idProof           – single ID proof
-     * experienceCerts   – list of files, index-matched to request.experiences
-     * relievingLetter   – single relieving letter from last company
+     * Core experienced save — used by both POST and PUT.
+     * By the time this is called, the state guard has already passed.
      */
-    @Transactional
-    public EmployeePersonalDetails submitExperiencedDetails(
-            String employeeId,
-            String dataJson,
-            MultipartFile idProof,
-            MultipartFile passportPhoto,
-            List<MultipartFile> experienceCerts,
-            MultipartFile relievingLetter) {
+    private EmployeePersonalDetails saveExperiencedDetails(
+            String employeeId, String dataJson,
+            MultipartFile idProof, MultipartFile passportPhoto,
+            List<MultipartFile> experienceCerts, MultipartFile relievingLetter,
+            Optional<EmployeePersonalDetails> existing) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new BadRequestException("Employee not found"));
@@ -261,11 +323,12 @@ public class EmployeeService {
         ExperiencedPersonalDetailsRequest request =
                 parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
 
-        // ── Validate files ────────────────────────────────────────
-        validateFile(idProof, "ID Proof");
-        validateFile(passportPhoto, "Passport-size Photo");
+        // Validate single files
+        validateFile(idProof,         "ID Proof");
+        validateFile(passportPhoto,   "Passport-size Photo");
         validateFile(relievingLetter, "Relieving Letter");
 
+        // Validate experience cert list
         if (experienceCerts == null || experienceCerts.isEmpty())
             throw new BadRequestException("At least one experience certificate is required.");
 
@@ -281,57 +344,44 @@ public class EmployeeService {
         for (int i = 0; i < experienceCerts.size(); i++)
             validateFile(experienceCerts.get(i), "Experience certificate for entry " + (i + 1));
 
-        // Exactly one entry must be marked as the last company
-        long lastCompanyCount = experiences.stream()
-                .filter(ExperienceEntryDto::isLastCompany).count();
-        if (lastCompanyCount != 1)
+        // Exactly one entry must be the last company
+        long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
+        if (lastCount != 1)
             throw new BadRequestException(
                     "Exactly one experience entry must be marked as the last company.");
 
-        // Validate each experience date range
+        // Validate date ranges
         for (int i = 0; i < experiences.size(); i++) {
-            ExperienceEntryDto entry = experiences.get(i);
-            if (entry.getFromDate() != null && entry.getEndDate() != null
-                    && !entry.getFromDate().isBefore(entry.getEndDate())) {
+            ExperienceEntryDto e = experiences.get(i);
+            if (e.getFromDate() != null && e.getEndDate() != null
+                    && !e.getFromDate().isBefore(e.getEndDate()))
                 throw new BadRequestException(
                         "Experience entry " + (i + 1) + ": fromDate must be before endDate.");
-            }
         }
 
-        // ── Validate spouse if MARRIED ────────────────────────────
+        // Validate spouse fields when MARRIED
         validateSpouse(request.getMaritalStatus(),
                 request.getSpouseName(),
                 request.getSpouseDateOfBirth(),
                 request.getSpouseOccupation(),
                 request.getSpouseContactNumber());
 
-        // ── Check existing submission state ───────────────────────
-        Optional<EmployeePersonalDetails> existing =
-                personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        if (existing.isPresent()) {
-            guardResubmit(existing.get().getVerificationStatus());
-            deleteExperiencedDocFiles(existing.get().getExperiencedDocuments());
-        }
+        // Delete old files from disk (only if resubmitting)
+        existing.ifPresent(pd -> deleteExperiencedDocFiles(pd.getExperiencedDocuments()));
 
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
 
-        // ── Fill text fields ──────────────────────────────────────
         fillCommonFields(pd, request);
         pd.setUanNumber(request.getUanNumber());
-
-        // ── Replace children list ─────────────────────────────────
         replaceChildren(pd, request.getChildren());
 
-        // ── Save documents ────────────────────────────────────────
-        // Clear fresher document
+        // Clear fresher document and old experienced rows
         pd.setFresherDocument(null);
-        // Clear old experienced docs from the entity list (orphanRemoval handles DB delete)
         pd.getExperiencedDocuments().clear();
 
-        // Save idProof and passportPhoto — attached to the first entry only
-        String idProofPath = documentStorageService.save(idProof, "id-proof", employeeId);
-        String passportPhotoPath = documentStorageService.save(passportPhoto, "passport-photo", employeeId);
+        // Save shared files once
+        String idProofPath       = documentStorageService.save(idProof,       "id-proof",       employeeId);
+        String passportPhotoPath = documentStorageService.save(passportPhoto,  "passport-photo", employeeId);
 
         for (int i = 0; i < experiences.size(); i++) {
             ExperienceEntryDto entry = experiences.get(i);
@@ -342,19 +392,18 @@ public class EmployeeService {
             doc.setFromDate(entry.getFromDate());
             doc.setEndDate(entry.getEndDate());
             doc.setExperienceCertPath(
-                    documentStorageService.save(experienceCerts.get(i),
-                            "experience-cert", employeeId));
+                    documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
 
-            // Attach idProof and passportPhoto to first entry only
+            // idProof and passportPhoto attached to first entry only
             if (i == 0) {
                 doc.setIdProofPath(idProofPath);
                 doc.setPassportPhotoPath(passportPhotoPath);
             }
 
+            // Relieving letter attached to the last-company entry
             if (entry.isLastCompany()) {
                 doc.setRelievingLetterPath(
-                        documentStorageService.save(relievingLetter,
-                                "relieving-letter", employeeId));
+                        documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
             }
 
             pd.getExperiencedDocuments().add(doc);
@@ -369,7 +418,6 @@ public class EmployeeService {
         EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
         leaveAllocationService.allocateForNewEmployee(employeeId);
         notifyHr(employee.getName(), employeeId);
-
         return saved;
     }
 
@@ -494,46 +542,41 @@ public class EmployeeService {
         employeeRepository.save(employee);
     }
 
-    // ─── Private helpers ───────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // State guards
+    // ─────────────────────────────────────────────────────────────
 
     /**
-     * Throws if the employee cannot resubmit in the current state.
+     * Used by POST: blocks if the existing record is PENDING or VERIFIED.
+     * REJECTED is allowed (employee is correcting and resubmitting).
      */
-    private void guardResubmit(VerificationStatus status) {
+    private void guardNotPendingOrVerified(VerificationStatus status) {
         if (status == VerificationStatus.PENDING)
             throw new BadRequestException(
                     "Your profile is already submitted and pending HR verification.");
         if (status == VerificationStatus.VERIFIED)
             throw new BadRequestException(
                     "Your profile is already verified. Contact Admin/HR for updates.");
-        // REJECTED → allowed to resubmit
     }
 
     /**
-     * Validates that spouse fields are present when marital status is MARRIED.
+     * Used by PUT: only REJECTED status allows an update.
+     * PENDING and VERIFIED both block the update.
      */
-    private void validateSpouse(MaritalStatus status,
-                                String spouseName,
-                                LocalDate spouseDateOfBirth,
-                                String spouseOccupation,
-                                String spouseContactNumber) {
-        if (status == MaritalStatus.MARRIED) {
-            if (spouseName == null || spouseName.isBlank())
-                throw new BadRequestException("Spouse name is required for married employees.");
-            if (spouseDateOfBirth == null)
-                throw new BadRequestException("Spouse Data of Birth is required for married employees ");
-            if (spouseOccupation == null || spouseOccupation.isBlank())
-                throw new BadRequestException("Spouse Occupation is required for married employees.");
-            if (spouseContactNumber == null || spouseContactNumber.isBlank())
-                throw new BadRequestException("Spouse contact number is required for married employees.");
-        }
+    private void guardOnlyRejected(VerificationStatus status) {
+        if (status == VerificationStatus.PENDING)
+            throw new BadRequestException(
+                    "Cannot edit while your profile is pending HR verification.");
+        if (status == VerificationStatus.VERIFIED)
+            throw new BadRequestException(
+                    "Cannot edit a verified profile. Contact Admin/HR for updates.");
+        // REJECTED → allowed
     }
 
-    /**
-     * Fills all common text fields from either fresher or experienced request.
-     * The approach uses a shared base — both DTOs share the same field names,
-     * so we extract a common helper using explicit field access.
-     */
+    // ─────────────────────────────────────────────────────────────
+    // Field-fill helpers
+    // ─────────────────────────────────────────────────────────────
+
     private void fillCommonFields(EmployeePersonalDetails pd, FresherPersonalDetailsRequest r) {
         pd.setFirstName(r.getFirstName());
         pd.setLastName(r.getLastName());
@@ -561,7 +604,6 @@ public class EmployeeService {
         pd.setMotherDateOfBirth(r.getMotherDateOfBirth());
         pd.setMotherOccupation(r.getMotherOccupation());
         pd.setMotherAlive(r.getMotherAlive());
-        // Spouse
         if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
             pd.setSpouseName(r.getSpouseName());
             pd.setSpouseDateOfBirth(r.getSpouseDateOfBirth());
@@ -602,7 +644,6 @@ public class EmployeeService {
         pd.setMotherDateOfBirth(r.getMotherDateOfBirth());
         pd.setMotherOccupation(r.getMotherOccupation());
         pd.setMotherAlive(r.getMotherAlive());
-        // Spouse
         if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
             pd.setSpouseName(r.getSpouseName());
             pd.setSpouseDateOfBirth(r.getSpouseDateOfBirth());
@@ -616,15 +657,9 @@ public class EmployeeService {
         }
     }
 
-    /**
-     * Replaces the children list in-place so JPA orphanRemoval
-     * deletes removed children and inserts new ones in one flush.
-     */
     private void replaceChildren(EmployeePersonalDetails pd, List<ChildDto> childDtos) {
-        // Clear existing so orphanRemoval fires on stale rows
         pd.getChildren().clear();
         if (childDtos == null || childDtos.isEmpty()) return;
-
         for (ChildDto dto : childDtos) {
             EmployeeChild child = new EmployeeChild();
             child.setChildName(dto.getChildName());
@@ -635,15 +670,13 @@ public class EmployeeService {
         }
     }
 
-    /**
-     * Clears the experiencedDocuments list so orphanRemoval
-     * removes all rows when a resubmit happens.
-     */
     private void clearExperiencedDocEntities(EmployeePersonalDetails pd) {
         pd.getExperiencedDocuments().clear();
     }
 
-    // ── File deletion helpers (disk cleanup on resubmit) ──────────
+    // ─────────────────────────────────────────────────────────────
+    // Disk-file deletion helpers
+    // ─────────────────────────────────────────────────────────────
 
     private void deleteFresherDocFiles(FresherDocument doc) {
         if (doc == null) return;
@@ -665,7 +698,9 @@ public class EmployeeService {
         }
     }
 
-    // ── Profile response mapping ───────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Profile response mapping
+    // ─────────────────────────────────────────────────────────────
 
     private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
         r.setFirstName(pd.getFirstName());
@@ -699,7 +734,6 @@ public class EmployeeService {
                     .map(String::trim).collect(Collectors.toList()));
         }
 
-        // Children
         if (pd.getChildren() != null) {
             r.setChildren(pd.getChildren().stream().map(c -> {
                 ChildDto dto = new ChildDto();
@@ -710,7 +744,6 @@ public class EmployeeService {
             }).collect(Collectors.toList()));
         }
 
-        // Document paths by experience type
         if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.FRESHER) {
             FresherDocument doc = pd.getFresherDocument();
             if (doc != null) {
@@ -726,15 +759,15 @@ public class EmployeeService {
         }
     }
 
-    // ── Notification helpers ──────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Notification helpers
+    // ─────────────────────────────────────────────────────────────
 
     private void notifyHr(String employeeName, String employeeId) {
         List<Employee> hrEmployees = employeeRepository.findAllByRoleName("HR");
         if (hrEmployees.isEmpty()) return;
-
         String msg = "Employee " + employeeName + " (ID: " + employeeId
                 + ") has submitted their profile. Please review and verify.";
-
         for (Employee hr : hrEmployees) {
             userRepository.findByEmployee_EmpId(hr.getEmpId()).ifPresent(hrUser ->
                     notificationService.createNotification(
@@ -751,7 +784,26 @@ public class EmployeeService {
                 eventType, Channel.EMAIL, message);
     }
 
-    // ── Validation helpers ────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Validation helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private void validateSpouse(MaritalStatus status,
+                                String spouseName,
+                                LocalDate spouseDateOfBirth,
+                                String spouseOccupation,
+                                String spouseContactNumber) {
+        if (status == MaritalStatus.MARRIED) {
+            if (spouseName == null || spouseName.isBlank())
+                throw new BadRequestException("Spouse name is required for married employees.");
+            if (spouseDateOfBirth == null)
+                throw new BadRequestException("Spouse date of birth is required for married employees.");
+            if (spouseOccupation == null || spouseOccupation.isBlank())
+                throw new BadRequestException("Spouse occupation is required for married employees.");
+            if (spouseContactNumber == null || spouseContactNumber.isBlank())
+                throw new BadRequestException("Spouse contact number is required for married employees.");
+        }
+    }
 
     private void validateFile(MultipartFile file, String fieldName) {
         if (file == null || file.isEmpty())
