@@ -81,10 +81,21 @@ public class EmployeeService {
         return name;
     }
 
-    public List<Department> getDepartmentList() { return departmentRepository.findAll(); }
-    public List<Role> getRoleList() { return roleRepository.findAll(); }
-    public List<EmployeeListDto> getAllEmployees() { return employeeRepository.findAllActiveEmployeeBasicDetails(); }
-    public List<BranchListDto> getAllBranches() { return branchRepository.findAllBranchDetails(); }
+    public List<Department> getDepartmentList() {
+        return departmentRepository.findAll();
+    }
+
+    public List<Role> getRoleList() {
+        return roleRepository.findAll();
+    }
+
+    public List<EmployeeListDto> getAllEmployees() {
+        return employeeRepository.findAllActiveEmployeeBasicDetails();
+    }
+
+    public List<BranchListDto> getAllBranches() {
+        return branchRepository.findAllBranchDetails();
+    }
 
     // ─── getProfile ────────────────────────────────────────────────
 
@@ -142,8 +153,8 @@ public class EmployeeService {
 
     /**
      * Multipart files:
-     *   idProof, tenthMarksheet, twelfthMarksheet,
-     *   degreeCertificate, offerLetter, passportPhoto
+     * idProof, tenthMarksheet, twelfthMarksheet,
+     * degreeCertificate, offerLetter, passportPhoto
      */
     @Transactional
     public EmployeePersonalDetails submitFresherDetails(
@@ -163,12 +174,12 @@ public class EmployeeService {
                 parseJson(dataJson, FresherPersonalDetailsRequest.class);
 
         // ── Validate all 6 documents ──────────────────────────────
-        validateFile(idProof,           "ID Proof");
-        validateFile(tenthMarksheet,    "10th Marksheet");
-        validateFile(twelfthMarksheet,  "12th Marksheet");
+        validateFile(idProof, "ID Proof");
+        validateFile(tenthMarksheet, "10th Marksheet");
+        validateFile(twelfthMarksheet, "12th Marksheet");
         validateFile(degreeCertificate, "Degree / Provisional Certificate");
-        validateFile(offerLetter,       "Offer Letter");
-        validateFile(passportPhoto,     "Passport-size Photo");
+        validateFile(offerLetter, "Offer Letter");
+        validateFile(passportPhoto, "Passport-size Photo");
 
         // ── Validate spouse if MARRIED ────────────────────────────
         validateSpouse(request.getMaritalStatus(),
@@ -200,12 +211,12 @@ public class EmployeeService {
         FresherDocument doc = Optional.ofNullable(pd.getFresherDocument())
                 .orElse(new FresherDocument());
 
-        doc.setIdProofPath(documentStorageService.save(idProof,           "id-proof",            employeeId));
-        doc.setTenthMarksheetPath(documentStorageService.save(tenthMarksheet,    "10th-marksheet",      employeeId));
-        doc.setTwelfthMarksheetPath(documentStorageService.save(twelfthMarksheet,  "12th-marksheet",      employeeId));
-        doc.setDegreeCertificatePath(documentStorageService.save(degreeCertificate, "degree-certificate",  employeeId));
-        doc.setOfferLetterPath(documentStorageService.save(offerLetter,       "offer-letter",        employeeId));
-        doc.setPassportPhotoPath(documentStorageService.save(passportPhoto,     "passport-photo",      employeeId));
+        doc.setIdProofPath(documentStorageService.save(idProof, "id-proof", employeeId));
+        doc.setTenthMarksheetPath(documentStorageService.save(tenthMarksheet, "10th-marksheet", employeeId));
+        doc.setTwelfthMarksheetPath(documentStorageService.save(twelfthMarksheet, "12th-marksheet", employeeId));
+        doc.setDegreeCertificatePath(documentStorageService.save(degreeCertificate, "degree-certificate", employeeId));
+        doc.setOfferLetterPath(documentStorageService.save(offerLetter, "offer-letter", employeeId));
+        doc.setPassportPhotoPath(documentStorageService.save(passportPhoto, "passport-photo", employeeId));
         doc.setPersonalDetails(pd);
         pd.setFresherDocument(doc);
 
@@ -229,9 +240,9 @@ public class EmployeeService {
 
     /**
      * Multipart files:
-     *   idProof           – single ID proof
-     *   experienceCerts   – list of files, index-matched to request.experiences
-     *   relievingLetter   – single relieving letter from last company
+     * idProof           – single ID proof
+     * experienceCerts   – list of files, index-matched to request.experiences
+     * relievingLetter   – single relieving letter from last company
      */
     @Transactional
     public EmployeePersonalDetails submitExperiencedDetails(
@@ -249,9 +260,9 @@ public class EmployeeService {
                 parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
 
         // ── Validate files ────────────────────────────────────────
-        validateFile(idProof,        "ID Proof");
-        validateFile(passportPhoto,  "Passport-size Photo");
-        validateFile(relievingLetter,"Relieving Letter");
+        validateFile(idProof, "ID Proof");
+        validateFile(passportPhoto, "Passport-size Photo");
+        validateFile(relievingLetter, "Relieving Letter");
 
         if (experienceCerts == null || experienceCerts.isEmpty())
             throw new BadRequestException("At least one experience certificate is required.");
@@ -316,7 +327,7 @@ public class EmployeeService {
         pd.getExperiencedDocuments().clear();
 
         // Save idProof and passportPhoto — attached to the first entry only
-        String idProofPath      = documentStorageService.save(idProof,       "id-proof",       employeeId);
+        String idProofPath = documentStorageService.save(idProof, "id-proof", employeeId);
         String passportPhotoPath = documentStorageService.save(passportPhoto, "passport-photo", employeeId);
 
         for (int i = 0; i < experiences.size(); i++) {

@@ -124,7 +124,7 @@ public class EmployeeController {
     public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
-    }
+    } 
 
     // ── Employee list / search ────────────────────────────────────
     @GetMapping("/all")
