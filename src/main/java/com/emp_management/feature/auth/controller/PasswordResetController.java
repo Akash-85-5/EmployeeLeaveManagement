@@ -14,25 +14,38 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Password-reset controller.
+ *
+ * ── Self-service OTP flow ───────────────────────────────────────────────────
+ *  POST /api/password-reset/forgot-password      Step 1 — send OTP
+ *  POST /api/password-reset/verify-otp           Step 2+3 combined — verify OTP + reset
+ *
+ * ── Admin override ──────────────────────────────────────────────────────────
+ *  POST /api/password-reset/approve/{requestId}  ADMIN only
+ *  POST /api/password-reset/reject/{requestId}   ADMIN only
+ *  GET  /api/password-reset/admin/list           ADMIN only
+ */
 @RestController
 @RequestMapping("/api/password-reset")
 public class PasswordResetController {
 
     private final PasswordResetService resetService;
-    private final OtpService otpService;
+    private final OtpService           otpService;
 
     public PasswordResetController(PasswordResetService resetService,
                                    OtpService otpService) {
         this.resetService = resetService;
-        this.otpService = otpService;
+        this.otpService   = otpService;
     }
 
-    // ─── OTP FLOW (self-service forgot password) ───────────────────────────
+    // ── STEP 1: Request OTP ───────────────────────────────────────────────
 
     /**
-     * Step 1: User submits their email → OTP sent
      * POST /api/password-reset/forgot-password
      * Body: { "email": "user@example.com" }
+     *
+     * Sends OTP to the registered email. Valid for 10 minutes.
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody OtpRequest request) {
@@ -41,10 +54,14 @@ public class PasswordResetController {
                 "OTP sent to your email. Valid for 10 minutes."));
     }
 
+    // ── STEP 2+3: Verify OTP and reset password ───────────────────────────
+
     /**
-     * Step 2: User submits email + OTP + new password
      * POST /api/password-reset/verify-otp
-     * Body: { "email": "...", "otp": "123456", "newPassword": "..." }
+     * Body: { "email": "...", "otp": "123456", "newPassword": "NewPass@1" }
+     *
+     * Validates OTP, applies complexity + last-3 check, resets password,
+     * and invalidates all active sessions via lastPasswordChangeAt.
      */
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtpAndReset(@RequestBody OtpVerifyRequest request) {
@@ -53,10 +70,11 @@ public class PasswordResetController {
                 request.getOtp(),
                 request.getNewPassword()
         );
-        return ResponseEntity.ok(Map.of("message", "Password reset successfully. Please log in."));
+        return ResponseEntity.ok(Map.of("message",
+                "Password reset successfully. Please log in."));
     }
 
-    // ─── ADMIN ENDPOINTS (kept for reference / manual override) ───────────
+    // ── ADMIN ENDPOINTS ───────────────────────────────────────────────────
 
     @PostMapping("/approve/{requestId}")
     @PreAuthorize("hasRole('ADMIN')")
