@@ -185,8 +185,11 @@ public class EmployeePersonalDetails {
     @Column(name = "spouse_name", length = 100)
     private String spouseName;
 
-    @Column(name = "spouse_age")
-    private Integer spouseAge;
+    @Column(name = "spouse_date_of_birth")
+    private LocalDate spouseDateOfBirth;
+
+    @Column(name = "spouse_occupation", length = 100)
+    private String spouseOccupation;
 
     @Column(name = "spouse_contact_number", length = 15)
     private String spouseContactNumber;
@@ -352,8 +355,21 @@ public class EmployeePersonalDetails {
     public String getSpouseName() { return spouseName; }
     public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
 
-    public Integer getSpouseAge() { return spouseAge; }
-    public void setSpouseAge(Integer spouseAge) { this.spouseAge = spouseAge; }
+    public LocalDate getSpouseDateOfBirth() {
+        return spouseDateOfBirth;
+    }
+
+    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) {
+        this.spouseDateOfBirth = spouseDateOfBirth;
+    }
+
+    public String getSpouseOccupation() {
+        return spouseOccupation;
+    }
+
+    public void setSpouseOccupation(String spouseOccupation) {
+        this.spouseOccupation = spouseOccupation;
+    }
 
     public String getSpouseContactNumber() { return spouseContactNumber; }
     public void setSpouseContactNumber(String spouseContactNumber) {

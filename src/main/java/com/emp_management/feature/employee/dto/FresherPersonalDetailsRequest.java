@@ -97,7 +97,8 @@ public class FresherPersonalDetailsRequest {
 
     // ── Spouse details (mandatory only when maritalStatus = MARRIED) ─
     private String spouseName;
-    private Integer spouseAge;
+    private LocalDate spouseDateOfBirth;
+    private String spouseOccupation;
 
     @Pattern(regexp = "^([6-9]\\d{9})?$", message = "Enter a valid 10-digit spouse contact number")
     private String spouseContactNumber;
@@ -196,8 +197,21 @@ public class FresherPersonalDetailsRequest {
     public String getSpouseName() { return spouseName; }
     public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
 
-    public Integer getSpouseAge() { return spouseAge; }
-    public void setSpouseAge(Integer spouseAge) { this.spouseAge = spouseAge; }
+    public LocalDate getSpouseDateOfBirth() {
+        return spouseDateOfBirth;
+    }
+
+    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) {
+        this.spouseDateOfBirth = spouseDateOfBirth;
+    }
+
+    public String getSpouseOccupation() {
+        return spouseOccupation;
+    }
+
+    public void setSpouseOccupation(String spouseOccupation) {
+        this.spouseOccupation = spouseOccupation;
+    }
 
     public String getSpouseContactNumber() { return spouseContactNumber; }
     public void setSpouseContactNumber(String spouseContactNumber) {

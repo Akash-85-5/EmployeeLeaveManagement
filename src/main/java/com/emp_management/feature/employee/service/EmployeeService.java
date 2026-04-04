@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -184,7 +185,8 @@ public class EmployeeService {
         // ── Validate spouse if MARRIED ────────────────────────────
         validateSpouse(request.getMaritalStatus(),
                 request.getSpouseName(),
-                request.getSpouseAge(),
+                request.getSpouseDateOfBirth(),
+                request.getSpouseOccupation(),
                 request.getSpouseContactNumber());
 
         // ── Check existing submission state ───────────────────────
@@ -299,7 +301,8 @@ public class EmployeeService {
         // ── Validate spouse if MARRIED ────────────────────────────
         validateSpouse(request.getMaritalStatus(),
                 request.getSpouseName(),
-                request.getSpouseAge(),
+                request.getSpouseDateOfBirth(),
+                request.getSpouseOccupation(),
                 request.getSpouseContactNumber());
 
         // ── Check existing submission state ───────────────────────
@@ -511,13 +514,16 @@ public class EmployeeService {
      */
     private void validateSpouse(MaritalStatus status,
                                 String spouseName,
-                                Integer spouseAge,
+                                LocalDate spouseDateOfBirth,
+                                String spouseOccupation,
                                 String spouseContactNumber) {
         if (status == MaritalStatus.MARRIED) {
             if (spouseName == null || spouseName.isBlank())
                 throw new BadRequestException("Spouse name is required for married employees.");
-            if (spouseAge == null || spouseAge < 18)
-                throw new BadRequestException("A valid spouse age (18+) is required for married employees.");
+            if (spouseDateOfBirth == null)
+                throw new BadRequestException("Spouse Data of Birth is required for married employees ");
+            if (spouseOccupation == null || spouseOccupation.isBlank())
+                throw new BadRequestException("Spouse Occupation is required for married employees.");
             if (spouseContactNumber == null || spouseContactNumber.isBlank())
                 throw new BadRequestException("Spouse contact number is required for married employees.");
         }
@@ -558,11 +564,13 @@ public class EmployeeService {
         // Spouse
         if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
             pd.setSpouseName(r.getSpouseName());
-            pd.setSpouseAge(r.getSpouseAge());
+            pd.setSpouseDateOfBirth(r.getSpouseDateOfBirth());
+            pd.setSpouseOccupation(r.getSpouseOccupation());
             pd.setSpouseContactNumber(r.getSpouseContactNumber());
         } else {
             pd.setSpouseName(null);
-            pd.setSpouseAge(null);
+            pd.setSpouseDateOfBirth(null);
+            pd.setSpouseOccupation(null);
             pd.setSpouseContactNumber(null);
         }
     }
@@ -597,11 +605,13 @@ public class EmployeeService {
         // Spouse
         if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
             pd.setSpouseName(r.getSpouseName());
-            pd.setSpouseAge(r.getSpouseAge());
+            pd.setSpouseDateOfBirth(r.getSpouseDateOfBirth());
+            pd.setSpouseOccupation(r.getSpouseOccupation());
             pd.setSpouseContactNumber(r.getSpouseContactNumber());
         } else {
             pd.setSpouseName(null);
-            pd.setSpouseAge(null);
+            pd.setSpouseDateOfBirth(null);
+            pd.setSpouseOccupation(null);
             pd.setSpouseContactNumber(null);
         }
     }
@@ -680,7 +690,8 @@ public class EmployeeService {
         r.setPfNumber(pd.getPfNumber());
         r.setUanNumber(pd.getUanNumber());
         r.setSpouseName(pd.getSpouseName());
-        r.setSpouseAge(pd.getSpouseAge());
+        r.setSpouseDateOfBirth(pd.getSpouseDateOfBirth());
+        r.setSpouseOccupation(pd.getSpouseOccupation());
         r.setSpouseContactNumber(pd.getSpouseContactNumber());
 
         if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
