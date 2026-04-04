@@ -1,12 +1,16 @@
 package com.emp_management.feature.employee.dto;
 
-import com.emp_management.feature.employee.entity.ExperiencedDocument;
 import com.emp_management.shared.enums.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Profile response DTO.
+ * All fields are primitives or other DTOs — no JPA entities anywhere.
+ * This prevents circular reference during JSON serialization.
+ */
 public class ProfileResponse {
 
     // ── Employee / User core ──────────────────────────────────────
@@ -60,11 +64,11 @@ public class ProfileResponse {
     private String pfNumber;
     private String uanNumber;
 
-    // ── Spouse (only when MARRIED) ────────────────────────────────
+    // ── Spouse (populated only when MARRIED) ──────────────────────
     private String spouseName;
     private LocalDate spouseDateOfBirth;
-    private String spouseContactNumber;
     private String spouseOccupation;
+    private String spouseContactNumber;
 
     // ── Children ──────────────────────────────────────────────────
     private List<ChildDto> children;
@@ -77,9 +81,8 @@ public class ProfileResponse {
     private String offerLetterPath;
     private String passportPhotoPath;
 
-    // ── EXPERIENCED document entries ──────────────────────────────
-    /** Each entry has certPath, relievingLetterPath, company, role, dates */
-    private List<ExperiencedDocument> experiencedDocuments;
+    // ── EXPERIENCED document entries (flat DTOs, no entity) ───────
+    private List<ExperiencedDocumentDto> experiencedDocuments;
 
     // ── Getters & Setters ─────────────────────────────────────────
 
@@ -161,13 +164,8 @@ public class ProfileResponse {
     public MaritalStatus getMaritalStatus() { return maritalStatus; }
     public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
-    public String getAadharNumber() {
-        return aadharNumber;
-    }
-
-    public void setAadharNumber(String aadharNumber) {
-        this.aadharNumber = aadharNumber;
-    }
+    public String getAadharNumber() { return aadharNumber; }
+    public void setAadharNumber(String aadharNumber) { this.aadharNumber = aadharNumber; }
 
     public String getPersonalEmail() { return personalEmail; }
     public void setPersonalEmail(String personalEmail) { this.personalEmail = personalEmail; }
@@ -220,21 +218,11 @@ public class ProfileResponse {
     public String getSpouseName() { return spouseName; }
     public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
 
-    public LocalDate getSpouseDateOfBirth() {
-        return spouseDateOfBirth;
-    }
+    public LocalDate getSpouseDateOfBirth() { return spouseDateOfBirth; }
+    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) { this.spouseDateOfBirth = spouseDateOfBirth; }
 
-    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) {
-        this.spouseDateOfBirth = spouseDateOfBirth;
-    }
-
-    public String getSpouseOccupation() {
-        return spouseOccupation;
-    }
-
-    public void setSpouseOccupation(String spouseOccupation) {
-        this.spouseOccupation = spouseOccupation;
-    }
+    public String getSpouseOccupation() { return spouseOccupation; }
+    public void setSpouseOccupation(String spouseOccupation) { this.spouseOccupation = spouseOccupation; }
 
     public String getSpouseContactNumber() { return spouseContactNumber; }
     public void setSpouseContactNumber(String spouseContactNumber) { this.spouseContactNumber = spouseContactNumber; }
@@ -260,6 +248,6 @@ public class ProfileResponse {
     public String getPassportPhotoPath() { return passportPhotoPath; }
     public void setPassportPhotoPath(String passportPhotoPath) { this.passportPhotoPath = passportPhotoPath; }
 
-    public List<ExperiencedDocument> getExperiencedDocuments() { return experiencedDocuments; }
-    public void setExperiencedDocuments(List<ExperiencedDocument> experiencedDocuments) { this.experiencedDocuments = experiencedDocuments; }
+    public List<ExperiencedDocumentDto> getExperiencedDocuments() { return experiencedDocuments; }
+    public void setExperiencedDocuments(List<ExperiencedDocumentDto> experiencedDocuments) { this.experiencedDocuments = experiencedDocuments; }
 }

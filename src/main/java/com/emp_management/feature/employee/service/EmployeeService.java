@@ -95,28 +95,7 @@ public class EmployeeService {
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
 
-        ProfileResponse response = new ProfileResponse();
-        response.setId(employee.getEmpId());
-        response.setName(employee.getName());
-        response.setEmail(employee.getEmail());
-        response.setRole(employee.getRole().getRoleName());
-        response.setReportingId(employee.getReportingId());
-        response.setEmployeeExperience(employee.getEmployeeExperience());
-        response.setActive(user.getStatus() == EmployeeStatus.ACTIVE);
-        response.setMustChangePassword(user.isForcePwdChange());
-        response.setJoiningDate(employee.getOnboarding().getJoiningDate());
-        response.setBiometricStatus(employee.getOnboarding().getBiometricStatus().name());
-        response.setVpnStatus(employee.getOnboarding().getVpnStatus().name());
-        response.setCreatedAt(employee.getCreatedAt());
-        response.setUpdatedAt(employee.getUpdatedAt());
-        response.setBranch(employee.getBranch().getName());
-        response.setCompanyName(employee.getBranch().getCompany().getName());
-        response.setCountry(employee.getBranch().getCompany().getCountry().getName());
-
-        if (employee.getReportingId() != null) {
-            employeeRepository.findByEmpId(employee.getReportingId())
-                    .ifPresent(m -> response.setReportingName(m.getName()));
-        }
+        ProfileResponse response = buildBaseProfile(employee, user);
 
         Optional<EmployeePersonalDetails> personalOpt =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
@@ -139,16 +118,37 @@ public class EmployeeService {
         return response;
     }
 
+    /**
+     * Used by the HR/Admin GET /personal-details/{employeeId} endpoint.
+     * Returns the same ProfileResponse shape so the frontend stays consistent.
+     */
+    public ProfileResponse getPersonalDetailsAsProfile(String employeeId) {
+        EmployeePersonalDetails pd = personalDetailsRepository
+                .findByEmployee_EmpId(employeeId)
+                .orElseThrow(() -> new BadRequestException(
+                        "Personal details not yet submitted for employee: " + employeeId));
+
+        User user = userRepository.findByEmployee_EmpId(employeeId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        Employee employee = pd.getEmployee();
+
+        ProfileResponse response = buildBaseProfile(employee, user);
+        mapPersonalDetailsToResponse(pd, response);
+        response.setPersonalDetailsComplete(true);
+        response.setPersonalDetailsLocked(pd.isLocked());
+        response.setVerificationStatus(pd.getVerificationStatus());
+        if (pd.getVerificationStatus() == VerificationStatus.REJECTED) {
+            response.setHrRemarks(pd.getHrRemarks());
+        }
+        return response;
+    }
+
     // ─────────────────────────────────────────────────────────────
-    // FRESHER — public API
+    // FRESHER — public API (void return; controller sends message)
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * POST: first-time submission.
-     * Allowed states: no record yet, OR existing record is REJECTED.
-     */
     @Transactional
-    public EmployeePersonalDetails submitFresherDetails(
+    public void submitFresherDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile tenthMarksheet,
             MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
@@ -156,21 +156,15 @@ public class EmployeeService {
 
         Optional<EmployeePersonalDetails> existing =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        // POST allows: no existing record, OR existing is REJECTED
         existing.ifPresent(pd -> guardNotPendingOrVerified(pd.getVerificationStatus()));
 
-        return saveFresherDetails(employeeId, dataJson,
+        saveFresherDetails(employeeId, dataJson,
                 idProof, tenthMarksheet, twelfthMarksheet,
                 degreeCertificate, offerLetter, passportPhoto, existing);
     }
 
-    /**
-     * PUT: resubmission after HR rejection only.
-     * Fails if there is no existing record or status is not REJECTED.
-     */
     @Transactional
-    public EmployeePersonalDetails updateFresherDetails(
+    public void updateFresherDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile tenthMarksheet,
             MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
@@ -178,60 +172,46 @@ public class EmployeeService {
 
         Optional<EmployeePersonalDetails> existing =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        // PUT requires an existing record that is specifically REJECTED
         EmployeePersonalDetails pd = existing.orElseThrow(() ->
                 new BadRequestException("No personal details found to update for employee: " + employeeId));
 //        guardOnlyRejected(pd.getVerificationStatus());
 
-        return saveFresherDetails(employeeId, dataJson,
+        saveFresherDetails(employeeId, dataJson,
                 idProof, tenthMarksheet, twelfthMarksheet,
                 degreeCertificate, offerLetter, passportPhoto, existing);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // EXPERIENCED — public API
+    // EXPERIENCED — public API (void return; controller sends message)
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * POST: first-time submission.
-     * Allowed states: no record yet, OR existing record is REJECTED.
-     */
     @Transactional
-    public EmployeePersonalDetails submitExperiencedDetails(
+    public void submitExperiencedDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts, MultipartFile relievingLetter) {
 
         Optional<EmployeePersonalDetails> existing =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        // POST allows: no existing record, OR existing is REJECTED
         existing.ifPresent(pd -> guardNotPendingOrVerified(pd.getVerificationStatus()));
 
-        return saveExperiencedDetails(employeeId, dataJson,
+        saveExperiencedDetails(employeeId, dataJson,
                 idProof, passportPhoto, experienceCerts, relievingLetter, existing);
     }
 
-    /**
-     * PUT: resubmission after HR rejection only.
-     * Fails if there is no existing record or status is not REJECTED.
-     */
     @Transactional
-    public EmployeePersonalDetails updateExperiencedDetails(
+    public void updateExperiencedDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts, MultipartFile relievingLetter) {
 
         Optional<EmployeePersonalDetails> existing =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
-
-        // PUT requires an existing record that is specifically REJECTED
         EmployeePersonalDetails pd = existing.orElseThrow(() ->
                 new BadRequestException("No personal details found to update for employee: " + employeeId));
 //        guardOnlyRejected(pd.getVerificationStatus());
 
-        return saveExperiencedDetails(employeeId, dataJson,
+        saveExperiencedDetails(employeeId, dataJson,
                 idProof, passportPhoto, experienceCerts, relievingLetter, existing);
     }
 
@@ -239,11 +219,7 @@ public class EmployeeService {
     // Shared internal save logic
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Core fresher save — used by both POST and PUT.
-     * By the time this is called, the state guard has already passed.
-     */
-    private EmployeePersonalDetails saveFresherDetails(
+    private void saveFresherDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile tenthMarksheet,
             MultipartFile twelfthMarksheet, MultipartFile degreeCertificate,
@@ -256,7 +232,6 @@ public class EmployeeService {
         FresherPersonalDetailsRequest request =
                 parseJson(dataJson, FresherPersonalDetailsRequest.class);
 
-        // Validate all 6 documents
         validateFile(idProof,           "ID Proof");
         validateFile(tenthMarksheet,    "10th Marksheet");
         validateFile(twelfthMarksheet,  "12th Marksheet");
@@ -264,23 +239,18 @@ public class EmployeeService {
         validateFile(offerLetter,       "Offer Letter");
         validateFile(passportPhoto,     "Passport-size Photo");
 
-        // Validate spouse fields when MARRIED
         validateSpouse(request.getMaritalStatus(),
-                request.getSpouseName(),
-                request.getSpouseDateOfBirth(),
-                request.getSpouseOccupation(),
-                request.getSpouseContactNumber());
+                request.getSpouseName(), request.getSpouseDateOfBirth(),
+                request.getSpouseOccupation(), request.getSpouseContactNumber());
 
-        // Delete old files from disk before overwriting (only if resubmitting)
+        // Delete old disk files before replacing
         existing.ifPresent(pd -> deleteFresherDocFiles(pd.getFresherDocument()));
 
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
-
         fillCommonFields(pd, request);
         pd.setUanNumber(null);
         replaceChildren(pd, request.getChildren());
 
-        // Build / reuse the FresherDocument row
         FresherDocument doc = Optional.ofNullable(pd.getFresherDocument())
                 .orElse(new FresherDocument());
         doc.setIdProofPath(documentStorageService.save(idProof,           "id-proof",           employeeId));
@@ -291,8 +261,6 @@ public class EmployeeService {
         doc.setPassportPhotoPath(documentStorageService.save(passportPhoto,     "passport-photo",     employeeId));
         doc.setPersonalDetails(pd);
         pd.setFresherDocument(doc);
-
-        // Clear any lingering experienced-document rows
         clearExperiencedDocEntities(pd);
 
         pd.setEmployee(employee);
@@ -301,17 +269,12 @@ public class EmployeeService {
         pd.setHrRemarks(null);
         pd.setSubmittedAt(LocalDateTime.now());
 
-        EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        personalDetailsRepository.save(pd);
         leaveAllocationService.allocateForNewEmployee(employeeId);
         notifyHr(employee.getName(), employeeId);
-        return saved;
     }
 
-    /**
-     * Core experienced save — used by both POST and PUT.
-     * By the time this is called, the state guard has already passed.
-     */
-    private EmployeePersonalDetails saveExperiencedDetails(
+    private void saveExperiencedDetails(
             String employeeId, String dataJson,
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts, MultipartFile relievingLetter,
@@ -323,12 +286,10 @@ public class EmployeeService {
         ExperiencedPersonalDetailsRequest request =
                 parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
 
-        // Validate single files
         validateFile(idProof,         "ID Proof");
         validateFile(passportPhoto,   "Passport-size Photo");
         validateFile(relievingLetter, "Relieving Letter");
 
-        // Validate experience cert list
         if (experienceCerts == null || experienceCerts.isEmpty())
             throw new BadRequestException("At least one experience certificate is required.");
 
@@ -344,13 +305,11 @@ public class EmployeeService {
         for (int i = 0; i < experienceCerts.size(); i++)
             validateFile(experienceCerts.get(i), "Experience certificate for entry " + (i + 1));
 
-        // Exactly one entry must be the last company
         long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
         if (lastCount != 1)
             throw new BadRequestException(
                     "Exactly one experience entry must be marked as the last company.");
 
-        // Validate date ranges
         for (int i = 0; i < experiences.size(); i++) {
             ExperienceEntryDto e = experiences.get(i);
             if (e.getFromDate() != null && e.getEndDate() != null
@@ -359,29 +318,23 @@ public class EmployeeService {
                         "Experience entry " + (i + 1) + ": fromDate must be before endDate.");
         }
 
-        // Validate spouse fields when MARRIED
         validateSpouse(request.getMaritalStatus(),
-                request.getSpouseName(),
-                request.getSpouseDateOfBirth(),
-                request.getSpouseOccupation(),
-                request.getSpouseContactNumber());
+                request.getSpouseName(), request.getSpouseDateOfBirth(),
+                request.getSpouseOccupation(), request.getSpouseContactNumber());
 
-        // Delete old files from disk (only if resubmitting)
+        // Delete old disk files before replacing
         existing.ifPresent(pd -> deleteExperiencedDocFiles(pd.getExperiencedDocuments()));
 
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
-
         fillCommonFields(pd, request);
         pd.setUanNumber(request.getUanNumber());
         replaceChildren(pd, request.getChildren());
 
-        // Clear fresher document and old experienced rows
         pd.setFresherDocument(null);
         pd.getExperiencedDocuments().clear();
 
-        // Save shared files once
-        String idProofPath       = documentStorageService.save(idProof,       "id-proof",       employeeId);
-        String passportPhotoPath = documentStorageService.save(passportPhoto,  "passport-photo", employeeId);
+        String idProofPath       = documentStorageService.save(idProof,      "id-proof",       employeeId);
+        String passportPhotoPath = documentStorageService.save(passportPhoto, "passport-photo", employeeId);
 
         for (int i = 0; i < experiences.size(); i++) {
             ExperienceEntryDto entry = experiences.get(i);
@@ -393,19 +346,14 @@ public class EmployeeService {
             doc.setEndDate(entry.getEndDate());
             doc.setExperienceCertPath(
                     documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
-
-            // idProof and passportPhoto attached to first entry only
             if (i == 0) {
                 doc.setIdProofPath(idProofPath);
                 doc.setPassportPhotoPath(passportPhotoPath);
             }
-
-            // Relieving letter attached to the last-company entry
             if (entry.isLastCompany()) {
                 doc.setRelievingLetterPath(
                         documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
             }
-
             pd.getExperiencedDocuments().add(doc);
         }
 
@@ -415,18 +363,15 @@ public class EmployeeService {
         pd.setHrRemarks(null);
         pd.setSubmittedAt(LocalDateTime.now());
 
-        EmployeePersonalDetails saved = personalDetailsRepository.save(pd);
+        personalDetailsRepository.save(pd);
         leaveAllocationService.allocateForNewEmployee(employeeId);
         notifyHr(employee.getName(), employeeId);
-        return saved;
     }
 
     // ─── HR: verify / reject ───────────────────────────────────────
 
     @Transactional
-    public EmployeePersonalDetails verifyPersonalDetails(
-            String employeeId, HrVerificationRequest request) {
-
+    public void verifyPersonalDetails(String employeeId, HrVerificationRequest request) {
         EmployeePersonalDetails pd = personalDetailsRepository
                 .findByEmployee_EmpId(employeeId)
                 .orElseThrow(() -> new BadRequestException(
@@ -460,28 +405,22 @@ public class EmployeeService {
                     "Hi " + employee.getName() + ", your profile has been verified by HR.");
         }
 
-        return personalDetailsRepository.save(pd);
+        personalDetailsRepository.save(pd);
     }
 
     // ─── Admin: set PF number ──────────────────────────────────────
 
     @Transactional
-    public EmployeePersonalDetails updatePfNumber(String employeeId, PfUpdateRequest request) {
+    public void updatePfNumber(String employeeId, PfUpdateRequest request) {
         EmployeePersonalDetails pd = personalDetailsRepository
                 .findByEmployee_EmpId(employeeId)
                 .orElseThrow(() -> new BadRequestException(
                         "Personal details not found for employee: " + employeeId));
         pd.setPfNumber(request.getPfNumber());
-        return personalDetailsRepository.save(pd);
+        personalDetailsRepository.save(pd);
     }
 
-    // ─── HR/Admin: get personal details ───────────────────────────
-
-    public EmployeePersonalDetails getPersonalDetails(String employeeId) {
-        return personalDetailsRepository.findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException(
-                        "Personal details not yet submitted for employee: " + employeeId));
-    }
+    // ─── HR/Admin: list verifications ─────────────────────────────
 
     public List<EmployeePersonalDetails> getPendingVerifications() {
         return personalDetailsRepository.findByVerificationStatus(VerificationStatus.PENDING);
@@ -546,10 +485,6 @@ public class EmployeeService {
     // State guards
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * Used by POST: blocks if the existing record is PENDING or VERIFIED.
-     * REJECTED is allowed (employee is correcting and resubmitting).
-     */
     private void guardNotPendingOrVerified(VerificationStatus status) {
         if (status == VerificationStatus.PENDING)
             throw new BadRequestException(
@@ -559,10 +494,6 @@ public class EmployeeService {
                     "Your profile is already verified. Contact Admin/HR for updates.");
     }
 
-    /**
-     * Used by PUT: only REJECTED status allows an update.
-     * PENDING and VERIFIED both block the update.
-     */
     private void guardOnlyRejected(VerificationStatus status) {
         if (status == VerificationStatus.PENDING)
             throw new BadRequestException(
@@ -570,7 +501,115 @@ public class EmployeeService {
         if (status == VerificationStatus.VERIFIED)
             throw new BadRequestException(
                     "Cannot edit a verified profile. Contact Admin/HR for updates.");
-        // REJECTED → allowed
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Profile builder helpers
+    // ─────────────────────────────────────────────────────────────
+
+    /** Builds the employee/user core section of ProfileResponse. */
+    private ProfileResponse buildBaseProfile(Employee employee, User user) {
+        ProfileResponse r = new ProfileResponse();
+        r.setId(employee.getEmpId());
+        r.setName(employee.getName());
+        r.setEmail(employee.getEmail());
+        r.setRole(employee.getRole().getRoleName());
+        r.setReportingId(employee.getReportingId());
+        r.setEmployeeExperience(employee.getEmployeeExperience());
+        r.setActive(user.getStatus() == EmployeeStatus.ACTIVE);
+        r.setMustChangePassword(user.isForcePwdChange());
+        r.setJoiningDate(employee.getOnboarding().getJoiningDate());
+        r.setBiometricStatus(employee.getOnboarding().getBiometricStatus().name());
+        r.setVpnStatus(employee.getOnboarding().getVpnStatus().name());
+        r.setCreatedAt(employee.getCreatedAt());
+        r.setUpdatedAt(employee.getUpdatedAt());
+        r.setBranch(employee.getBranch().getName());
+        r.setCompanyName(employee.getBranch().getCompany().getName());
+        r.setCountry(employee.getBranch().getCompany().getCountry().getName());
+        if (employee.getReportingId() != null) {
+            employeeRepository.findByEmpId(employee.getReportingId())
+                    .ifPresent(m -> r.setReportingName(m.getName()));
+        }
+        return r;
+    }
+
+    /** Maps personal details + documents onto an already-built ProfileResponse. */
+    private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
+        r.setFirstName(pd.getFirstName());
+        r.setLastName(pd.getLastName());
+        r.setContactNumber(pd.getContactNumber());
+        r.setGender(pd.getGender());
+        r.setMaritalStatus(pd.getMaritalStatus());
+        r.setAadharNumber(pd.getAadharNumber());
+        r.setPersonalEmail(pd.getPersonalEmail());
+        r.setDateOfBirth(pd.getDateOfBirth());
+        r.setPresentAddress(pd.getPresentAddress());
+        r.setPermanentAddress(pd.getPermanentAddress());
+        r.setBloodGroup(pd.getBloodGroup());
+        r.setEmergencyContactNumber(pd.getEmergencyContactNumber());
+        r.setFatherName(pd.getFatherName());
+        r.setMotherName(pd.getMotherName());
+        r.setDesignation(pd.getDesignation());
+        r.setAccountNumber(pd.getAccountNumber());
+        r.setBankName(pd.getBankName());
+        r.setIfscCode(pd.getIfscCode());
+        r.setBankBranchName(pd.getBankBranchName());
+        r.setPfNumber(pd.getPfNumber());
+        r.setUanNumber(pd.getUanNumber());
+        r.setSpouseName(pd.getSpouseName());
+        r.setSpouseDateOfBirth(pd.getSpouseDateOfBirth());
+        r.setSpouseOccupation(pd.getSpouseOccupation());
+        r.setSpouseContactNumber(pd.getSpouseContactNumber());
+
+        if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
+            r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))
+                    .map(String::trim).collect(Collectors.toList()));
+        }
+
+        if (pd.getChildren() != null) {
+            r.setChildren(pd.getChildren().stream().map(c -> {
+                ChildDto dto = new ChildDto();
+                dto.setChildName(c.getChildName());
+                dto.setGender(c.getGender());
+                dto.setAge(c.getAge());
+                return dto;
+            }).collect(Collectors.toList()));
+        }
+
+        if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.FRESHER) {
+            FresherDocument doc = pd.getFresherDocument();
+            if (doc != null) {
+                r.setIdProofPath(doc.getIdProofPath());
+                r.setTenthMarksheetPath(doc.getTenthMarksheetPath());
+                r.setTwelfthMarksheetPath(doc.getTwelfthMarksheetPath());
+                r.setDegreeCertificatePath(doc.getDegreeCertificatePath());
+                r.setOfferLetterPath(doc.getOfferLetterPath());
+                r.setPassportPhotoPath(doc.getPassportPhotoPath());
+            }
+        } else if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.EXPERIENCED) {
+            // Map each ExperiencedDocument entity → flat ExperiencedDocumentDto
+            // This breaks the circular reference:
+            //   ExperiencedDocument.personalDetails → EmployeePersonalDetails → ...
+            List<ExperiencedDocumentDto> docDtos = pd.getExperiencedDocuments().stream()
+                    .map(this::toExperiencedDocumentDto)
+                    .collect(Collectors.toList());
+            r.setExperiencedDocuments(docDtos);
+        }
+    }
+
+    /** Converts one ExperiencedDocument entity to its flat DTO. No back-reference. */
+    private ExperiencedDocumentDto toExperiencedDocumentDto(ExperiencedDocument doc) {
+        ExperiencedDocumentDto dto = new ExperiencedDocumentDto();
+        dto.setId(doc.getId());
+        dto.setCompanyName(doc.getCompanyName());
+        dto.setRole(doc.getRole());
+        dto.setFromDate(doc.getFromDate());
+        dto.setEndDate(doc.getEndDate());
+        dto.setExperienceCertPath(doc.getExperienceCertPath());
+        dto.setRelievingLetterPath(doc.getRelievingLetterPath());
+        dto.setIdProofPath(doc.getIdProofPath());
+        dto.setPassportPhotoPath(doc.getPassportPhotoPath());
+        return dto;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -699,67 +738,6 @@ public class EmployeeService {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Profile response mapping
-    // ─────────────────────────────────────────────────────────────
-
-    private void mapPersonalDetailsToResponse(EmployeePersonalDetails pd, ProfileResponse r) {
-        r.setFirstName(pd.getFirstName());
-        r.setLastName(pd.getLastName());
-        r.setContactNumber(pd.getContactNumber());
-        r.setGender(pd.getGender());
-        r.setMaritalStatus(pd.getMaritalStatus());
-        r.setAadharNumber(pd.getAadharNumber());
-        r.setPersonalEmail(pd.getPersonalEmail());
-        r.setDateOfBirth(pd.getDateOfBirth());
-        r.setPresentAddress(pd.getPresentAddress());
-        r.setPermanentAddress(pd.getPermanentAddress());
-        r.setBloodGroup(pd.getBloodGroup());
-        r.setEmergencyContactNumber(pd.getEmergencyContactNumber());
-        r.setFatherName(pd.getFatherName());
-        r.setMotherName(pd.getMotherName());
-        r.setDesignation(pd.getDesignation());
-        r.setAccountNumber(pd.getAccountNumber());
-        r.setBankName(pd.getBankName());
-        r.setIfscCode(pd.getIfscCode());
-        r.setBankBranchName(pd.getBankBranchName());
-        r.setPfNumber(pd.getPfNumber());
-        r.setUanNumber(pd.getUanNumber());
-        r.setSpouseName(pd.getSpouseName());
-        r.setSpouseDateOfBirth(pd.getSpouseDateOfBirth());
-        r.setSpouseOccupation(pd.getSpouseOccupation());
-        r.setSpouseContactNumber(pd.getSpouseContactNumber());
-
-        if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank()) {
-            r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))
-                    .map(String::trim).collect(Collectors.toList()));
-        }
-
-        if (pd.getChildren() != null) {
-            r.setChildren(pd.getChildren().stream().map(c -> {
-                ChildDto dto = new ChildDto();
-                dto.setChildName(c.getChildName());
-                dto.setGender(c.getGender());
-                dto.setAge(c.getAge());
-                return dto;
-            }).collect(Collectors.toList()));
-        }
-
-        if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.FRESHER) {
-            FresherDocument doc = pd.getFresherDocument();
-            if (doc != null) {
-                r.setIdProofPath(doc.getIdProofPath());
-                r.setTenthMarksheetPath(doc.getTenthMarksheetPath());
-                r.setTwelfthMarksheetPath(doc.getTwelfthMarksheetPath());
-                r.setDegreeCertificatePath(doc.getDegreeCertificatePath());
-                r.setOfferLetterPath(doc.getOfferLetterPath());
-                r.setPassportPhotoPath(doc.getPassportPhotoPath());
-            }
-        } else if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.EXPERIENCED) {
-            r.setExperiencedDocuments(pd.getExperiencedDocuments());
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────
     // Notification helpers
     // ─────────────────────────────────────────────────────────────
 
@@ -788,10 +766,8 @@ public class EmployeeService {
     // Validation helpers
     // ─────────────────────────────────────────────────────────────
 
-    private void validateSpouse(MaritalStatus status,
-                                String spouseName,
-                                LocalDate spouseDateOfBirth,
-                                String spouseOccupation,
+    private void validateSpouse(MaritalStatus status, String spouseName,
+                                LocalDate spouseDateOfBirth, String spouseOccupation,
                                 String spouseContactNumber) {
         if (status == MaritalStatus.MARRIED) {
             if (spouseName == null || spouseName.isBlank())

@@ -4,7 +4,6 @@ import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
 import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
-import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.service.EmployeeService;
 import com.emp_management.shared.dto.BranchListDto;
 import com.emp_management.shared.dto.EmployeeListDto;
@@ -31,6 +30,7 @@ public class EmployeeController {
     }
 
     // ── Lookups ───────────────────────────────────────────────────
+
     @GetMapping("/profile/{employeeId}")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
@@ -64,23 +64,9 @@ public class EmployeeController {
     // ─────────────────────────────────────────────────────────────
     // FRESHER
     // ─────────────────────────────────────────────────────────────
-
-    /**
-     * POST — first-time submission by a fresher.
-     * Fails if a record already exists in PENDING or VERIFIED state.
-     *
-     * Multipart keys:
-     *   data              – JSON (FresherPersonalDetailsRequest)
-     *   idProof           – ID proof document
-     *   tenthMarksheet    – 10th marksheet
-     *   twelfthMarksheet  – 12th marksheet
-     *   degreeCertificate – Degree / Provisional certificate
-     *   offerLetter       – Offer letter
-     *   passportPhoto     – Passport-size photo
-     */
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
+    public ResponseEntity<String> submitFresherDetails(
             @PathVariable String employeeId,
             @RequestPart("data")               String dataJson,
             @RequestPart("idProof")            MultipartFile idProof,
@@ -90,23 +76,16 @@ public class EmployeeController {
             @RequestPart("offerLetter")        MultipartFile offerLetter,
             @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
 
-        return ResponseEntity.ok(
-                employeeService.submitFresherDetails(
-                        employeeId, dataJson,
-                        idProof, tenthMarksheet, twelfthMarksheet,
-                        degreeCertificate, offerLetter, passportPhoto));
+        employeeService.submitFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto);
+
+        return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
-    /**
-     * PUT — resubmission after HR rejection.
-     * Fails unless the current verification status is REJECTED.
-     * All 6 documents must be re-uploaded (full replacement — no partial update).
-     *
-     * Multipart keys: same as POST above.
-     */
     @PutMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<EmployeePersonalDetails> updateFresherDetails(
+    public ResponseEntity<String> updateFresherDetails(
             @PathVariable String employeeId,
             @RequestPart("data")               String dataJson,
             @RequestPart("idProof")            MultipartFile idProof,
@@ -116,33 +95,20 @@ public class EmployeeController {
             @RequestPart("offerLetter")        MultipartFile offerLetter,
             @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
 
-        return ResponseEntity.ok(
-                employeeService.updateFresherDetails(
-                        employeeId, dataJson,
-                        idProof, tenthMarksheet, twelfthMarksheet,
-                        degreeCertificate, offerLetter, passportPhoto));
+        employeeService.updateFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto);
+
+        return ResponseEntity.ok("Personal details updated successfully.");
     }
 
     // ─────────────────────────────────────────────────────────────
     // EXPERIENCED
     // ─────────────────────────────────────────────────────────────
 
-    /**
-     * POST — first-time submission by an experienced employee.
-     * Fails if a record already exists in PENDING or VERIFIED state.
-     *
-     * Multipart keys:
-     *   data              – JSON (ExperiencedPersonalDetailsRequest)
-     *                       The "experiences" array index must match
-     *                       the order of files in "experienceCerts".
-     *   idProof           – ID proof document (single file)
-     *   passportPhoto     – Passport-size photo (single file)
-     *   experienceCerts   – One file per experience entry (ordered list)
-     *   relievingLetter   – Relieving letter from the last company (single file)
-     */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
+    public ResponseEntity<String> submitExperiencedDetails(
             @PathVariable String employeeId,
             @RequestPart("data")             String dataJson,
             @RequestPart("idProof")          MultipartFile idProof,
@@ -150,22 +116,19 @@ public class EmployeeController {
             @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
             @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
 
-        return ResponseEntity.ok(
-                employeeService.submitExperiencedDetails(
-                        employeeId, dataJson,
-                        idProof, passportPhoto, experienceCerts, relievingLetter));
+        employeeService.submitExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter);
+
+        return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
     /**
      * PUT — resubmission after HR rejection.
-     * Fails unless the current verification status is REJECTED.
-     * All documents must be re-uploaded (full replacement — no partial update).
-     *
-     * Multipart keys: same as POST above.
+     * Returns a plain success message.
      */
     @PutMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<EmployeePersonalDetails> updateExperiencedDetails(
+    public ResponseEntity<String> updateExperiencedDetails(
             @PathVariable String employeeId,
             @RequestPart("data")             String dataJson,
             @RequestPart("idProof")          MultipartFile idProof,
@@ -173,20 +136,21 @@ public class EmployeeController {
             @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
             @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
 
-        return ResponseEntity.ok(
-                employeeService.updateExperiencedDetails(
-                        employeeId, dataJson,
-                        idProof, passportPhoto, experienceCerts, relievingLetter));
+        employeeService.updateExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter);
+
+        return ResponseEntity.ok("Personal details updated successfully.");
     }
 
-    // ── Personal details read ─────────────────────────────────────
+    // ── Personal details read (HR / Admin) ────────────────────────
     @GetMapping("/personal-details/{employeeId}")
-    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+    public ResponseEntity<ProfileResponse> getPersonalDetails(
             @PathVariable String employeeId) {
-        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+        return ResponseEntity.ok(employeeService.getPersonalDetailsAsProfile(employeeId));
     }
 
     // ── Employee list / search ────────────────────────────────────
+
     @GetMapping("/all")
     public Page<EmployeeResponseDTO> getAllEmployees(
             @RequestParam(required = false) String name,
@@ -214,6 +178,6 @@ public class EmployeeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteEmployee(@PathVariable String id) {
         employeeService.deleteEmployee(id);
-        return ResponseEntity.ok("Employee deactivated successfully");
+        return ResponseEntity.ok("Employee deactivated successfully.");
     }
 }
