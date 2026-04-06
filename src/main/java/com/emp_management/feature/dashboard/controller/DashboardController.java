@@ -140,7 +140,6 @@ public class DashboardController {
     }
 
     @GetMapping("/team-calendar/{id}")
-    @PreAuthorize("#id == authentication.principal.employeeId")
     public ResponseEntity<Map<String, List<TeamMemberBalance>>> getManagerTeamLeaveCalendar(
             @PathVariable String id) {
         return ResponseEntity.ok(

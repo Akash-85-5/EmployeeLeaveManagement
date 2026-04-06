@@ -17,7 +17,7 @@ public class EmailSender {
     @Async
     public void sendEmail(String from, String to, String subject, String body){
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(from);
+        message.setFrom("hr@wenxttech.com");
         message.setTo(to);
         message.setSubject(subject);
         message.setText(body);
