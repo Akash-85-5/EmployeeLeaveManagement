@@ -70,7 +70,6 @@ public class LeaveApprovalController {
     // ── Core decision ─────────────────────────────────────────────
 
     @PatchMapping("/decision")
-//    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
         return ResponseEntity.ok("Decision recorded: " + request.getDecision());
