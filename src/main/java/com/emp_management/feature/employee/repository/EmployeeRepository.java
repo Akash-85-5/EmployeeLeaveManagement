@@ -33,7 +33,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 //
 //    List<Employee> findByRole(String role);
 //
-    List<Employee> findByNameContainingIgnoreCase(String name);
+    List<Employee> findByEmpIdContainingIgnoreCase(String name);
 //
     Long countByActive(Boolean active);
 //

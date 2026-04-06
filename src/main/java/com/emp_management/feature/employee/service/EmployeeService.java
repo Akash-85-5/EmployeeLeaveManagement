@@ -259,36 +259,19 @@ public class EmployeeService {
             replaceChildren(pd, request.getChildren());
         }
 
-        // ── Experience entries: only replace if "experiences" is in the JSON ──
+        // ── Experience entries ─────────────────────────────────────────────────
+        // Rule: "experiences" absent in JSON → entries untouched (only idProof/
+        //        passportPhoto on first entry can still be swapped).
+        //       "experiences" present → patch text fields and optionally replace
+        //        files. NO file is mandatory. Existing paths are kept when the
+        //        corresponding file part is not sent.
         List<ExperienceEntryDto> experiences = request.getExperiences();
         if (experiences != null) {
-            // Experiences were explicitly sent — validate and fully replace
+
             if (experiences.isEmpty())
                 throw new BadRequestException("Experience entries cannot be empty. Send at least one entry.");
 
-            boolean hasCerts = experienceCerts != null && !experienceCerts.isEmpty();
-            if (!hasCerts)
-                throw new BadRequestException(
-                        "experienceCerts files must be provided when updating experience entries.");
-
-            if (experienceCerts.size() != experiences.size())
-                throw new BadRequestException(
-                        "Number of experience certificate files (" + experienceCerts.size()
-                                + ") must match number of experience entries (" + experiences.size() + ").");
-
-            for (int i = 0; i < experienceCerts.size(); i++)
-                validateFile(experienceCerts.get(i), "Experience certificate for entry " + (i + 1));
-
-            long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
-            if (lastCount != 1)
-                throw new BadRequestException(
-                        "Exactly one experience entry must be marked as the last company.");
-
-            boolean anyLastCompany = experiences.stream().anyMatch(ExperienceEntryDto::isLastCompany);
-            if (anyLastCompany && !hasFile(relievingLetter))
-                throw new BadRequestException(
-                        "Relieving letter must be provided for the last company entry.");
-
+            // Only validate date ranges when both dates are explicitly provided
             for (int i = 0; i < experiences.size(); i++) {
                 ExperienceEntryDto e = experiences.get(i);
                 if (e.getFromDate() != null && e.getEndDate() != null
@@ -297,51 +280,151 @@ public class EmployeeService {
                             "Experience entry " + (i + 1) + ": fromDate must be before endDate.");
             }
 
-            // Delete old experience doc files from disk before replacing
-            deleteExperiencedDocFiles(pd.getExperiencedDocuments());
-            pd.getExperiencedDocuments().clear();
+            // Only validate lastCompany count if more than one entry marks itself as last
+            long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
+            if (lastCount > 1)
+                throw new BadRequestException("Only one experience entry can be marked as the last company.");
 
-            // Find existing idProofPath and passportPhotoPath to carry forward if no new files sent
-            String existingIdProofPath     = null;
-            String existingPassportPath    = null;
-            // (They were stored on the first entry of the old list — already cleared above,
-            //  but we read them before clearing via the deleted docs — handled below)
+            List<ExperiencedDocument> existingDocs = pd.getExperiencedDocuments();
+            int oldSize = existingDocs.size();
 
-            String idProofPath      = hasFile(idProof)
-                    ? documentStorageService.save(idProof,      "id-proof",       employeeId)
-                    : null; // will stay null on non-first entries anyway
-            String passportPhotoPath = hasFile(passportPhoto)
-                    ? documentStorageService.save(passportPhoto, "passport-photo", employeeId)
-                    : null;
+            // Save shared single-upload files only if new ones were sent
+            String newIdProofPath       = hasFile(idProof)
+                    ? documentStorageService.save(idProof,       "id-proof",       employeeId) : null;
+            String newPassportPhotoPath = hasFile(passportPhoto)
+                    ? documentStorageService.save(passportPhoto, "passport-photo", employeeId) : null;
 
-            for (int i = 0; i < experiences.size(); i++) {
-                ExperienceEntryDto entry = experiences.get(i);
-                ExperiencedDocument doc = new ExperiencedDocument();
-                doc.setPersonalDetails(pd);
-                doc.setCompanyName(entry.getCompanyName());
-                doc.setRole(entry.getRole());
-                doc.setFromDate(entry.getFromDate());
-                doc.setEndDate(entry.getEndDate());
-                doc.setExperienceCertPath(
-                        documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
-                if (i == 0) {
-                    doc.setIdProofPath(idProofPath);       // null if no new file — acceptable
-                    doc.setPassportPhotoPath(passportPhotoPath);
+            if (experiences.size() == oldSize) {
+                // ── Same count: patch each existing row in place ──────────────
+                for (int i = 0; i < experiences.size(); i++) {
+                    ExperienceEntryDto entry = experiences.get(i);
+                    ExperiencedDocument doc  = existingDocs.get(i);
+
+                    // Text — only overwrite if a value was actually sent
+                    if (entry.getCompanyName() != null && !entry.getCompanyName().isBlank())
+                        doc.setCompanyName(entry.getCompanyName());
+                    if (entry.getRole() != null && !entry.getRole().isBlank())
+                        doc.setRole(entry.getRole());
+                    if (entry.getFromDate() != null) doc.setFromDate(entry.getFromDate());
+                    if (entry.getEndDate()  != null) doc.setEndDate(entry.getEndDate());
+
+                    // Experience cert — only replace if a new file was sent at this index
+                    boolean newCertSent = experienceCerts != null
+                            && i < experienceCerts.size()
+                            && hasFile(experienceCerts.get(i));
+                    if (newCertSent) {
+                        documentStorageService.delete(doc.getExperienceCertPath());
+                        doc.setExperienceCertPath(
+                                documentStorageService.save(experienceCerts.get(i),
+                                        "experience-cert", employeeId));
+                    }
+
+                    // Relieving letter — only replace if new file sent for the last-company entry
+                    if (entry.isLastCompany() && hasFile(relievingLetter)) {
+                        documentStorageService.delete(doc.getRelievingLetterPath());
+                        doc.setRelievingLetterPath(
+                                documentStorageService.save(relievingLetter,
+                                        "relieving-letter", employeeId));
+                    }
+
+                    // idProof and passportPhoto live on the first entry only
+                    if (i == 0) {
+                        if (newIdProofPath != null) {
+                            documentStorageService.delete(doc.getIdProofPath());
+                            doc.setIdProofPath(newIdProofPath);
+                        }
+                        if (newPassportPhotoPath != null) {
+                            documentStorageService.delete(doc.getPassportPhotoPath());
+                            doc.setPassportPhotoPath(newPassportPhotoPath);
+                        }
+                    }
                 }
-                if (entry.isLastCompany()) {
-                    doc.setRelievingLetterPath(
-                            documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
+
+            } else {
+                // ── Count changed: rebuild list, carry forward old paths by index ──
+                // Snapshot old paths before clearing so we can reuse them
+                String oldIdProofPath    = oldSize > 0 ? existingDocs.get(0).getIdProofPath()       : null;
+                String oldPassportPath   = oldSize > 0 ? existingDocs.get(0).getPassportPhotoPath() : null;
+                List<String> oldCertPaths      = new ArrayList<>();
+                List<String> oldRelievingPaths = new ArrayList<>();
+                List<LocalDate> oldFromDates   = new ArrayList<>();
+                List<LocalDate> oldEndDates    = new ArrayList<>();
+                List<String> oldCompanyNames   = new ArrayList<>();
+                List<String> oldRoles          = new ArrayList<>();
+                for (ExperiencedDocument d : existingDocs) {
+                    oldCertPaths.add(d.getExperienceCertPath());
+                    oldRelievingPaths.add(d.getRelievingLetterPath());
+                    oldFromDates.add(d.getFromDate());
+                    oldEndDates.add(d.getEndDate());
+                    oldCompanyNames.add(d.getCompanyName());
+                    oldRoles.add(d.getRole());
                 }
-                pd.getExperiencedDocuments().add(doc);
+
+                // Delete disk files for entries that are being dropped (positions >= new size)
+                for (int i = experiences.size(); i < oldSize; i++) {
+                    documentStorageService.delete(oldCertPaths.get(i));
+                    documentStorageService.delete(oldRelievingPaths.get(i));
+                    if (i == 0) {
+                        documentStorageService.delete(oldIdProofPath);
+                        documentStorageService.delete(oldPassportPath);
+                    }
+                }
+
+                pd.getExperiencedDocuments().clear();
+
+                for (int i = 0; i < experiences.size(); i++) {
+                    ExperienceEntryDto entry = experiences.get(i);
+                    ExperiencedDocument doc  = new ExperiencedDocument();
+                    doc.setPersonalDetails(pd);
+
+                    // Text: use sent value, else carry old value if the position existed before
+                    doc.setCompanyName(entry.getCompanyName() != null && !entry.getCompanyName().isBlank()
+                            ? entry.getCompanyName() : (i < oldSize ? oldCompanyNames.get(i) : null));
+                    doc.setRole(entry.getRole() != null && !entry.getRole().isBlank()
+                            ? entry.getRole() : (i < oldSize ? oldRoles.get(i) : null));
+                    doc.setFromDate(entry.getFromDate() != null
+                            ? entry.getFromDate() : (i < oldSize ? oldFromDates.get(i) : null));
+                    doc.setEndDate(entry.getEndDate() != null
+                            ? entry.getEndDate() : (i < oldSize ? oldEndDates.get(i) : null));
+
+                    // Cert: use new file if sent, else carry old path
+                    boolean newCertSent = experienceCerts != null
+                            && i < experienceCerts.size()
+                            && hasFile(experienceCerts.get(i));
+                    doc.setExperienceCertPath(newCertSent
+                            ? documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId)
+                            : (i < oldSize ? oldCertPaths.get(i) : null));
+
+                    // Relieving: use new file if sent for last-company entry, else carry old
+                    if (entry.isLastCompany() && hasFile(relievingLetter)) {
+                        doc.setRelievingLetterPath(
+                                documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
+                    } else {
+                        doc.setRelievingLetterPath(i < oldSize ? oldRelievingPaths.get(i) : null);
+                    }
+
+                    // idProof and passportPhoto on first entry only
+                    if (i == 0) {
+                        doc.setIdProofPath(newIdProofPath != null ? newIdProofPath : oldIdProofPath);
+                        doc.setPassportPhotoPath(newPassportPhotoPath != null ? newPassportPhotoPath : oldPassportPath);
+                    }
+
+                    pd.getExperiencedDocuments().add(doc);
+                }
             }
+
         } else {
-            // Experiences not sent — only update idProof/passportPhoto files on first entry if provided
+            // "experiences" not in JSON — only patch idProof/passportPhoto on first entry if new files sent
             if (!pd.getExperiencedDocuments().isEmpty()) {
                 ExperiencedDocument firstDoc = pd.getExperiencedDocuments().get(0);
-                if (hasFile(idProof))
+                if (hasFile(idProof)) {
+                    documentStorageService.delete(firstDoc.getIdProofPath());
                     firstDoc.setIdProofPath(documentStorageService.save(idProof, "id-proof", employeeId));
-                if (hasFile(passportPhoto))
+                }
+                if (hasFile(passportPhoto)) {
+                    documentStorageService.delete(firstDoc.getPassportPhotoPath());
                     firstDoc.setPassportPhotoPath(documentStorageService.save(passportPhoto, "passport-photo", employeeId));
+                }
             }
         }
 
@@ -583,7 +666,7 @@ public class EmployeeService {
     }
 
     public List<Employee> searchEmployees(String query) {
-        return employeeRepository.findByNameContainingIgnoreCase(query);
+        return employeeRepository.findByEmpIdContainingIgnoreCase(query);
     }
 
     public Long getActiveEmployeesCount() {

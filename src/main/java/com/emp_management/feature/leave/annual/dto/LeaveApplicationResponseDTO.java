@@ -27,6 +27,7 @@ public class LeaveApplicationResponseDTO {
     private Integer requiredApprovalLevels;
     private String currentApproverId;
     private String firstApproverId;
+    private String rejectionReason;
     private RequestStatus firstApproverDecision;
     private LocalDateTime firstApproverDecidedAt;
     private String secondApproverId;
@@ -54,6 +55,14 @@ public class LeaveApplicationResponseDTO {
 
     public Boolean getAppointment() {
         return isAppointment;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 
     public void setAppointment(Boolean appointment) {
