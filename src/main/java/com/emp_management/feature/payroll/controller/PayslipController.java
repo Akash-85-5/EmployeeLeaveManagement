@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -130,26 +131,20 @@ public class PayslipController {
     public PayslipResponse myPayslip(
             @PathVariable Integer year,
             @PathVariable Integer month,
-            Authentication auth){
-
-        CustomUserDetails user =
-                (CustomUserDetails) auth.getPrincipal();
+            @AuthenticationPrincipal CustomUserDetails user){
 
         return payslipService.getEmployeePayslip(
-                user.getUser().getEmployee().getEmpId(),year,month);
+                user.getEmployeeId(), year, month);
     }
 
     @GetMapping("/download/{year}/{month}")
     public ResponseEntity<byte[]> download(
             @PathVariable Integer year,
             @PathVariable Integer month,
-            Authentication auth) {
-
-        CustomUserDetails user =
-                (CustomUserDetails) auth.getPrincipal();
+            @AuthenticationPrincipal CustomUserDetails user) {
 
         byte[] pdf = payslipService.downloadPayslip(
-                user.getUser().getEmployee().getEmpId(), year, month);
+                user.getEmployeeId(), year, month);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)

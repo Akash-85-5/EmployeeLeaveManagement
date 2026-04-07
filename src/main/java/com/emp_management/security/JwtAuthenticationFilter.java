@@ -76,20 +76,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // ✅ 6. Check account status
-        if (user.getStatus() != com.emp_management.shared.enums.EmployeeStatus.ACTIVE) {
+        if (!user.getEmployee().isActive()) {
             sendUnauthorized(response, "Account is disabled.");
             return;
         }
 
-        // ✅ 7. Set authentication
-        String role = jwtTokenProvider.getRoleFromToken(token);
+        CustomUserDetails userDetails = new CustomUserDetails(user);
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        empId,
+                        userDetails,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        userDetails.getAuthorities()
                 );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
