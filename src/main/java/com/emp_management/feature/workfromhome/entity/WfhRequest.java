@@ -1,6 +1,7 @@
 package com.emp_management.feature.workfromhome.entity;
 
 import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.shared.enums.ApprovalLevel;
 import com.emp_management.shared.enums.HalfDayType;
 import com.emp_management.shared.enums.RequestStatus;
 import jakarta.persistence.*;
@@ -38,7 +39,8 @@ public class WfhRequest {
     private String currentApprover;
 
     private String remarks;
-
+    private String approvedBy;
+    private LocalDateTime approvedAt;
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -47,6 +49,21 @@ public class WfhRequest {
     @Enumerated(EnumType.STRING)
     @Column(name = "half_day_type")
     private HalfDayType halfDayType;
+    @Column(name = "current_approver_id")
+    private String currentApproverId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_approval_level")
+    private ApprovalLevel currentApprovalLevel;
+
+    @Column(name = "second_approver_id")
+    private String secondApproverId;
+
+    @Column(name = "is_escalated")
+    private boolean escalated = false;
+
+    @Column(name = "escalated_at")
+    private LocalDateTime escalatedAt;
 
     @PrePersist
     public void onCreate() {
@@ -59,11 +76,31 @@ public class WfhRequest {
         this.updatedAt = LocalDateTime.now();
     }
 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
     // GETTERS / SETTERS
     public Long getId() { return id; }
 
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Employee getEmployee() { return employee; }
     public void setEmployee(Employee employee) { this.employee = employee; }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
     public LocalDate getFromDate() { return fromDate; }
     public void setFromDate(LocalDate fromDate) { this.fromDate = fromDate; }
@@ -90,4 +127,61 @@ public class WfhRequest {
     public void setHalfDayType(HalfDayType halfDayType) {
         this.halfDayType = halfDayType;
     }
+    // 🔥 ADD THESE METHODS
+
+    public String getCurrentApproverId() {
+        return currentApproverId;
+    }
+
+    public void setCurrentApproverId(String currentApproverId) {
+        this.currentApproverId = currentApproverId;
+    }
+
+    public ApprovalLevel getCurrentApprovalLevel() {
+        return currentApprovalLevel;
+    }
+
+    public void setCurrentApprovalLevel(ApprovalLevel currentApprovalLevel) {
+        this.currentApprovalLevel = currentApprovalLevel;
+    }
+
+    public String getSecondApproverId() {
+        return secondApproverId;
+    }
+
+    public void setSecondApproverId(String secondApproverId) {
+        this.secondApproverId = secondApproverId;
+    }
+
+    public boolean isEscalated() {
+        return escalated;
+    }
+
+    public void setEscalated(boolean escalated) {
+        this.escalated = escalated;
+    }
+
+    public LocalDateTime getEscalatedAt() {
+        return escalatedAt;
+    }
+
+    public void setEscalatedAt(LocalDateTime escalatedAt) {
+        this.escalatedAt = escalatedAt;
+    }
+    public String getApprovedBy() {
+        return approvedBy;
+    }
+
+    public void setApprovedBy(String approvedBy) {
+        this.approvedBy = approvedBy;
+    }
+
+    public LocalDateTime getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(LocalDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
 }

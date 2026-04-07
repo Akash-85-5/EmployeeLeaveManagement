@@ -1,6 +1,7 @@
 package com.emp_management.feature.workfromhome.controller;
 
 import com.emp_management.feature.workfromhome.entity.WfhRequest;
+import com.emp_management.feature.workfromhome.repository.WfhRepository;
 import com.emp_management.feature.workfromhome.service.WfhService;
 import com.emp_management.shared.enums.HalfDayType;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import java.util.List;
 public class WfhController {
 
     private final WfhService service;
+
 
     public WfhController(WfhService service) {
         this.service = service;
@@ -76,6 +78,15 @@ public class WfhController {
         String response = service.cancelWfh(id, employeeId);
 
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/employee/wfh-history")
+    public List<WfhRequest> getEmployeeHistory(@RequestParam String empId) {
+        return service.getEmployeeHistory(empId);
+    }
+
+    @GetMapping("/manager/wfh-history")
+    public List<WfhRequest> getManagerHistory(@RequestParam String managerId) {
+        return service.getManagerHistory(managerId);
     }
 }
 

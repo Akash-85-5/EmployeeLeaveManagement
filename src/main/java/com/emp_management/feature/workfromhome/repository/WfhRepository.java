@@ -10,11 +10,13 @@ public interface WfhRepository extends JpaRepository<WfhRequest, Long> {
 
     // Manager view
     List<WfhRequest> findByCurrentApprover(String approverId);
-
+    List<WfhRequest> findByStatus(RequestStatus Status);
     // Employee view
     List<WfhRequest> findByEmployee_EmpId(String empId);
     List<WfhRequest> findByEmployee_EmpIdAndStatusIn(
             String empId,
             List<RequestStatus> statuses
     );
+    List<WfhRequest> findByEmployee_ReportingId(String managerId);
+
 }

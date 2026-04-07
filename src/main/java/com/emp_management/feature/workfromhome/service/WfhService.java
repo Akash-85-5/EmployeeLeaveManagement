@@ -25,6 +25,13 @@ public class WfhService {
         this.wfhRepository = wfhRepository;
         this.employeeRepository = employeeRepository;
     }
+    public List<WfhRequest> getEmployeeHistory(String empId) {
+        return wfhRepository.findByEmployee_EmpId(empId);
+    }
+
+    public List<WfhRequest> getManagerHistory(String managerId) {
+        return wfhRepository.findByEmployee_ReportingId(managerId);
+    }
 
     // APPLY (same as leave logic)
     public WfhRequest apply(String empId,
@@ -63,7 +70,7 @@ public class WfhService {
             //  FULL DAY conflict
             if (req.getHalfDayType() == null &&
                     !(to.isBefore(req.getFromDate()) || from.isAfter(req.getToDate()))) {
-                throw new RuntimeException("WFH already exists for selected dates");
+                throw new BadRequestException("WFH already exists for selected dates");
             }
 
             // HALF DAY conflict
@@ -125,7 +132,7 @@ public class WfhService {
                 .orElseThrow(() -> new BadRequestException("WFH not found"));
 
         if (!approverId.equals(wfh.getCurrentApprover())) {
-            throw new RuntimeException("Not authorized");
+            throw new UnauthorizedException("Not authorized");
         }
 
         wfh.setStatus(RequestStatus.REJECTED);
