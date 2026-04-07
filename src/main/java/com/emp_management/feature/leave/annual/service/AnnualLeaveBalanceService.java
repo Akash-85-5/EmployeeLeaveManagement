@@ -3,12 +3,15 @@ package com.emp_management.feature.leave.annual.service;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.entity.AnnualLeaveMonthlyBalance;
+import com.emp_management.feature.leave.annual.dto.AnnualLeaveBalanceResponse;
+import com.emp_management.feature.leave.annual.mapper.AnnualLeaveBalanceMapper;
 import com.emp_management.feature.leave.annual.entity.LeaveType;
 import com.emp_management.feature.leave.annual.repository.AnnualLeaveMonthlyBalanceRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.shared.exceptions.BadRequestException;
+
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,6 +199,27 @@ public class AnnualLeaveBalanceService {
 
     private AnnualLeaveMonthlyBalance getOrThrow(String employeeId, int year, int month) {
         return monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new BadRequestException(
+                        "Annual leave balance not found for employee "
+                                + employeeId + " " + year + "/" + month));
+    }
+    // ================= DTO METHODS (NEW - SAFE ADDITION) =================
+
+    @Transactional
+    public List<AnnualLeaveBalanceResponse> getYearSummaryDTO(String employeeId, int year) {
+        return getYearSummary(employeeId, year)
+                .stream()
+                .map(AnnualLeaveBalanceMapper::toDTO)
+                .toList();
+    }
+
+    @Transactional
+    public AnnualLeaveBalanceResponse getSingleMonthDTO(String employeeId, int year, int month) {
+        ensureCurrentMonthInitialized(employeeId, year, month);
+
+        return monthlyBalanceRepo
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .map(AnnualLeaveBalanceMapper::toDTO)
                 .orElseThrow(() -> new BadRequestException(
                         "Annual leave balance not found for employee "
                                 + employeeId + " " + year + "/" + month));

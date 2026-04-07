@@ -10,6 +10,7 @@ import com.emp_management.feature.leave.annual.repository.LeaveApplicationReposi
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.carryforward.dto.*;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
+import com.emp_management.feature.leave.carryforward.mapper.CarryForwardBalanceMapper;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.shared.enums.RequestStatus;
 import com.emp_management.shared.exceptions.BadRequestException;
@@ -52,25 +53,10 @@ public class CarryForwardBalanceService {
     public CarryForwardBalanceResponse getBalance(String employeeId, int year) {
         Employee emp = requireEmployee(employeeId);
 
-        CarryForwardBalance balance =
-                carryForwardRepo.findByEmployee_EmpIdAndYear(employeeId, year).orElse(null);
-
-        CarryForwardBalanceResponse response = new CarryForwardBalanceResponse();
-        response.setEmployeeId(employeeId);
-        response.setEmployeeName(emp.getName());
-        response.setYear(year);
-
-        if (balance == null) {
-            response.setTotalCarriedForward(0.0);
-            response.setTotalUsed(0.0);
-            response.setRemaining(0.0);
-        } else {
-            response.setTotalCarriedForward(balance.getTotalCarriedForward());
-            response.setTotalUsed(balance.getTotalUsed());
-            response.setRemaining(balance.getRemaining());
-        }
-
-        return response;
+        return carryForwardRepo
+                .findByEmployee_EmpIdAndYear(employeeId, year)
+                .map(CarryForwardBalanceMapper::toDTO)                      // record exists → map it
+                .orElseGet(() -> CarryForwardBalanceMapper.toEmptyDTO(emp, year)); // no record → zeros
     }
 
     // ================= ELIGIBILITY =================
@@ -110,20 +96,13 @@ public class CarryForwardBalanceService {
         return response;
     }
 
-    // ================= ALL BALANCES (FIXED) =================
+    // ================= ALL BALANCES =================
 
     @Transactional(readOnly = true)
     public List<CarryForwardBalanceResponse> getAllBalances(int year) {
-        return carryForwardRepo.findByYear(year).stream().map(balance -> {
-            CarryForwardBalanceResponse response = new CarryForwardBalanceResponse();
-            response.setEmployeeId(balance.getEmployee().getEmpId());
-            response.setEmployeeName(balance.getEmployee().getName());
-            response.setYear(balance.getYear());
-            response.setTotalCarriedForward(balance.getTotalCarriedForward());
-            response.setTotalUsed(balance.getTotalUsed());
-            response.setRemaining(balance.getRemaining());
-            return response;
-        }).toList();
+        return carryForwardRepo.findByYear(year).stream()
+                .map(CarryForwardBalanceMapper::toDTO)      // mapper used here now
+                .toList();
     }
 
     // ================= MONTHLY =================
@@ -149,10 +128,7 @@ public class CarryForwardBalanceService {
             if (la.getStartDate().getYear() != year) continue;
 
             int month = la.getStartDate().getMonthValue();
-
-            double days = la.getDays() != null
-                    ? la.getDays().doubleValue() : 0.0;
-
+            double days = la.getDays() != null ? la.getDays().doubleValue() : 0.0;
             usedByMonth.put(month, usedByMonth.get(month) + days);
         }
 
@@ -219,7 +195,7 @@ public class CarryForwardBalanceService {
         carryForwardRepo.save(balance);
     }
 
-    // ================= YEAR END (FIXED) =================
+    // ================= YEAR END =================
 
     @Transactional
     public void processYearEndCarryForward(int previousYear) {
@@ -261,7 +237,7 @@ public class CarryForwardBalanceService {
     private double getMaxCarryForwardCap() {
         return leaveTypeRepository.findByLeaveType("CARRY_FORWARD")
                 .map(LeaveType::getAllocatedDays)
-                .map(val -> val.doubleValue()) // FIXED
+                .map(val -> val.doubleValue())
                 .orElse(10.0);
     }
 

@@ -24,47 +24,52 @@ public class CarryForwardController {
         this.carryForwardBalanceService = carryForwardBalanceService;
     }
 
-    // ── Yearly balance for one employee ──────────────────────────────────────
+    // ── Yearly balance for one employee ─────────────────────────────
 
     @GetMapping("/balance/{employeeId}")
     public ResponseEntity<CarryForwardBalanceResponse> getBalance(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
+
         if (year == null) year = LocalDate.now().getYear();
+
         log.info("[CARRYFORWARD] Fetching balance: employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(carryForwardBalanceService.getBalance(employeeId, year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getBalance(employeeId, year)
+        );
     }
 
-    // ── Pre-year-end eligibility check ───────────────────────────────────────
+    // ── Eligibility check ───────────────────────────────────────────
 
     @GetMapping("/eligibility/{employeeId}")
     public ResponseEntity<CarryForwardEligibilityResponse> checkEligibility(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
+
         if (year == null) year = LocalDate.now().getYear();
+
         log.info("[CARRYFORWARD] Checking eligibility: employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(carryForwardBalanceService.checkEligibility(employeeId, year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.checkEligibility(employeeId, year)
+        );
     }
 
-    // ── All employees' yearly balances (HR/Manager view) ─────────────────────
+    // ── All balances (HR/ADMIN) ─────────────────────────────────────
 
     @GetMapping("/balances/{year}")
     public ResponseEntity<List<CarryForwardBalanceResponse>> getAllBalances(
             @PathVariable Integer year) {
+
         log.info("[CARRYFORWARD] Fetching all balances for year: {}", year);
-        return ResponseEntity.ok(carryForwardBalanceService.getAllBalances(year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getAllBalances(year)
+        );
     }
 
-    // ── Month-wise used / balance / remaining ─────────────────────────────────
-    //
-    //  GET /api/carryforward/monthly/{employeeId}?year=2025
-    //
-    //  Returns a 12-row list (Jan–Dec) showing:
-    //    openingBalance  – CF balance at start of that month
-    //    used            – approved CF days consumed in that month
-    //    closingBalance  – remaining at end of that month
-    //
-    //  Access: employee themselves, or HR / ADMIN / MANAGER / TEAM_LEADER
+    // ── Monthly usage ───────────────────────────────────────────────
 
     @GetMapping("/monthly/{employeeId}")
     @PreAuthorize("#employeeId == authentication.principal.user.id " +
@@ -73,8 +78,13 @@ public class CarryForwardController {
     public ResponseEntity<List<CarryForwardMonthlyUsageResponse>> getMonthlyUsage(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
+
         if (year == null) year = LocalDate.now().getYear();
+
         log.info("[CARRYFORWARD] Fetching monthly usage: employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(carryForwardBalanceService.getMonthlyUsage(employeeId, year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getMonthlyUsage(employeeId, year)
+        );
     }
 }
