@@ -13,6 +13,7 @@ import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.compoff.entity.CompOff;
 import com.emp_management.feature.leave.compoff.repository.CompOffRepository;
 import com.emp_management.feature.leave.compoff.service.CompOffService;
+import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;// ✅ NEW IMPORT
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.shared.enums.*;
 import com.emp_management.shared.exceptions.BadRequestException;
@@ -38,8 +39,8 @@ public class LeaveApplicationService {
     private final LeaveAttachmentRepository leaveAttachmentRepository;
     private final AnnualLeaveBalanceService    annualLeaveBalanceService;
     private final SickLeaveBalanceService      sickLeaveBalanceService;
+    private final CarryForwardBalanceService carryForwardBalanceService;// ✅ NEW FIELD
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
-//    private final SeparationService            separationService;
 
     public LeaveApplicationService(
             LeaveApplicationRepository leaveApplicationRepository,
@@ -52,8 +53,8 @@ public class LeaveApplicationService {
             LeaveAttachmentRepository leaveAttachmentRepository,
             AnnualLeaveBalanceService annualLeaveBalanceService,
             SickLeaveBalanceService sickLeaveBalanceService,
-            EmployeePersonalDetailsRepository personalDetailsRepository){
-//            SeparationService separationService) {
+            CarryForwardBalanceService carryForwardBalanceService, // ✅ NEW PARAM
+            EmployeePersonalDetailsRepository personalDetailsRepository) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService         = notificationService;
         this.employeeRepository          = employeeRepository;
@@ -64,12 +65,12 @@ public class LeaveApplicationService {
         this.leaveAttachmentRepository   = leaveAttachmentRepository;
         this.annualLeaveBalanceService   = annualLeaveBalanceService;
         this.sickLeaveBalanceService     = sickLeaveBalanceService;
+        this.carryForwardBalanceService  = carryForwardBalanceService; // ✅ NEW ASSIGNMENT
         this.personalDetailsRepository   = personalDetailsRepository;
-//        this.separationService           = separationService;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // APPLY LEAVE
+    // APPLY LEAVE  (unchanged — carry-forward plugs in via switch)
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
@@ -86,7 +87,7 @@ public class LeaveApplicationService {
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);
 
-        Employee employee = leave.getEmployee(); // already set by controller
+        Employee employee = leave.getEmployee();
 
         validateLeaveTypeAndBalance(leave, employee, calculatedDays);
         setupApprovalChain(leave, employee);
@@ -109,17 +110,16 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // APPROVAL CHAIN SETUP
-    // Uses Employee.reportingId (String empId of manager)
+    // APPROVAL CHAIN SETUP  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     private void setupApprovalChain(LeaveApplication leave, Employee employee) {
-        // reportingId is stored as Long in your entity — fetch manager by their numeric id
         String firstApproverNumericId = employee.getReportingId();
 
         if (firstApproverNumericId == null) {
             leave.setFirstApproverId(null);
             leave.setSecondApproverId(null);
+            leave.setCurrentApproverId(null);
             leave.setCurrentApprovalLevel(null);
             leave.setRequiredApprovalLevels(0);
             return;
@@ -149,7 +149,7 @@ public class LeaveApplicationService {
 
     // ═══════════════════════════════════════════════════════════════
     // VALIDATE LEAVE TYPE AND BALANCE
-    // Driven by leaveType.leaveType (String name) — no enum switch
+    // ✅ CARRY_FORWARD case added here
     // ═══════════════════════════════════════════════════════════════
 
     private void validateLeaveTypeAndBalance(LeaveApplication leave,
@@ -160,14 +160,14 @@ public class LeaveApplicationService {
         int month = leave.getStartDate().getMonthValue();
 
         switch (typeName) {
-            case "SICK"         -> validateSickLeave(leave, days, year, month);
-            case "ANNUAL_LEAVE" -> validateAnnualLeave(leave, days, year, month);
-            case "MATERNITY"    -> validateMaternity(leave, employee, days);
-            case "PATERNITY"    -> validatePaternity(leave, employee, days);
-            case "COMP_OFF"     -> validateCompOff(leave, days);
+            case "SICK"           -> validateSickLeave(leave, days, year, month);
+            case "ANNUAL_LEAVE"   -> validateAnnualLeave(leave, days, year, month);
+            case "CARRY_FORWARD"  -> validateCarryForward(leave, days, year); // ✅ NEW CASE
+            case "MATERNITY"      -> validateMaternity(leave, employee, days);
+            case "PATERNITY"      -> validatePaternity(leave, employee, days);
+            case "COMP_OFF"       -> validateCompOff(leave, days);
             default -> {
-                // Generic validation for any future leave types:
-                // Just check the total allocated days from the entity
+                // Generic validation for any future leave types
                 Double allocatedDays = leave.getLeaveType().getAllocatedDays();
                 Double used = leaveApplicationRepository.getTotalUsedDaysByType(
                         employee.getEmpId(), RequestStatus.APPROVED, year,
@@ -181,6 +181,8 @@ public class LeaveApplicationService {
             }
         }
     }
+
+    // ─── Individual validators ────────────────────────────────────
 
     private void validateSickLeave(LeaveApplication leave, BigDecimal days, int year, int month) {
         double available = sickLeaveBalanceService
@@ -201,6 +203,24 @@ public class LeaveApplicationService {
             throw new BadRequestException(
                     "Insufficient ANNUAL_LEAVE balance for "
                             + java.time.Month.of(month).name() + " " + year
+                            + ". Available: " + String.format("%.1f", available)
+                            + ", Requested: " + days);
+        }
+    }
+
+    /**
+     * ✅ NEW — Validates carry-forward balance before allowing application.
+     *
+     * Reads CarryForwardBalance.remaining for the employee in the leave year.
+     * If no balance record exists → employee has 0 carry-forward → reject.
+     * Balance is a yearly bucket (not monthly), so we only check by year.
+     */
+    private void validateCarryForward(LeaveApplication leave, BigDecimal days, int year) {
+        double available = carryForwardBalanceService
+                .getAvailableBalance(leave.getEmployee().getEmpId(), year);
+        if (days.doubleValue() > available) {
+            throw new BadRequestException(
+                    "Insufficient CARRY_FORWARD balance for year " + year
                             + ". Available: " + String.format("%.1f", available)
                             + ", Requested: " + days);
         }
@@ -254,7 +274,8 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // BALANCE DEDUCTION / RESTORE
+    // BALANCE DEDUCTION  (called on final approval)
+    // ✅ CARRY_FORWARD case added here
     // ═══════════════════════════════════════════════════════════════
 
     public void applyBalanceDeduction(LeaveApplication leave) {
@@ -265,17 +286,18 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL_LEAVE" -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
-            case "SICK"         -> sickLeaveBalanceService.deductLeave(empId, year, month, days);
-            case "COMP_OFF"     -> compOffService.useCompOff(empId, leave.getDays(), leave.getId());
-            default             -> { /* one-time types like MATERNITY/PATERNITY — no balance table */ }
+            case "ANNUAL_LEAVE"  -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
+            case "SICK"          -> sickLeaveBalanceService.deductLeave(empId, year, month, days);
+            case "CARRY_FORWARD" -> carryForwardBalanceService.deductLeave(empId, year, days); // ✅ NEW
+            case "COMP_OFF"      -> compOffService.useCompOff(empId, leave.getDays(), leave.getId());
+            default              -> { /* MATERNITY/PATERNITY — no balance table */ }
         }
-
-//        if (separationService.isInNoticePeriod(empId)) {
-
-//            separationService.extendNoticePeriod(empId, (int) Math.ceil(days));
-//        }
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BALANCE RESTORE  (called on cancel of an APPROVED leave)
+    // ✅ CARRY_FORWARD case added here
+    // ═══════════════════════════════════════════════════════════════
 
     public void restoreBalance(LeaveApplication leave) {
         double days  = leave.getDays().doubleValue();
@@ -285,9 +307,10 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL_LEAVE" -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
-            case "SICK"         -> sickLeaveBalanceService.restoreLeave(empId, year, month, days);
-            case "COMP_OFF"     -> {
+            case "ANNUAL_LEAVE"  -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
+            case "SICK"          -> sickLeaveBalanceService.restoreLeave(empId, year, month, days);
+            case "CARRY_FORWARD" -> carryForwardBalanceService.restoreLeave(empId, year, days); // ✅ NEW
+            case "COMP_OFF"      -> {
                 List<CompOff> linked = compOffRepository.findByUsedLeaveApplicationId(leave.getId());
                 BigDecimal restored = BigDecimal.ZERO;
                 for (CompOff c : linked) {
@@ -305,7 +328,7 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // CANCEL LEAVE
+    // CANCEL LEAVE  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
@@ -329,7 +352,7 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // UPDATE LEAVE (before approval)
+    // UPDATE LEAVE  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     @Transactional
@@ -373,7 +396,7 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // QUERIES
+    // QUERIES  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     public LeaveApplication getLeaveById(Long id) {
@@ -387,7 +410,7 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // LEAVE DURATION (logic unchanged)
+    // LEAVE DURATION  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     public BigDecimal calculateLeaveDuration(LeaveApplication leave) {
@@ -426,7 +449,7 @@ public class LeaveApplicationService {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PRIVATE HELPERS
+    // PRIVATE HELPERS  (unchanged)
     // ═══════════════════════════════════════════════════════════════
 
     private void checkHolidaysInRange(LeaveApplication leave) {
@@ -458,12 +481,11 @@ public class LeaveApplicationService {
         employeeRepository.findByEmpId(leave.getFirstApproverId()).ifPresent(approver ->
                 notificationService.createNotification(
                         approver.getEmpId(), employee.getEmail(), approver.getEmail(),
-                        EventType.LEAVE_APPLIED,  Channel.EMAIL,
+                        EventType.LEAVE_APPLIED, Channel.EMAIL,
                         employee.getName() + " applied for "
                                 + leave.getLeaveType().getLeaveType() + " leave from "
                                 + leave.getStartDate() + " to " + leave.getEndDate()
                                 + ". Awaiting your approval.")
         );
     }
-
 }

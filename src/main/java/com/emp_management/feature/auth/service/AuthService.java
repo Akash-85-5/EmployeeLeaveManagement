@@ -51,7 +51,7 @@ public class AuthService {
         User user = userRepository.findByEmployee_Email(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus()== EmployeeStatus.ACTIVE) {
+        if (user.getStatus() == EmployeeStatus.INACTIVE) {
             throw new RuntimeException("Account is disabled. Contact admin.");
         }
 
