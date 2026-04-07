@@ -1,16 +1,16 @@
-package com.emp_management.feature.leave.annual.controller;
+package com.example.employeeLeaveApplication.feature.leave.annual.controller;
 
-import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
-import com.emp_management.feature.leave.annual.dto.LeaveDecisionRequest;
-import com.emp_management.feature.leave.annual.entity.LeaveApproval;
-import com.emp_management.feature.leave.annual.service.LeaveApprovalService;
+import com.example.employeeLeaveApplication.feature.leave.annual.dto.BulkLeaveDecisionRequest;
+import com.example.employeeLeaveApplication.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
+import com.example.employeeLeaveApplication.feature.leave.annual.dto.LeaveDecisionRequest;
+import com.example.employeeLeaveApplication.feature.leave.annual.entity.LeaveApproval;
+import com.example.employeeLeaveApplication.feature.leave.annual.service.LeaveApprovalService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/leave-approvals")
@@ -37,8 +37,9 @@ public class LeaveApprovalController {
 //    }
 
     @GetMapping("/pending/manager/{managerId}")
+    @PreAuthorize("#managerId == authentication.principal.user.id")
     public ResponseEntity<Page<LeaveApplicationWithAttachmentsDto>> getPendingLeavesForManager(
-            @PathVariable String managerId,
+            @PathVariable Long managerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -60,35 +61,38 @@ public class LeaveApprovalController {
 
     // ── Get single leave with attachments ────────────────────────
 
-//    @GetMapping("/{leaveId}/with-attachments")
-//    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
-//            @PathVariable Long leaveId) {
-//        LeaveApplicationWithAttachmentsDto dto =
-//                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
-//        return ResponseEntity.ok(dto);
-//    }
+    @GetMapping("/{leaveId}/with-attachments")
+    public ResponseEntity<LeaveApplicationWithAttachmentsDto> getLeaveWithAttachments(
+            @PathVariable Long leaveId) {
+        LeaveApplicationWithAttachmentsDto dto =
+                leaveApprovalService.getLeaveApplicationWithAttachments(leaveId);
+        return ResponseEntity.ok(dto);
+    }
 
     // ── Core decision ─────────────────────────────────────────────
 
     @PatchMapping("/decision")
-    public ResponseEntity<String> decideLeave(@Valid @RequestBody LeaveDecisionRequest request) {
+//    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
+    public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
         return ResponseEntity.ok("Decision recorded: " + request.getDecision());
     }
 
     @PatchMapping("/{leaveId}/approve")
+    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> approveLeave(
             @PathVariable Long leaveId,
-            @RequestParam String approverId,
+            @RequestParam Long approverId,
             @RequestParam(required = false) String comments) {
         leaveApprovalService.approveLeave(leaveId, approverId, comments);
         return ResponseEntity.ok("Leave approved successfully");
     }
 
     @PatchMapping("/{leaveId}/reject")
+    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<String> rejectLeave(
             @PathVariable Long leaveId,
-            @RequestParam String approverId,
+            @RequestParam Long approverId,
             @RequestParam(required = false) String comments) {
         leaveApprovalService.rejectLeave(leaveId, approverId, comments);
         return ResponseEntity.ok("Leave rejected successfully");
@@ -96,19 +100,19 @@ public class LeaveApprovalController {
 
     // ── Bulk decisions ────────────────────────────────────────────
 
-//    @PostMapping("/manager/bulk-decision")
-//    @PreAuthorize("hasRole('MANAGER')")
-//    public ResponseEntity<String> managerBulkDecision(
-//            @RequestBody BulkLeaveDecisionRequest request) {
-//        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, false));
-//    }
+    @PostMapping("/manager/bulk-decision")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<String> managerBulkDecision(
+            @RequestBody BulkLeaveDecisionRequest request) {
+        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, false));
+    }
 
-//    @PostMapping("/hr/bulk-decision")
-//    @PreAuthorize("hasRole('HR')")
-//    public ResponseEntity<String> hrBulkDecision(
-//            @RequestBody BulkLeaveDecisionRequest request) {
-//        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, true));
-//    }
+    @PostMapping("/hr/bulk-decision")
+    @PreAuthorize("hasRole('HR')")
+    public ResponseEntity<String> hrBulkDecision(
+            @RequestBody BulkLeaveDecisionRequest request) {
+        return ResponseEntity.ok(leaveApprovalService.bulkDecision(request, true));
+    }
 
     // ── History & audit ───────────────────────────────────────────
 
@@ -122,8 +126,9 @@ public class LeaveApprovalController {
     }
 
     @GetMapping("/my-decisions/{approverId}")
+    @PreAuthorize("hasRole('TEAM_LEADER') or hasRole('MANAGER') or hasRole('HR')")
     public ResponseEntity<Page<LeaveApproval>> getMyDecisions(
-            @PathVariable String approverId,
+            @PathVariable Long approverId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(
