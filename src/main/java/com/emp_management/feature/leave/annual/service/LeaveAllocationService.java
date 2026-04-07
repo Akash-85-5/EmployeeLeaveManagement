@@ -1,6 +1,8 @@
 package com.emp_management.feature.leave.annual.service;
 
 import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
+import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.leave.annual.entity.LeaveAllocation;
 import com.emp_management.feature.leave.annual.repository.LeaveAllocationRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
@@ -12,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,14 +30,19 @@ public class LeaveAllocationService {
     private final LeaveAllocationRepository leaveAllocationRepository;
     private final EmployeeRepository employeeRepository;
     private final LeaveTypeRepository leaveTypeRepository;
+    private final EmployeePersonalDetailsRepository personalDetailsRepository;
+    private final AnnualLeaveBalanceService annualLeaveBalanceService;
+    private final SickLeaveBalanceService   sickLeaveBalanceService;
 
-    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository,
-                                  EmployeeRepository employeeRepository,
-                                  LeaveTypeRepository leaveTypeRepository) {
+    public LeaveAllocationService(LeaveAllocationRepository leaveAllocationRepository, EmployeeRepository employeeRepository, LeaveTypeRepository leaveTypeRepository, EmployeePersonalDetailsRepository personalDetailsRepository, AnnualLeaveBalanceService annualLeaveBalanceService, SickLeaveBalanceService sickLeaveBalanceService) {
         this.leaveAllocationRepository = leaveAllocationRepository;
         this.employeeRepository = employeeRepository;
         this.leaveTypeRepository = leaveTypeRepository;
+        this.personalDetailsRepository = personalDetailsRepository;
+        this.annualLeaveBalanceService = annualLeaveBalanceService;
+        this.sickLeaveBalanceService = sickLeaveBalanceService;
     }
+
 
     // ── Create one allocation manually ────────────────────────────
 //    public LeaveAllocation createEmployeeAllocation(LeaveAllocation leaveAllocation) {
@@ -86,6 +94,7 @@ public class LeaveAllocationService {
     }
 
     // ── Build default allocations for one employee ────────────────
+// ── Build default allocations for one employee ────────────────
     private List<LeaveAllocation> buildAllocations(Employee emp, Integer year) {
         List<LeaveType> autoTypes = leaveTypeRepository.findAllByAutoAllocateTrue();
 
@@ -95,7 +104,13 @@ public class LeaveAllocationService {
                             "Please seed the leave_type table correctly.");
         }
 
+        // Fetch personal details once — used for gender/marital eligibility
+        EmployeePersonalDetails personalDetails = personalDetailsRepository
+                .findByEmployee_EmpId(emp.getEmpId())
+                .orElse(null);
+
         return autoTypes.stream()
+                .filter(leaveType -> isEligible(leaveType, personalDetails))
                 .map(leaveType -> {
                     LeaveAllocation alloc = new LeaveAllocation();
                     alloc.setEmployee(emp);
@@ -105,6 +120,60 @@ public class LeaveAllocationService {
                     return alloc;
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if an employee is eligible for a leave type based on:
+     * 1. Gender restriction (eligibleGender field on LeaveType)
+     * 2. Marital status restriction (marriedOnly field on LeaveType)
+     *
+     * If personal details are not yet submitted, gender/marital restricted
+     * leave types are SKIPPED (conservative approach — can be allocated
+     * later manually once details are verified).
+     */
+    private boolean isEligible(LeaveType leaveType, EmployeePersonalDetails details) {
+        String eligibleGender = leaveType.getEligibleGender();
+        Boolean marriedOnly   = leaveType.getMarriedOnly();
+
+        // No restrictions — everyone is eligible
+        boolean hasGenderRestriction   = eligibleGender != null && !eligibleGender.isBlank();
+        boolean hasMaritalRestriction  = Boolean.TRUE.equals(marriedOnly);
+
+        if (!hasGenderRestriction && !hasMaritalRestriction) {
+            return true;
+        }
+
+        // Has restrictions but no personal details yet — skip
+        if (details == null) {
+            log.warn("Skipping restricted leave type '{}' for employee — personal details not submitted yet.",
+                    leaveType.getLeaveType());
+            return false;
+        }
+
+        // Gender check
+        if (hasGenderRestriction) {
+            String empGender = details.getGender() != null
+                    ? details.getGender().name().toUpperCase()
+                    : "";
+            if (!eligibleGender.equalsIgnoreCase(empGender)) {
+                log.info("Skipping '{}' — employee gender '{}' does not match required '{}'",
+                        leaveType.getLeaveType(), empGender, eligibleGender);
+                return false;
+            }
+        }
+
+        // Marital status check
+        if (hasMaritalRestriction) {
+            boolean isMarried = details.getMaritalStatus() != null
+                    && details.getMaritalStatus().name().equalsIgnoreCase("MARRIED");
+            if (!isMarried) {
+                log.info("Skipping '{}' — employee is not married",
+                        leaveType.getLeaveType());
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // ── Create bulk allocations for ONE employee ──────────────────
@@ -131,6 +200,10 @@ public class LeaveAllocationService {
     @Transactional
     public void allocateForNewEmployee(String employeeId) {
         createBulkAllocations(employeeId, Year.now().getValue());
+        int year  = Year.now().getValue();
+        int month = LocalDate.now().getMonthValue();
+        annualLeaveBalanceService.initializeForCurrentMonth(employeeId, year, month);
+        sickLeaveBalanceService.initializeForCurrentMonth(employeeId, year, month);
     }
 
     // ── Allocate ALL employees at once ────────────────────────────

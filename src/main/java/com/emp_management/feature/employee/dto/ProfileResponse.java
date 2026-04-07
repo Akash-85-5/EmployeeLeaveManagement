@@ -6,9 +6,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Profile response DTO.
+ * All fields are primitives or other DTOs — no JPA entities anywhere.
+ * This prevents circular reference during JSON serialization.
+ */
 public class ProfileResponse {
 
-    // ── From User/Employee — UNCHANGED ────────────────────────────
+    // ── Employee / User core ──────────────────────────────────────
     private String id;
     private String name;
     private String email;
@@ -22,25 +27,20 @@ public class ProfileResponse {
     private String vpnStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String branch;
+    private String country;
+    private String companyName;
 
-    // ── Personal details status — UNCHANGED ───────────────────────
+    // ── Personal details meta ─────────────────────────────────────
     private boolean personalDetailsComplete;
     private boolean personalDetailsLocked;
-
-    // ── NEW: verification status shown on profile page ────────────
-    // null = not submitted yet
-    // PENDING = submitted, waiting for HR
-    // VERIFIED = HR approved
-    // REJECTED = HR rejected, employee can resubmit
     private VerificationStatus verificationStatus;
-
-    // ── NEW: shown only when REJECTED ─────────────────────────────
     private String hrRemarks;
-
-    // ── NEW: FRESHER or EXPERIENCED ───────────────────────────────
     private EmployeeExperience employeeExperience;
 
-    // ── UNCHANGED personal fields ─────────────────────────────────
+    // ── Personal fields ───────────────────────────────────────────
+    private String firstName;
+    private String lastName;
     private String contactNumber;
     private Gender gender;
     private MaritalStatus maritalStatus;
@@ -56,38 +56,37 @@ public class ProfileResponse {
     private String designation;
     private List<String> skillSet;
 
-    // ── NEW fields ────────────────────────────────────────────────
-    private String firstName;
-    private String lastName;
+    // ── Bank ──────────────────────────────────────────────────────
     private String accountNumber;
     private String bankName;
-    private String pfNumber;      // admin-filled, shown in profile
-    private String unaNumber;     // experienced only
+    private String ifscCode;
+    private String bankBranchName;
+    private String pfNumber;
+    private String uanNumber;
 
-    // ── NEW: document paths (shown as download links in profile) ──
-    private String aadhaarDocPath;
-    private String tcDocPath;               // fresher only
-    private String offerLetterDocPath;      // fresher only
-    private String experienceCertDocPath;   // experienced only
-    private String leavingLetterDocPath;    // experienced only
+    // ── Spouse (populated only when MARRIED) ──────────────────────
+    private String spouseName;
+    private LocalDate spouseDateOfBirth;
+    private String spouseOccupation;
+    private String spouseContactNumber;
 
-    // ── NEW: experienced-only text fields ─────────────────────────
-    private String previousRole;
-    private String oldCompanyName;
-    private LocalDate oldCompanyFromDate;
-    private LocalDate oldCompanyEndDate;
+    // ── Children ──────────────────────────────────────────────────
+    private List<ChildDto> children;
 
-    // Getters & Setters
+    // ── FRESHER document paths ────────────────────────────────────
+    private String idProofPath;
+    private String tenthMarksheetPath;
+    private String twelfthMarksheetPath;
+    private String degreeCertificatePath;
+    private String offerLetterPath;
+    private String passportPhotoPath;
 
-    public String getFirstName() {
-        return firstName;
-    }
+    // ── EXPERIENCED document entries (flat DTOs, no entity) ───────
+    private List<ExperiencedDocumentDto> experiencedDocuments;
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    // ── Getters & Setters ─────────────────────────────────────────
 
-    public String  getId() { return id; }
+    public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
     public String getName() { return name; }
@@ -96,24 +95,14 @@ public class ProfileResponse {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String  getReportingId() {
-        return reportingId;
-    }
-
-    public void setReportingId(String reportingId) {
-        this.reportingId = reportingId;
-    }
-
-    public String getReportingName() {
-        return reportingName;
-    }
-
-    public void setReportingName(String reportingName) {
-        this.reportingName = reportingName;
-    }
-
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getReportingId() { return reportingId; }
+    public void setReportingId(String reportingId) { this.reportingId = reportingId; }
+
+    public String getReportingName() { return reportingName; }
+    public void setReportingName(String reportingName) { this.reportingName = reportingName; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
@@ -136,6 +125,15 @@ public class ProfileResponse {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
+    public String getBranch() { return branch; }
+    public void setBranch(String branch) { this.branch = branch; }
+
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+
     public boolean isPersonalDetailsComplete() { return personalDetailsComplete; }
     public void setPersonalDetailsComplete(boolean personalDetailsComplete) { this.personalDetailsComplete = personalDetailsComplete; }
 
@@ -148,13 +146,14 @@ public class ProfileResponse {
     public String getHrRemarks() { return hrRemarks; }
     public void setHrRemarks(String hrRemarks) { this.hrRemarks = hrRemarks; }
 
-    public EmployeeExperience getEmployeeExperience() {
-        return employeeExperience;
-    }
+    public EmployeeExperience getEmployeeExperience() { return employeeExperience; }
+    public void setEmployeeExperience(EmployeeExperience employeeExperience) { this.employeeExperience = employeeExperience; }
 
-    public void setEmployeeExperience(EmployeeExperience employeeExperience) {
-        this.employeeExperience = employeeExperience;
-    }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
@@ -198,47 +197,57 @@ public class ProfileResponse {
     public List<String> getSkillSet() { return skillSet; }
     public void setSkillSet(List<String> skillSet) { this.skillSet = skillSet; }
 
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
-
     public String getAccountNumber() { return accountNumber; }
     public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
 
     public String getBankName() { return bankName; }
     public void setBankName(String bankName) { this.bankName = bankName; }
 
+    public String getIfscCode() { return ifscCode; }
+    public void setIfscCode(String ifscCode) { this.ifscCode = ifscCode; }
+
+    public String getBankBranchName() { return bankBranchName; }
+    public void setBankBranchName(String bankBranchName) { this.bankBranchName = bankBranchName; }
+
     public String getPfNumber() { return pfNumber; }
     public void setPfNumber(String pfNumber) { this.pfNumber = pfNumber; }
 
-    public String getUnaNumber() { return unaNumber; }
-    public void setUnaNumber(String unaNumber) { this.unaNumber = unaNumber; }
+    public String getUanNumber() { return uanNumber; }
+    public void setUanNumber(String uanNumber) { this.uanNumber = uanNumber; }
 
-    public String getAadhaarDocPath() { return aadhaarDocPath; }
-    public void setAadhaarDocPath(String aadhaarDocPath) { this.aadhaarDocPath = aadhaarDocPath; }
+    public String getSpouseName() { return spouseName; }
+    public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
 
-    public String getTcDocPath() { return tcDocPath; }
-    public void setTcDocPath(String tcDocPath) { this.tcDocPath = tcDocPath; }
+    public LocalDate getSpouseDateOfBirth() { return spouseDateOfBirth; }
+    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) { this.spouseDateOfBirth = spouseDateOfBirth; }
 
-    public String getOfferLetterDocPath() { return offerLetterDocPath; }
-    public void setOfferLetterDocPath(String offerLetterDocPath) { this.offerLetterDocPath = offerLetterDocPath; }
+    public String getSpouseOccupation() { return spouseOccupation; }
+    public void setSpouseOccupation(String spouseOccupation) { this.spouseOccupation = spouseOccupation; }
 
-    public String getExperienceCertDocPath() { return experienceCertDocPath; }
-    public void setExperienceCertDocPath(String experienceCertDocPath) { this.experienceCertDocPath = experienceCertDocPath; }
+    public String getSpouseContactNumber() { return spouseContactNumber; }
+    public void setSpouseContactNumber(String spouseContactNumber) { this.spouseContactNumber = spouseContactNumber; }
 
-    public String getLeavingLetterDocPath() { return leavingLetterDocPath; }
-    public void setLeavingLetterDocPath(String leavingLetterDocPath) { this.leavingLetterDocPath = leavingLetterDocPath; }
+    public List<ChildDto> getChildren() { return children; }
+    public void setChildren(List<ChildDto> children) { this.children = children; }
 
-    public String getPreviousRole() { return previousRole; }
-    public void setPreviousRole(String previousRole) { this.previousRole = previousRole; }
+    public String getIdProofPath() { return idProofPath; }
+    public void setIdProofPath(String idProofPath) { this.idProofPath = idProofPath; }
 
-    public String getOldCompanyName() { return oldCompanyName; }
-    public void setOldCompanyName(String oldCompanyName) { this.oldCompanyName = oldCompanyName; }
+    public String getTenthMarksheetPath() { return tenthMarksheetPath; }
+    public void setTenthMarksheetPath(String tenthMarksheetPath) { this.tenthMarksheetPath = tenthMarksheetPath; }
 
-    public LocalDate getOldCompanyFromDate() { return oldCompanyFromDate; }
-    public void setOldCompanyFromDate(LocalDate oldCompanyFromDate) { this.oldCompanyFromDate = oldCompanyFromDate; }
+    public String getTwelfthMarksheetPath() { return twelfthMarksheetPath; }
+    public void setTwelfthMarksheetPath(String twelfthMarksheetPath) { this.twelfthMarksheetPath = twelfthMarksheetPath; }
 
-    public LocalDate getOldCompanyEndDate() { return oldCompanyEndDate; }
-    public void setOldCompanyEndDate(LocalDate oldCompanyEndDate) { this.oldCompanyEndDate = oldCompanyEndDate; }
+    public String getDegreeCertificatePath() { return degreeCertificatePath; }
+    public void setDegreeCertificatePath(String degreeCertificatePath) { this.degreeCertificatePath = degreeCertificatePath; }
+
+    public String getOfferLetterPath() { return offerLetterPath; }
+    public void setOfferLetterPath(String offerLetterPath) { this.offerLetterPath = offerLetterPath; }
+
+    public String getPassportPhotoPath() { return passportPhotoPath; }
+    public void setPassportPhotoPath(String passportPhotoPath) { this.passportPhotoPath = passportPhotoPath; }
+
+    public List<ExperiencedDocumentDto> getExperiencedDocuments() { return experiencedDocuments; }
+    public void setExperiencedDocuments(List<ExperiencedDocumentDto> experiencedDocuments) { this.experiencedDocuments = experiencedDocuments; }
 }

@@ -1,68 +1,119 @@
 package com.emp_management.feature.employee.dto;
 
-
 import com.emp_management.shared.enums.BloodGroup;
 import com.emp_management.shared.enums.Gender;
 import com.emp_management.shared.enums.MaritalStatus;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
+/**
+ * JSON part of the fresher personal-details multipart request.
+ *
+ * Multipart files expected alongside this JSON:
+ *   - idProof            (mandatory)
+ *   - tenthMarksheet     (mandatory)
+ *   - twelfthMarksheet   (mandatory)
+ *   - degreeCertificate  (mandatory)
+ *   - offerLetter        (mandatory)
+ *   - passportPhoto      (mandatory)
+ */
 public class FresherPersonalDetailsRequest {
 
-    // ── NEW name fields ───────────────────────────────────────────
+    // ── Name ──────────────────────────────────────────────────────
+    @NotBlank(message = "First name is required")
     private String firstName;
-    private String lastName;
-    private String surName;
 
-    // ── EXISTING fields ───────────────────────────────────────────
+    @NotBlank(message = "Last name is required")
+    private String lastName;
+
+    // ── Contact ───────────────────────────────────────────────────
+    @NotBlank(message = "Contact number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Enter a valid 10-digit Indian mobile number")
     private String contactNumber;
+
+    @NotNull(message = "Gender is required")
     private Gender gender;
+
+    @NotNull(message = "Marital status is required")
     private MaritalStatus maritalStatus;
+
+    @NotBlank(message = "Aadhar number is required")
     private String aadharNumber;
+
+    @NotBlank(message = "Personal email is required")
+    @Email(message = "Enter a valid email address")
     private String personalEmail;
+
+    @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be in the past")
     private LocalDate dateOfBirth;
+
+    @NotBlank(message = "Present address is required")
     private String presentAddress;
+
+    @NotBlank(message = "Permanent address is required")
     private String permanentAddress;
+
+    @NotNull(message = "Blood group is required")
     private BloodGroup bloodGroup;
+
+    @NotBlank(message = "Emergency contact number is required")
+    @Pattern(regexp = "^[6-9]\\d{9}$", message = "Enter a valid 10-digit emergency contact number")
     private String emergencyContactNumber;
+
+    @NotBlank(message = "Designation is required")
     private String designation;
+
     private String skillSet;
 
-    // ── NEW bank details ──────────────────────────────────────────
+    // ── Bank details ──────────────────────────────────────────────
+    @NotBlank(message = "Account number is required")
     private String accountNumber;
+
+    @NotBlank(message = "Bank name is required")
     private String bankName;
 
-    // ── NOTE: unaNumber NOT included — FRESHER does not need it ──
-    // ── NOTE: pfNumber NOT included — Admin fills this later ──────
+    @NotBlank(message = "IFSC code is required")
+    @Pattern(regexp = "^[A-Z]{4}0[A-Z0-9]{6}$", message = "Enter a valid IFSC code")
+    private String ifscCode;
 
-    // ── EXISTING father details ───────────────────────────────────
+    @NotBlank(message = "Bank branch name is required")
+    private String bankBranchName;
+
+    // ── Father details ────────────────────────────────────────────
     private String fatherName;
     private LocalDate fatherDateOfBirth;
     private String fatherOccupation;
     private Boolean fatherAlive;
 
-    // ── EXISTING mother details ───────────────────────────────────
+    // ── Mother details ────────────────────────────────────────────
     private String motherName;
     private LocalDate motherDateOfBirth;
     private String motherOccupation;
     private Boolean motherAlive;
 
-    // Getters & Setters
+    // ── Spouse details (mandatory only when maritalStatus = MARRIED) ─
+    private String spouseName;
+    private LocalDate spouseDateOfBirth;
+    private String spouseOccupation;
 
+    @Pattern(regexp = "^([6-9]\\d{9})?$", message = "Enter a valid 10-digit spouse contact number")
+    private String spouseContactNumber;
 
-    public String getFirstName() {
-        return firstName;
-    }
+    // ── Children (optional, dynamic list) ────────────────────────
+    @Valid
+    private List<ChildDto> children;
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    // ── Getters & Setters ─────────────────────────────────────────
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getSurName() { return surName; }
-    public void setSurName(String surName) { this.surName = surName; }
 
     public String getContactNumber() { return contactNumber; }
     public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
@@ -73,8 +124,13 @@ public class FresherPersonalDetailsRequest {
     public MaritalStatus getMaritalStatus() { return maritalStatus; }
     public void setMaritalStatus(MaritalStatus maritalStatus) { this.maritalStatus = maritalStatus; }
 
-    public String getAadharNumber() { return aadharNumber; }
-    public void setAadharNumber(String aadharNumber) { this.aadharNumber = aadharNumber; }
+    public String getAadharNumber() {
+        return aadharNumber;
+    }
+
+    public void setAadharNumber(String aadharNumber) {
+        this.aadharNumber = aadharNumber;
+    }
 
     public String getPersonalEmail() { return personalEmail; }
     public void setPersonalEmail(String personalEmail) { this.personalEmail = personalEmail; }
@@ -92,7 +148,9 @@ public class FresherPersonalDetailsRequest {
     public void setBloodGroup(BloodGroup bloodGroup) { this.bloodGroup = bloodGroup; }
 
     public String getEmergencyContactNumber() { return emergencyContactNumber; }
-    public void setEmergencyContactNumber(String emergencyContactNumber) { this.emergencyContactNumber = emergencyContactNumber; }
+    public void setEmergencyContactNumber(String emergencyContactNumber) {
+        this.emergencyContactNumber = emergencyContactNumber;
+    }
 
     public String getDesignation() { return designation; }
     public void setDesignation(String designation) { this.designation = designation; }
@@ -105,6 +163,12 @@ public class FresherPersonalDetailsRequest {
 
     public String getBankName() { return bankName; }
     public void setBankName(String bankName) { this.bankName = bankName; }
+
+    public String getIfscCode() { return ifscCode; }
+    public void setIfscCode(String ifscCode) { this.ifscCode = ifscCode; }
+
+    public String getBankBranchName() { return bankBranchName; }
+    public void setBankBranchName(String bankBranchName) { this.bankBranchName = bankBranchName; }
 
     public String getFatherName() { return fatherName; }
     public void setFatherName(String fatherName) { this.fatherName = fatherName; }
@@ -129,4 +193,31 @@ public class FresherPersonalDetailsRequest {
 
     public Boolean getMotherAlive() { return motherAlive; }
     public void setMotherAlive(Boolean motherAlive) { this.motherAlive = motherAlive; }
+
+    public String getSpouseName() { return spouseName; }
+    public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
+
+    public LocalDate getSpouseDateOfBirth() {
+        return spouseDateOfBirth;
+    }
+
+    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) {
+        this.spouseDateOfBirth = spouseDateOfBirth;
+    }
+
+    public String getSpouseOccupation() {
+        return spouseOccupation;
+    }
+
+    public void setSpouseOccupation(String spouseOccupation) {
+        this.spouseOccupation = spouseOccupation;
+    }
+
+    public String getSpouseContactNumber() { return spouseContactNumber; }
+    public void setSpouseContactNumber(String spouseContactNumber) {
+        this.spouseContactNumber = spouseContactNumber;
+    }
+
+    public List<ChildDto> getChildren() { return children; }
+    public void setChildren(List<ChildDto> children) { this.children = children; }
 }

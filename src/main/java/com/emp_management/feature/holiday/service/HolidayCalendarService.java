@@ -3,6 +3,8 @@ package com.emp_management.feature.holiday.service;
 import com.emp_management.feature.holiday.entity.HolidayCalendar;
 import com.emp_management.feature.holiday.repository.HolidayCalendarRepository;
 import com.emp_management.feature.holiday.utils.HolidayChecker;
+import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +46,7 @@ public class HolidayCalendarService {
     public HolidayCalendar addHoliday(LocalDate date, String name,
                                       String type, Long createdBy) {
         if (repo.existsByHolidayDate(date)) {
-            throw new RuntimeException(
+            throw new BadRequestException(
                     "Holiday already exists for date: " + date +
                             ". Use update to edit it.");
         }
@@ -67,7 +69,7 @@ public class HolidayCalendarService {
     public HolidayCalendar updateHoliday(Long id, String name,
                                          String type, boolean active) {
         HolidayCalendar h = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Holiday not found: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Holiday not found: " + id));
 
         h.setHolidayName(name);
         h.setHolidayType(type);
@@ -83,7 +85,7 @@ public class HolidayCalendarService {
     @Transactional
     public void deactivateHoliday(Long id) {
         HolidayCalendar h = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Holiday not found: " + id));
+                .orElseThrow(() -> new BadRequestException("Holiday not found: " + id));
         h.setActive(false);
         repo.save(h);
         holidayChecker.invalidateCacheFor(h.getHolidayDate());
@@ -94,7 +96,7 @@ public class HolidayCalendarService {
     @Transactional
     public void deleteHoliday(Long id) {
         HolidayCalendar h = repo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Holiday not found: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Holiday not found: " + id));
         LocalDate date = h.getHolidayDate();
         repo.delete(h);
         holidayChecker.invalidateCacheFor(date);

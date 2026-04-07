@@ -6,6 +6,8 @@ import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.PasswordResetRequestRepository;
 import com.emp_management.feature.auth.repository.UserRepository;
 import com.emp_management.shared.enums.ResetStatus;
+import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +36,7 @@ public class PasswordResetService {
     public void requestReset(String email) {
 
         User user = userRepository.findByEmployee_Email(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         boolean alreadyPending =
                 resetRepository.findByUserIdAndStatus(
@@ -43,7 +45,7 @@ public class PasswordResetService {
                 ).isPresent();
 
         if (alreadyPending) {
-            throw new RuntimeException("Reset request already pending");
+            throw new BadRequestException("Reset request already pending");
         }
 
         PasswordResetRequest request = new PasswordResetRequest();
@@ -61,17 +63,17 @@ public class PasswordResetService {
         PasswordResetRequest request =
                 resetRepository.findById(requestId)
                         .orElseThrow(() ->
-                                new RuntimeException("Request not found"));
+                                new EntityNotFoundException("Request not found"));
 
         if (request.getStatus() != ResetStatus.PENDING) {
-            throw new RuntimeException("Already handled");
+            throw new BadRequestException("Already handled");
         }
 
         User admin = userRepository.findByEmployee_Email(adminEmail)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Admin not found"));
 
         User user = userRepository.findByEmployee_EmpId(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         user.setPasswordHash(passwordEncoder.encode("1234"));
         user.setForcePwdChange(true);
@@ -91,14 +93,14 @@ public class PasswordResetService {
         PasswordResetRequest request =
                 resetRepository.findById(requestId)
                         .orElseThrow(() ->
-                                new RuntimeException("Request not found"));
+                                new EntityNotFoundException("Request not found"));
 
         if (request.getStatus() != ResetStatus.PENDING) {
-            throw new RuntimeException("Already handled");
+            throw new BadRequestException("Already handled");
         }
 
         User admin = userRepository.findByEmployee_Email(adminEmail)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Admin not found"));
 
         request.setStatus(ResetStatus.REJECTED);
         request.setHandledBy(admin.getId());
@@ -117,7 +119,7 @@ public class PasswordResetService {
         return requests.stream().map(req -> {
 
             User user = userRepository.findByEmployee_EmpId(req.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
             return new PasswordResetAdminResponse(
                     req.getUserId(),

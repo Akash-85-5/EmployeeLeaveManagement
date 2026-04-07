@@ -27,9 +27,6 @@ public class CarryForwardController {
     // ── Yearly balance for one employee ──────────────────────────────────────
 
     @GetMapping("/balance/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id " +
-            "or hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<CarryForwardBalanceResponse> getBalance(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
@@ -41,9 +38,6 @@ public class CarryForwardController {
     // ── Pre-year-end eligibility check ───────────────────────────────────────
 
     @GetMapping("/eligibility/{employeeId}")
-    @PreAuthorize("#employeeId == authentication.principal.user.id " +
-            "or hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<CarryForwardEligibilityResponse> checkEligibility(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
@@ -55,8 +49,6 @@ public class CarryForwardController {
     // ── All employees' yearly balances (HR/Manager view) ─────────────────────
 
     @GetMapping("/balances/{year}")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') " +
-            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
     public ResponseEntity<List<CarryForwardBalanceResponse>> getAllBalances(
             @PathVariable Integer year) {
         log.info("[CARRYFORWARD] Fetching all balances for year: {}", year);

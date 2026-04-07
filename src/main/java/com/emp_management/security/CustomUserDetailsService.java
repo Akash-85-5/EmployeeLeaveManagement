@@ -4,12 +4,14 @@ package com.emp_management.security;
 import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -23,21 +25,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    @Transactional
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String identifier) throws UsernameNotFoundException {
 
-        User user = userRepository.findByEmployee_Email(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
+        // try email first, fall back to empId — no fragile regex needed
+        User user = userRepository.findByEmployee_Email(identifier)
+                .or(() -> userRepository.findByEmployee_EmpId(identifier))
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + identifier));
 
-        // 🔥 IMPORTANT: ROLE_ PREFIX
-        List<SimpleGrantedAuthority> authorities =
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
-
-        return new CustomUserDetails(user);    }
+        return new CustomUserDetails(user);
+    }
 }
-//org.springframework.security.core.userdetails.User(
+//org.sprin
+// gframework.security.core.userdetails.User(
 //        user.getEmail(),
 //                user.getPasswordHash(),
 //authorities

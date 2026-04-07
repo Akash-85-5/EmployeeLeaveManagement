@@ -19,7 +19,7 @@ import static com.emp_management.shared.enums.BiometricVpnStatus.PENDING;
 public class Employee {
 
     @Id
-    @Column(name = "emp_code", unique = true, length = 20)
+    @Column(name = "employee_id", unique = true, length = 20)
     private String empId;
 
     @Column(name = "team_id")
@@ -39,6 +39,7 @@ public class Employee {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "employee_experience")
     private EmployeeExperience employeeExperience;
 

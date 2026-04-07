@@ -1,4 +1,5 @@
 package com.emp_management.feature.leave.annual.service;
+
 import com.emp_management.feature.leave.annual.entity.LeaveType;
 import com.emp_management.feature.leave.annual.entity.SickLeaveMonthlyBalance;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
@@ -11,21 +12,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Manages cumulative SICK leave monthly balance.
  *
- * Rules:
- *  - Accrues 1.0 day per month (SICK_LEAVE_PER_MONTH).
- *  - Unused sick days roll forward month-to-month within the same year.
- *  - Jan of each year starts fresh: available = 1.0 (NO carry-forward from prev year).
- *  - Feb: available = Jan_remaining + 1.0
- *  - ... rolls up to December.
+ * RULES:
+ *  - Accrues (allocatedDays / 12) days per month.
+ *  - Only the CURRENT month's record is lazily created on first access.
+ *  - Prior months are NOT backfilled — new employees joining mid-year
+ *    start with a single month's accrual, not all months up to today.
+ *  - Jan of each year starts fresh at 0 + monthlyRate (NO carry-forward across years).
+ *  - Feb onwards: available = previous month's remaining + monthlyRate.
  *  - Year-end: RESET. Sick balance does NOT carry forward to next year.
- *
- * Max cumulative available at any month = month_number * 1.0
- * (e.g., by March: max 3.0 days if none used).
  */
 @Service
 public class SickLeaveBalanceService {
@@ -37,37 +35,39 @@ public class SickLeaveBalanceService {
 
     public SickLeaveBalanceService(SickLeaveMonthlyBalanceRepository monthlyBalanceRepo,
                                    LeaveTypeRepository leaveTypeRepository) {
-        this.monthlyBalanceRepo  = monthlyBalanceRepo;
+        this.monthlyBalanceRepo = monthlyBalanceRepo;
         this.leaveTypeRepository = leaveTypeRepository;
     }
 
-    // ─── resolve monthly accrual rate from DB ────────────────────
-    private double getMonthlyAccrualRate() {
-        LeaveType leaveType = leaveTypeRepository.findByLeaveType("SICK")
-                .orElseThrow(() -> new RuntimeException(
-                        "LeaveType 'SICK' not found in DB. Please seed the leave_type table."));
-
-        if (!Boolean.TRUE.equals(leaveType.isAutoAllocate())) {
-            throw new RuntimeException("SICK leave is not configured for auto-allocation.");
-        }
-
-        // allocatedDays is yearly total → divide by 12 for monthly rate
-        return leaveType.getAllocatedDays() / 12.0;
-    }
-
     // ═══════════════════════════════════════════════════════════════
-    // PUBLIC API (signatures unchanged — callers need no change)
+    // PUBLIC API
     // ═══════════════════════════════════════════════════════════════
 
+    /**
+     * Returns the remaining (available) days for the given month.
+     * Initializes the current month's record if it doesn't exist yet.
+     */
     @Transactional
     public double getAvailableForMonth(String employeeId, int year, int month) {
-        ensureMonthsInitialized(employeeId, year, month);
+        ensureCurrentMonthInitialized(employeeId, year, month);
         return getOrThrow(employeeId, year, month).getRemainingDays();
     }
 
+    /**
+     * Called during employee onboarding (personal details submission)
+     * and on dashboard load to ensure the current month's record exists.
+     */
+    @Transactional
+    public void initializeForCurrentMonth(String employeeId, int year, int month) {
+        ensureCurrentMonthInitialized(employeeId, year, month);
+    }
+
+    /**
+     * Deducts leave days from the given month's balance.
+     */
     @Transactional
     public void deductLeave(String employeeId, int year, int month, double days) {
-        ensureMonthsInitialized(employeeId, year, month);
+        ensureCurrentMonthInitialized(employeeId, year, month);
         SickLeaveMonthlyBalance record = getOrThrow(employeeId, year, month);
 
         double newUsed      = record.getUsedDays() + days;
@@ -87,6 +87,9 @@ public class SickLeaveBalanceService {
                 days, employeeId, month, year, newRemaining);
     }
 
+    /**
+     * Restores leave days back to the given month's balance (on cancellation/rejection).
+     */
     @Transactional
     public void restoreLeave(String employeeId, int year, int month, double days) {
         monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
@@ -101,32 +104,46 @@ public class SickLeaveBalanceService {
                 });
     }
 
+    /**
+     * Returns all monthly balance records for the given year.
+     * Only initializes the current month — does not backfill past months.
+     */
     @Transactional
     public List<SickLeaveMonthlyBalance> getYearSummary(String employeeId, int year) {
         int currentMonth = (year == LocalDate.now().getYear())
                 ? LocalDate.now().getMonthValue() : 12;
-        ensureMonthsInitialized(employeeId, year, currentMonth);
+        ensureCurrentMonthInitialized(employeeId, year, currentMonth);
         return monthlyBalanceRepo.findByEmployeeIdAndYearOrderByMonthAsc(employeeId, year);
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // INTERNAL
+    // PRIVATE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    private void ensureMonthsInitialized(String employeeId, int year, int targetMonth) {
-        // Resolve rate ONCE per call — avoids repeated DB hits in the loop
-        double monthlyRate = getMonthlyAccrualRate();
-        for (int m = 1; m <= targetMonth; m++) {
-            if (monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, m).isEmpty()) {
-                createMonthRecord(employeeId, year, m, monthlyRate);
-            }
+    /**
+     * Creates the monthly record ONLY for the given month if it doesn't exist.
+     * Does NOT loop through prior months — new employees joining mid-year
+     * correctly get only the current month's single accrual, not a backfill.
+     *
+     * Cumulative carry-forward still works naturally:
+     *  - When the next month's record is created, it reads the previous
+     *    month's remainingDays (if that record exists) and adds the accrual.
+     *  - If the previous month record doesn't exist (new employee), it defaults to 0.
+     */
+    private void ensureCurrentMonthInitialized(String employeeId, int year, int month) {
+        if (monthlyBalanceRepo
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .isPresent()) {
+            return; // already initialized — nothing to do
         }
+
+        double monthlyRate = getMonthlyAccrualRate();
+        createMonthRecord(employeeId, year, month, monthlyRate);
     }
 
     private void createMonthRecord(String employeeId, int year, int month, double monthlyRate) {
-        // SICK does NOT carry forward across years — Jan always starts at 0
-        double previousRemaining = (month == 1) ? 0.0 : getPreviousRemaining(employeeId, year, month);
-        double available = previousRemaining + monthlyRate;
+        double previousRemaining = getPreviousRemaining(employeeId, year, month);
+        double available         = previousRemaining + monthlyRate;
 
         SickLeaveMonthlyBalance record = new SickLeaveMonthlyBalance();
         record.setEmployeeId(employeeId);
@@ -137,20 +154,42 @@ public class SickLeaveBalanceService {
         record.setRemainingDays(available);
         monthlyBalanceRepo.save(record);
 
-        log.info("[SICK] Created {}/{} for employee {}. Rate: {}/month, Available: {}",
-                month, year, employeeId, monthlyRate, available);
+        log.info("[SICK] Created {}/{} for employee {}. Rate: {}/month, PrevRemaining: {}, Available: {}",
+                month, year, employeeId, monthlyRate, previousRemaining, available);
     }
 
+    /**
+     * For January: always returns 0.0 — SICK leave does NOT carry forward across years.
+     * For other months: reads the previous month's remaining days.
+     * If the previous month record doesn't exist (new employee joining mid-year),
+     * returns 0.0 — so they only get the current month's accrual, not a backfill.
+     */
     private double getPreviousRemaining(String employeeId, int year, int month) {
+        if (month == 1) {
+            return 0.0; // SICK leave resets every year — no cross-year carry-forward
+        }
         return monthlyBalanceRepo
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month - 1)
                 .map(SickLeaveMonthlyBalance::getRemainingDays)
-                .orElse(0.0);
+                .orElse(0.0); // 0.0 = new employee joining mid-year, no prior record
+    }
+
+    private double getMonthlyAccrualRate() {
+        LeaveType leaveType = leaveTypeRepository.findByLeaveType("SICK")
+                .orElseThrow(() -> new BadRequestException(
+                        "LeaveType 'SICK' not found in DB. Please seed the leave_type table."));
+
+        if (!Boolean.TRUE.equals(leaveType.isAutoAllocate())) {
+            throw new BadRequestException(
+                    "SICK leave is not configured for auto-allocation.");
+        }
+
+        return leaveType.getAllocatedDays() / 12.0;
     }
 
     private SickLeaveMonthlyBalance getOrThrow(String employeeId, int year, int month) {
         return monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new BadRequestException(
                         "Sick leave balance not found for employee "
                                 + employeeId + " " + year + "/" + month));
     }

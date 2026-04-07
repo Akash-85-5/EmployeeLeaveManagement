@@ -1,146 +1,97 @@
 package com.emp_management.feature.auth.controller;
 
-import com.emp_management.feature.auth.dto.ChangePasswordRequest;
-import com.emp_management.feature.auth.dto.LoginRequest;
-import com.emp_management.feature.auth.dto.LoginResponse;
+import com.emp_management.feature.auth.dto.*;
 import com.emp_management.feature.auth.service.AuthService;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.Map;
 
-
+/**
+ * Auth controller — JWT-only (no cookies, no refresh tokens).
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │  Endpoint                   │ Auth required │ Description            │
+ * ├──────────────────────────────────────────────────────────────────────┤
+ * │  POST /api/auth/login        │ No            │ Returns JWT in body    │
+ * │  POST /api/auth/force-change │ Yes (JWT)     │ First-login pwd change │
+ * │  PUT  /api/auth/change-pass  │ Yes (JWT)     │ Known-old-pwd change   │
+ * └──────────────────────────────────────────────────────────────────────┘
+ *
+ * Removed: /refresh, /logout  (stateless JWT — no server-side session to clear)
+ */
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;
 
-    private static final String ACCESS_TOKEN_COOKIE  = "accessToken";
-    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
-
-    private static final int ACCESS_TOKEN_MAX_AGE  = 15 * 60;           // 15 minutes
-    private static final int REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
-
-    @Value("${app.cookie.secure:true}")
-    private boolean cookieSecure;
-
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
-    // ─── LOGIN ─────────────────────────────────────────────
+    // ── LOGIN ─────────────────────────────────────────────────────────────
 
+    /**
+     * POST /api/auth/login
+     * Body: { "employeeId": "EMP001", "password": "Secret@1" }
+     *
+     * Returns:
+     * {
+     *   "employeeId": "EMP001",
+     *   "role": "EMPLOYEE",
+     *   "token": "eyJ...",
+     *   "forcePasswordChange": false
+     * }
+     *
+     * Frontend responsibility:
+     *  - Store token in sessionStorage.
+     *  - If forcePasswordChange == true → redirect to /force-change.
+     *  - Send token as: Authorization: Bearer <token>
+     */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request,
-                                               HttpServletResponse response) {
-
-        Object[] result        = authService.login(request);
-        String accessToken     = (String) result[0];
-        String refreshToken    = (String) result[1];
-        LoginResponse body     = (LoginResponse) result[2];
-
-        // Both tokens go into HTTP-only cookies — JS cannot read either
-        setCookie(response, ACCESS_TOKEN_COOKIE,  accessToken,  ACCESS_TOKEN_MAX_AGE);
-        setCookie(response, REFRESH_TOKEN_COOKIE, refreshToken, REFRESH_TOKEN_MAX_AGE);
-
-        return ResponseEntity.ok(body);
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
-    // ─── REFRESH ───────────────────────────────────────────
+    // ── FORCE CHANGE PASSWORD (first login) ───────────────────────────────
 
-    @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(HttpServletRequest request,
-                                     HttpServletResponse response) {
-
-        String refreshToken = extractCookie(request, REFRESH_TOKEN_COOKIE);
-
-        if (refreshToken == null) {
-            return ResponseEntity.status(401)
-                    .body(Map.of("error", "No refresh token found"));
-        }
-
-        try {
-            Object[] result     = authService.refreshAccessToken(refreshToken);
-            String newAccess    = (String) result[0];
-            String newRefresh   = (String) result[1];
-
-            setCookie(response, ACCESS_TOKEN_COOKIE,  newAccess,  ACCESS_TOKEN_MAX_AGE);
-            setCookie(response, REFRESH_TOKEN_COOKIE, newRefresh, REFRESH_TOKEN_MAX_AGE);
-
-            return ResponseEntity.ok(Map.of("message", "Token refreshed"));
-
-        } catch (RuntimeException e) {
-            clearCookie(response, ACCESS_TOKEN_COOKIE);
-            clearCookie(response, REFRESH_TOKEN_COOKIE);
-            return ResponseEntity.status(401)
-                    .body(Map.of("error", e.getMessage()));
-        }
+    /**
+     * POST /api/auth/force-change
+     * Header: Authorization: Bearer <token>
+     * Body: { "newPassword": "MyNewPwd1" }
+     *
+     * Rules:
+     *  - No complexity / history check (admin default "1234" being replaced).
+     *  - Clears forcePasswordChange flag.
+     *  - Does NOT invalidate the current JWT (user stays logged in).
+     */
+    @PostMapping("/force-change")
+    public ResponseEntity<?> forceChangePassword(
+            @RequestBody ForceChangePasswordRequest request) {
+        authService.forceChangePassword(request);
+        return ResponseEntity.ok(Map.of("message",
+                "Password changed. You may now access the system."));
     }
 
-    // ─── LOGOUT ────────────────────────────────────────────
+    // ── CHANGE PASSWORD (known old password) ─────────────────────────────
 
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request,
-                                    HttpServletResponse response) {
-
-        String refreshToken = extractCookie(request, REFRESH_TOKEN_COOKIE);
-        authService.logout(refreshToken);
-
-        clearCookie(response, ACCESS_TOKEN_COOKIE);
-        clearCookie(response, REFRESH_TOKEN_COOKIE);
-
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
-    }
-
-    // ─── CHANGE PASSWORD ───────────────────────────────────
-
+    /**
+     * PUT /api/auth/change-password
+     * Header: Authorization: Bearer <token>
+     * Body: { "oldPassword": "OldPass@1", "newPassword": "NewPass@2" }
+     *
+     * Rules:
+     *  - Old password must match.
+     *  - New password must pass complexity.
+     *  - Must not match last 3 passwords.
+     *  - Invalidates ALL previously issued tokens (session invalidation).
+     */
     @PutMapping("/change-password")
-    public void changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {
         authService.changePassword(request);
-    }
-
-    // ─── COOKIE HELPERS ────────────────────────────────────
-
-    private void setCookie(HttpServletResponse response,
-                           String name, String value, int maxAgeSeconds) {
-
-        ResponseCookie cookie = ResponseCookie.from(name, value)
-                .httpOnly(true)
-                .secure(true) // required for SameSite=None
-                .sameSite("None")
-                .path("/")
-                .maxAge(Duration.ofSeconds(maxAgeSeconds))
-                .build();
-
-        response.addHeader("Set-Cookie", cookie.toString());
-    }
-    private void clearCookie(HttpServletResponse response, String name) {
-
-        ResponseCookie cookie = ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(0)
-                .build();
-
-        response.addHeader("Set-Cookie", cookie.toString());
-    }
-
-    private String extractCookie(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
-        return Arrays.stream(request.getCookies())
-                .filter(c -> name.equals(c.getName()))
-                .map(Cookie::getValue)
-                .findFirst()
-                .orElse(null);
+        return ResponseEntity.ok(Map.of("message",
+                "Password changed successfully. Please log in again."));
     }
 }

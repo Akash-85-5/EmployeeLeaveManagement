@@ -15,6 +15,16 @@ public interface LeaveAllocationRepository extends JpaRepository<LeaveAllocation
 
     List<LeaveAllocation> findByYear(Integer year);
 
+    @Query("""
+        SELECT COALESCE(SUM(a.allocatedDays), 0)
+        FROM LeaveAllocation a
+        WHERE a.employee.empId = :empId
+          AND a.year           = :year
+    """)
+    Double getTotalAllocatedDays(
+            @Param("empId") String empId,
+            @Param("year") Integer year);
+
     // ✅ Fixed: LeaveType enum instead of String
 //    Optional<LeaveAllocation> findByEmployeeIdAndYearAndLeaveCategory(
 //            String employeeId, Integer year, LeaveType leaveCategory);

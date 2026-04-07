@@ -14,7 +14,7 @@ public class CarryForwardBalance {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emp_id", nullable = false)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     @Column(name = "carry_year", nullable = false)

@@ -10,6 +10,7 @@ import com.emp_management.feature.leave.compoff.entity.CompOff;
 import com.emp_management.feature.leave.compoff.repository.CompOffRepository;
 import com.emp_management.shared.enums.RequestStatus;
 import com.emp_management.shared.exceptions.BadRequestException;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -71,7 +72,7 @@ public class CompOffService {
             Employee employee = employeeRepository
                     .findByEmpId(request.getEmployeeId())
                     .orElseThrow(() ->
-                            new RuntimeException("Employee Not found"));
+                            new EntityNotFoundException("Employee Not found"));
             compOff.setReportingId(employee.getReportingId());
             compOff.setDays(entry.getDays());
             compOffRepository.save(compOff);
@@ -304,7 +305,7 @@ public class CompOffService {
                     Employee employee = employeeRepository
                             .findByEmpId(compOff.getEmployeeId())
                             .orElseThrow(() ->
-                                    new RuntimeException(
+                                    new EntityNotFoundException(
                                             "Employee Not Found"));
                     dto.setEmployeeName(employee.getName());
                     dto.setWorkedDate(compOff.getWorkedDate());

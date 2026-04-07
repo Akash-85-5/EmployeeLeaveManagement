@@ -254,12 +254,36 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
             @Param("year") Integer year,
             @Param("month") Integer month);
 
+//    @Query("""
+//        SELECT l FROM LeaveApplication l
+//        WHERE l.employee.empId IN
+//              (SELECT e.empId FROM  e WHERE e.currentApproverId = :managerId)
+//          AND l.status = 'PENDING'
+//        ORDER BY l.createdAt ASC
+//    """)
+//    List<LeaveApplication> findPendingTeamRequests(@Param("managerId") String managerId);
+
+
+
+    // These go into your existing LeaveApplicationRepository
+
+
+    // Managers who approved leaves — returns String empIds now
     @Query("""
-        SELECT l FROM LeaveApplication l
-        WHERE l.employee.empId IN
-              (SELECT e.empId FROM Employee e WHERE e.reportingId = :managerId)
-          AND l.status = 'PENDING'
-        ORDER BY l.createdAt ASC
-    """)
-    List<LeaveApplication> findPendingTeamRequests(@Param("managerId") String managerId);
+    SELECT DISTINCT l.approvedBy FROM LeaveApplication l
+    WHERE l.status      = 'APPROVED'
+      AND l.approvedBy IS NOT NULL
+      AND l.year        = :year
+""")
+    List<String> findManagersWhoApprovedLeaves(@Param("year") Integer year);
+
+    @Query("""
+    SELECT l FROM LeaveApplication l
+    WHERE l.approvedBy = :managerId
+      AND l.year       = :year
+    ORDER BY l.approvedAt DESC
+""")
+    List<LeaveApplication> findLeavesApprovedByManager(
+            @Param("managerId") String managerId,
+            @Param("year") Integer year);
 }

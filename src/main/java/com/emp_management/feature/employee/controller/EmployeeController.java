@@ -1,16 +1,19 @@
 package com.emp_management.feature.employee.controller;
 
+import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
+import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
-import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.service.EmployeeService;
+import com.emp_management.shared.dto.BranchListDto;
+import com.emp_management.shared.dto.EmployeeListDto;
+import com.emp_management.shared.entity.Department;
+import com.emp_management.shared.entity.Role;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,54 +29,169 @@ public class EmployeeController {
         this.employeeService = employeeService;
     }
 
-    // ── UNCHANGED ─────────────────────────────────────────────────
+    // ── Lookups ───────────────────────────────────────────────────
+
     @GetMapping("/profile/{employeeId}")
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
     public ResponseEntity<ProfileResponse> getProfile(@PathVariable String employeeId) {
         return ResponseEntity.ok(employeeService.getProfile(employeeId));
     }
 
+    @GetMapping("/name/{emp_id}")
+    public ResponseEntity<NameDto> getEmpName(@PathVariable String emp_id) {
+        return ResponseEntity.ok(employeeService.getEmployeeName(emp_id));
+    }
+
+    @GetMapping("/departments/list")
+    public ResponseEntity<List<Department>> getDepartmentList() {
+        return ResponseEntity.ok(employeeService.getDepartmentList());
+    }
+
+    @GetMapping("/role/list")
+    public ResponseEntity<List<Role>> getRoleList() {
+        return ResponseEntity.ok(employeeService.getRoleList());
+    }
+
+    @GetMapping("/managers/list")
+    public ResponseEntity<List<EmployeeListDto>> getAllEmployeesList() {
+        return ResponseEntity.ok(employeeService.getAllEmployees());
+    }
+
+    @GetMapping("/branch/list")
+    public ResponseEntity<List<BranchListDto>> getAllBranches() {
+        return ResponseEntity.ok(employeeService.getAllBranches());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // FRESHER
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST — first-time submission. All fields and all 6 files are mandatory.
+     *
+     * Multipart keys:
+     *   data              – JSON (FresherPersonalDetailsRequest)
+     *   idProof, tenthMarksheet, twelfthMarksheet,
+     *   degreeCertificate, offerLetter, passportPhoto
+     */
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @PreAuthorize("#employeeId == authentication.principal.user.id")
-    public ResponseEntity<EmployeePersonalDetails> submitFresherDetails(
+    public ResponseEntity<String> submitFresherDetails(
             @PathVariable String employeeId,
-            @RequestPart("data") String dataJson,
-            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
-            @RequestPart("tc") MultipartFile tc,
-            @RequestPart("offerLetter") MultipartFile offerLetter) {
+            @RequestPart("data")               String dataJson,
+            @RequestPart("idProof")            MultipartFile idProof,
+            @RequestPart("tenthMarksheet")     MultipartFile tenthMarksheet,
+            @RequestPart("twelfthMarksheet")   MultipartFile twelfthMarksheet,
+            @RequestPart("degreeCertificate")  MultipartFile degreeCertificate,
+            @RequestPart("offerLetter")        MultipartFile offerLetter,
+            @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
 
-        return ResponseEntity.ok(
-                employeeService.submitFresherDetails(
-                        employeeId, dataJson, aadhaarCard, tc, offerLetter));
+        employeeService.submitFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto);
+
+        return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
+    /**
+     * PUT — partial update. Only send the fields/files you want to change.
+     * Fields absent in JSON are left unchanged. Files not sent are kept as-is.
+     *
+     * Multipart keys (all optional):
+     *   data              – JSON (FresherUpdateRequest) — send only changed fields
+     *   idProof, tenthMarksheet, twelfthMarksheet,
+     *   degreeCertificate, offerLetter, passportPhoto
+     */
+    @PutMapping(value = "/personal-details/{employeeId}/fresher",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> updateFresherDetails(
+            @PathVariable String employeeId,
+            @RequestPart("data")                                        String dataJson,
+            @RequestPart(value = "idProof",           required = false) MultipartFile idProof,
+            @RequestPart(value = "tenthMarksheet",    required = false) MultipartFile tenthMarksheet,
+            @RequestPart(value = "twelfthMarksheet",  required = false) MultipartFile twelfthMarksheet,
+            @RequestPart(value = "degreeCertificate", required = false) MultipartFile degreeCertificate,
+            @RequestPart(value = "offerLetter",       required = false) MultipartFile offerLetter,
+            @RequestPart(value = "passportPhoto",     required = false) MultipartFile passportPhoto) {
+
+        employeeService.updateFresherDetails(employeeId, dataJson,
+                idProof, tenthMarksheet, twelfthMarksheet,
+                degreeCertificate, offerLetter, passportPhoto);
+
+        return ResponseEntity.ok("Personal details updated successfully.");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // EXPERIENCED
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * POST — first-time submission. All fields and files are mandatory.
+     *
+     * Multipart keys:
+     *   data             – JSON (ExperiencedPersonalDetailsRequest)
+     *                      "experiences" array index matches "experienceCerts" order.
+     *   idProof, passportPhoto – single files
+     *   experienceCerts  – one file per experience entry
+     *   relievingLetter  – single file for last company
+     */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("#employeeId == authentication.principal.id")
-    public ResponseEntity<EmployeePersonalDetails> submitExperiencedDetails(
+    public ResponseEntity<String> submitExperiencedDetails(
             @PathVariable String employeeId,
-            @RequestPart("data") String dataJson,
-            @RequestPart("aadhaarCard") MultipartFile aadhaarCard,
-            @RequestPart("experienceCertificate") MultipartFile experienceCertificate,
-            @RequestPart("leavingLetter") MultipartFile leavingLetter) {
+            @RequestPart("data")             String dataJson,
+            @RequestPart("idProof")          MultipartFile idProof,
+            @RequestPart("passportPhoto")    MultipartFile passportPhoto,
+            @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
+            @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
 
-        return ResponseEntity.ok(
-                employeeService.submitExperiencedDetails(
-                        employeeId, dataJson, aadhaarCard, experienceCertificate, leavingLetter));
+        employeeService.submitExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter);
+
+        return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
-    // ── UNCHANGED ─────────────────────────────────────────────────
+    /**
+     * PUT — partial update. Only send what changed.
+     *
+     * Multipart keys (all optional):
+     *   data             – JSON (ExperiencedUpdateRequest) — send only changed fields.
+     *                      If "experiences" array is included, experienceCerts files
+     *                      must also be provided (one per entry), and relievingLetter
+     *                      must be sent if any entry is marked lastCompany.
+     *                      If "experiences" is absent, existing entries are untouched.
+     *   idProof          – replace ID proof file (optional)
+     *   passportPhoto    – replace passport photo (optional)
+     *   experienceCerts  – required only when "experiences" is in JSON
+     *   relievingLetter  – required only when an experience entry has lastCompany=true
+     */
+    @PutMapping(value = "/personal-details/{employeeId}/experienced",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> updateExperiencedDetails(
+            @PathVariable String employeeId,
+            @RequestPart("data")                                          String dataJson,
+            @RequestPart(value = "idProof",         required = false)     MultipartFile idProof,
+            @RequestPart(value = "passportPhoto",   required = false)     MultipartFile passportPhoto,
+            @RequestPart(value = "experienceCerts", required = false)     List<MultipartFile> experienceCerts,
+            @RequestPart(value = "relievingLetter", required = false)     MultipartFile relievingLetter) {
+
+        employeeService.updateExperiencedDetails(employeeId, dataJson,
+                idProof, passportPhoto, experienceCerts, relievingLetter);
+
+        return ResponseEntity.ok("Personal details updated successfully.");
+    }
+
+    // ── Personal details read ─────────────────────────────────────
+
     @GetMapping("/personal-details/{employeeId}")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
-    public ResponseEntity<EmployeePersonalDetails> getPersonalDetails(
+    public ResponseEntity<ProfileResponse> getPersonalDetails(
             @PathVariable String employeeId) {
-        return ResponseEntity.ok(employeeService.getPersonalDetails(employeeId));
+        return ResponseEntity.ok(employeeService.getPersonalDetailsAsProfile(employeeId));
     }
+
+    // ── Employee list / search ────────────────────────────────────
 
     @GetMapping("/all")
-//    @PreAuthorize("hasAnyRole('HR','CFO','ADMIN')")
-    public Page<Employee> getAllEmployees(
+    public Page<EmployeeResponseDTO> getAllEmployees(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String role,
@@ -81,42 +199,24 @@ public class EmployeeController {
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
         Pageable pageable = PageRequest.of(page, size);
         return employeeService.getAllEmployees(name, email, role, managerId, active, pageable);
     }
 
     @GetMapping("/manager/{managerId}/team")
-    @PreAuthorize("hasRole('MANAGER') and #managerId == authentication.principal.id")
     public List<Employee> getTeamMembers(@PathVariable String managerId) {
         return employeeService.getTeamMembers(managerId);
     }
 
-//    @GetMapping("/teamleader/{teamLeaderId}/team")
-//    @PreAuthorize("hasRole('TEAM_LEADER') and #teamLeaderId == authentication.principal.user.id")
-//    public List<Employee> getTeamLeaderMembers(@PathVariable Long teamLeaderId) {
-//        return employeeService.getTeamLeaderMembers(teamLeaderId);
-//    }
-
     @GetMapping("/search")
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('CFO')")
     public List<Employee> searchEmployees(@RequestParam String query) {
         return employeeService.searchEmployees(query);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEmployee(@PathVariable String id) {
         employeeService.deleteEmployee(id);
-        return ResponseEntity.ok("Employee deactivated successfully");
+        return ResponseEntity.ok("Employee deactivated successfully.");
     }
-//    @GetMapping("/me")
-//    public EmployeeProfileResponse getMyProfile(Authentication authentication) {
-//
-//        CustomUserDetails userDetails =
-//                (CustomUserDetails) authentication.getPrincipal();
-//
-//        User user = userDetails.getUser();
-//
-//        return employeeService.getMyProfile(user);
-//    }
 }
