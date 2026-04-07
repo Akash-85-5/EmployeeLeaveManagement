@@ -59,7 +59,12 @@ public class ODRequestController {
     public ResponseEntity<String> approveOD(
             @PathVariable Long odId,
             @RequestParam String approverId,
-            @RequestParam(required = false) String comments) {
+            @RequestParam String comments) {  // Make required
+
+        if (comments == null || comments.isBlank()) {
+            throw new BadRequestException("Approval remark is required.");
+        }
+
         odService.approveOD(odId, approverId, comments);
         return ResponseEntity.ok("OD approved successfully");
     }
@@ -68,7 +73,11 @@ public class ODRequestController {
     public ResponseEntity<String> rejectOD(
             @PathVariable Long odId,
             @RequestParam String approverId,
-            @RequestParam(required = false) String comments) {
+            @RequestParam String comments) {  // Make required
+
+        if (comments == null || comments.isBlank()) {
+            throw new BadRequestException("Rejection remark is required.");
+        }
         odService.rejectOD(odId, approverId, comments);
         return ResponseEntity.ok("OD rejected successfully");
     }
@@ -138,7 +147,7 @@ public class ODRequestController {
 
     // ── My decisions (approver history) ──────────────────────────
 
-    @GetMapping("/my-decisions/{approverId}")
+    @GetMapping("/my-decisions/{managerId}")
     public ResponseEntity<Page<ODApproval>> getMyDecisions(
             @PathVariable String approverId,
             @RequestParam(defaultValue = "0") int page,

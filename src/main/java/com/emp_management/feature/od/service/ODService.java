@@ -135,6 +135,10 @@ public class ODService {
     public void decideOD(ODDecisionRequest request) {
         validateDecision(request.getDecision());
 
+        if (request.getComments() == null || request.getComments().trim().isEmpty()) {
+            throw new BadRequestException("Remarks are required for approval or rejection.");
+        }
+
         ODRequest od = odRepository.findById(request.getOdId())
                 .orElseThrow(() -> new EntityNotFoundException("OD not found"));
 
@@ -149,8 +153,35 @@ public class ODService {
         ApprovalLevel currentLevel = od.getCurrentApprovalLevel();
         validateApproverForLevel(od, approver, currentLevel);
         recordLevelDecision(od, currentLevel, request.getDecision());
-        saveApprovalRecord(od.getId(), approver, currentLevel,
-                request.getDecision(), request.getComments());
+
+        // ────────────── APPEND PREVIOUS REMARKS FOR LEVEL 1 ──────────────
+        String previousLevel1Remarks = "";
+        if (currentLevel == ApprovalLevel.SECOND_APPROVER) {
+            List<ODApproval> previousApprovals =
+                    odApprovalRepository.findByOdIdAndApprovalLevel(od.getId(), ApprovalLevel.FIRST_APPROVER);
+            if (!previousApprovals.isEmpty()) {
+                // Concatenate all level-1 remarks
+                StringBuilder sb = new StringBuilder();
+                for (ODApproval a : previousApprovals) {
+                    sb.append(a.getApproverRole()).append(": ").append(a.getComments()).append(" | ");
+                }
+                previousLevel1Remarks = sb.toString();
+            }
+        }
+
+        // Append current approver's remark
+        String existing = od.getRemarks() != null ? od.getRemarks() + " | " : "";
+        od.setRemarks(existing + previousLevel1Remarks + approver.getRole().getRoleName()
+                + ": " + request.getComments());
+
+        // Save individual ODApproval record (visible to next manager)
+        saveApprovalRecord(
+                od.getId(),
+                approver,
+                currentLevel,
+                request.getDecision(),
+                request.getComments()
+        );
 
         if (request.getDecision() == RequestStatus.REJECTED) {
             finalizeOD(od, RequestStatus.REJECTED, approver, request.getComments());

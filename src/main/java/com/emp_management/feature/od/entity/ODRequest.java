@@ -35,6 +35,9 @@ public class ODRequest {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
+    @Column(name = "remarks", length = 500)
+    private String remarks;
+
     // ── OD details ────────────────────────────────────────────────
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -182,6 +185,9 @@ public class ODRequest {
 
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
 
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
