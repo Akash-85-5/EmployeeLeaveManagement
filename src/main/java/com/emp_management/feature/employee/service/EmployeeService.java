@@ -29,6 +29,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import com.emp_management.shared.exceptions.ResourceNotFoundException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -75,7 +76,7 @@ public class EmployeeService {
 
     public NameDto getEmployeeName(String empId) {
         Employee employee = employeeRepository.findByEmpId(empId)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         NameDto name = new NameDto();
         name.setEmpId(employee.getEmpId());
         name.setEmpName(employee.getName());
@@ -91,9 +92,9 @@ public class EmployeeService {
 
     public ProfileResponse getProfile(String employeeId) {
         User user = userRepository.findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         ProfileResponse response = buildBaseProfile(employee, user);
 
@@ -125,7 +126,7 @@ public class EmployeeService {
                         "Personal details not yet submitted for employee: " + employeeId));
 
         User user = userRepository.findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         ProfileResponse response = buildBaseProfile(pd.getEmployee(), user);
         mapPersonalDetailsToResponse(pd, response);
@@ -446,7 +447,7 @@ public class EmployeeService {
             Optional<EmployeePersonalDetails> existing) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         FresherPersonalDetailsRequest request =
                 parseJson(dataJson, FresherPersonalDetailsRequest.class);
@@ -501,7 +502,7 @@ public class EmployeeService {
             Optional<EmployeePersonalDetails> existing) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         ExperiencedPersonalDetailsRequest request =
                 parseJson(dataJson, ExperiencedPersonalDetailsRequest.class);
@@ -590,8 +591,8 @@ public class EmployeeService {
     public void verifyPersonalDetails(String employeeId, HrVerificationRequest request) {
         EmployeePersonalDetails pd = personalDetailsRepository
                 .findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException(
-                        "No personal details found for employee: " + employeeId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Personal details not found for employee: " + employeeId));
 
         if (pd.getVerificationStatus() != VerificationStatus.PENDING)
             throw new BadRequestException(
@@ -601,7 +602,7 @@ public class EmployeeService {
             throw new BadRequestException("Cannot set status back to PENDING.");
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
         pd.setVerificationStatus(request.getStatus());
         pd.setVerifiedAt(LocalDateTime.now());
@@ -630,7 +631,7 @@ public class EmployeeService {
     public void updatePfNumber(String employeeId, PfUpdateRequest request) {
         EmployeePersonalDetails pd = personalDetailsRepository
                 .findByEmployee_EmpId(employeeId)
-                .orElseThrow(() -> new BadRequestException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Personal details not found for employee: " + employeeId));
         pd.setPfNumber(request.getPfNumber());
         personalDetailsRepository.save(pd);
@@ -659,7 +660,7 @@ public class EmployeeService {
     @Transactional
     public void deleteEmployee(String id) {
         Employee employee = employeeRepository.findByEmpId(id)
-                .orElseThrow(() -> new BadRequestException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         employee.setActive(false);
         employeeRepository.save(employee);
     }
@@ -678,15 +679,15 @@ public class EmployeeService {
 
     public Employee getById(Long id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
     }
 
     public void decideVpn(String employeeId, BiometricVpnStatus decision) {
         Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new EntityNotFoundException("Employee not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         if (employee.getOnboarding().getBiometricStatus() == BiometricVpnStatus.PROVIDED) {
             EmployeeOnboarding eo = employeeOnboardingRepository.findByEmployee_EmpId(employeeId)
-                    .orElseThrow(() -> new EntityNotFoundException("Onboarding not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Onboarding not found"));
             eo.setBiometricStatus(decision);
             employeeOnboardingRepository.save(eo);
         }
@@ -1268,7 +1269,9 @@ public class EmployeeService {
             mapper.registerModule(new JavaTimeModule());
             return mapper.readValue(json, clazz);
         } catch (Exception e) {
-            throw new BadRequestException("Invalid JSON for personal details: " + e.getMessage());
+            throw new BadRequestException(
+                    "Invalid request format. Please check your input data."
+            );
         }
     }
 
