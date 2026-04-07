@@ -18,20 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
-/**
- * Auth service — JWT-only (no refresh tokens).
- *
- * ┌─────────────────────────────────────────────────────────────┐
- * │  Flow summary                                               │
- * │  LOGIN          → validate → issue JWT in response body     │
- * │  FORCE-CHANGE   → set new password, clear forceFlag         │
- * │                   (no audit check, no complexity guard,     │
- * │                    no session invalidation)                 │
- * │  CHANGE-PASS    → old-pass check + complexity + last-3      │
- * │                   update lastPasswordChangeAt → all old     │
- * │                   tokens rejected by JWT filter             │
- * └─────────────────────────────────────────────────────────────┘
- */
+
 @Service
 public class AuthService {
 
@@ -55,14 +42,8 @@ public class AuthService {
 
     // ── LOGIN ─────────────────────────────────────────────────────────────
 
-    /**
-     * Validates credentials and returns a JWT in the response body.
-     * Frontend must store the token in sessionStorage and send it as
-     * {@code Authorization: Bearer <token>} on every subsequent request.
-     */
     public LoginResponse login(LoginRequest request) {
 
-        // Spring Security validates password via CustomUserDetailsService
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getIdentifier(),
@@ -87,19 +68,6 @@ public class AuthService {
         );
     }
 
-    // ── FORCE-CHANGE PASSWORD (first login) ───────────────────────────────
-
-    /**
-     * Called when {@code forcePasswordChange == true}.
-     *
-     * Rules:
-     *  - No old-password check (caller is already authenticated via JWT).
-     *  - No password complexity enforcement.
-     *  - No last-3 history check (audit table may be empty).
-     *  - Does NOT update lastPasswordChangeAt → existing token remains valid,
-     *    allowing the frontend to stay logged in after the forced change.
-     *  - Clears forcePwdChange flag.
-     */
     @Transactional
     public void forceChangePassword(ForceChangePasswordRequest request) {
 
@@ -122,18 +90,7 @@ public class AuthService {
 
         passwordAuditService.recordPassword(empId, newHash);
     }
-    // ── CHANGE PASSWORD (known old password) ─────────────────────────────
 
-    /**
-     * Standard change-password flow (authenticated user knows their old password).
-     *
-     * Rules:
-     *  ✅ Old password must match.
-     *  ✅ New password must pass complexity check.
-     *  ✅ New password must not match last 3 audit entries.
-     *  ✅ Sets lastPasswordChangeAt → all previously issued JWTs become invalid,
-     *     effectively logging out all other devices / sessions.
-     */
     @Transactional
     public void changePassword(ChangePasswordRequest request) {
 
@@ -167,7 +124,6 @@ public class AuthService {
 
     // ── PRIVATE HELPERS ───────────────────────────────────────────────────
 
-    /** Extracts the authenticated employee-id from the SecurityContext. */
     private String authenticatedEmpId() {
         return SecurityContextHolder
                 .getContext()

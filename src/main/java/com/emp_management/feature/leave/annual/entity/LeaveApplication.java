@@ -73,6 +73,9 @@ public class LeaveApplication {
     @Column(name = "current_approver_id")
     private String currentApproverId;
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Column(name = "first_approver_id")
     private String firstApproverId;
 
@@ -206,6 +209,22 @@ public class LeaveApplication {
 
     public String getCurrentApproverId() { return currentApproverId; }
     public void setCurrentApproverId(String currentApproverId) { this.currentApproverId = currentApproverId; }
+
+    public Boolean getAppointment() {
+        return isAppointment;
+    }
+
+    public void setAppointment(Boolean appointment) {
+        isAppointment = appointment;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
 
     public String getFirstApproverId() { return firstApproverId; }
     public void setFirstApproverId(String firstApproverId) { this.firstApproverId = firstApproverId; }

@@ -463,15 +463,16 @@ public class LeaveApplicationService {
 
     private void notifyFirstApprover(LeaveApplication leave, Employee employee) {
         if (leave.getFirstApproverId() == null) return;
-        employeeRepository.findByEmpId(leave.getFirstApproverId()).ifPresent(approver ->
-                notificationService.createNotification(
+
+        Employee approver = employeeRepository.findByEmpId(leave.getFirstApproverId())
+                        .orElseThrow(()-> new EntityNotFoundException("Approver not found"));
+    notificationService.createNotification(
                         approver.getEmpId(), employee.getEmail(), approver.getEmail(),
                         EventType.LEAVE_APPLIED,  Channel.EMAIL,
                         employee.getName() + " applied for "
                                 + leave.getLeaveType().getLeaveType() + " leave from "
                                 + leave.getStartDate() + " to " + leave.getEndDate()
-                                + ". Awaiting your approval.")
-        );
+                                + ". Awaiting your approval.");
     }
 
 }

@@ -572,8 +572,8 @@ public class DashboardService {
         Map<String, List<TeamMemberBalance>> cal = new TreeMap<>();
         for (Employee m : employeeRepository.findActiveTeamMembers(managerId)) {
             processLeavesIntoCalendar(cal, m,
-                    applicationRepository.findByEmployee_EmpIdAndStatus(
-                            m.getEmpId(), RequestStatus.APPROVED));
+                    applicationRepository.findByEmployee_EmpId(
+                            m.getEmpId()));
 //            processODsIntoCalendar(cal, m,
 //                    odRepository.findByEmployee_EmpIdAndStatus(
 //                            m.getEmpId(), RequestStatus.APPROVED));
@@ -586,8 +586,8 @@ public class DashboardService {
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
         Map<String, List<TeamMemberBalance>> cal = new TreeMap<>();
         processLeavesIntoCalendar(cal, m,
-                applicationRepository.findByEmployee_EmpIdAndStatus(
-                        employeeId, RequestStatus.APPROVED));
+                applicationRepository.findByEmployee_EmpId(
+                        employeeId));
 //        processODsIntoCalendar(cal, m,
 //                odRepository.findByEmployee_EmpIdAndStatus(
 //                        employeeId, RequestStatus.APPROVED));
