@@ -16,28 +16,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
-/**
- * JWT filter (JWT-only, no refresh-token logic).
- *
- * Per-request checks:
- *  1. Extract Bearer token from Authorization header.
- *  2. Validate signature + expiry via JwtTokenProvider.
- *  3. Load user from DB (needed to read lastPasswordChangeAt).
- *  4. Reject token if issued BEFORE lastPasswordChangeAt
- *     → this is the session-invalidation mechanism after password reset.
- *  5. Reject if user account is not ACTIVE.
- *  6. Set SecurityContext so downstream @PreAuthorize works.
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository   userRepository;
+    private final UserRepository userRepository;
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider,
                                    UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
-        this.userRepository   = userRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -46,70 +34,97 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+        // ✅ 1. Skip JWT validation for PUBLIC endpoints
+        if (isPublicEndpoint(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = extractBearerToken(request);
 
-        if (StringUtils.hasText(token)) {
+        // ✅ 2. If NO token → just continue (Spring will handle auth later)
+        if (!StringUtils.hasText(token) ||
+                "null".equalsIgnoreCase(token) ||
+                "undefined".equalsIgnoreCase(token)) {
 
-            // ── Step 1: Basic JWT validation (signature + expiry) ──────────
-            if (!jwtTokenProvider.validateToken(token)) {
-                sendUnauthorized(response, "Invalid or expired JWT token");
-                return;
-            }
-
-            // ── Step 2: Load user ──────────────────────────────────────────
-            String empId = jwtTokenProvider.getEmployeeIdFromToken(token);
-
-            User user = userRepository.findByEmployee_EmpId(empId).orElse(null);
-
-            if (user == null) {
-                sendUnauthorized(response, "User not found");
-                return;
-            }
-
-            // ── Step 3: Session invalidation check ────────────────────────
-            // Reject tokens issued before the last password change
-            if (!jwtTokenProvider.isTokenIssuedAfterPasswordChange(
-                    token, user.getLastPasswordChangeAt())) {
-                sendUnauthorized(response, "Session expired. Please log in again.");
-                return;
-            }
-
-            // ── Step 4: Account active check ──────────────────────────────
-            if (user.getStatus() != com.emp_management.shared.enums.EmployeeStatus.ACTIVE) {
-                sendUnauthorized(response, "Account is disabled.");
-                return;
-            }
-
-            // ── Step 5: Populate SecurityContext ──────────────────────────
-            String role = jwtTokenProvider.getRoleFromToken(token);
-
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            empId,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            filterChain.doFilter(request, response);
+            return;
         }
+
+        // ✅ 3. Validate token
+        if (!jwtTokenProvider.validateToken(token)) {
+            sendUnauthorized(response, "Invalid or expired JWT token");
+            return;
+        }
+
+        // ✅ 4. Load user
+        String empId = jwtTokenProvider.getEmployeeIdFromToken(token);
+
+        User user = userRepository.findByEmployee_EmpId(empId).orElse(null);
+
+        if (user == null) {
+            sendUnauthorized(response, "User not found");
+            return;
+        }
+
+        // ✅ 5. Check session invalidation
+        if (!jwtTokenProvider.isTokenIssuedAfterPasswordChange(
+                token, user.getLastPasswordChangeAt())) {
+            sendUnauthorized(response, "Session expired. Please log in again.");
+            return;
+        }
+
+        // ✅ 6. Check account status
+        if (user.getStatus() != com.emp_management.shared.enums.EmployeeStatus.ACTIVE) {
+            sendUnauthorized(response, "Account is disabled.");
+            return;
+        }
+
+        // ✅ 7. Set authentication
+        String role = jwtTokenProvider.getRoleFromToken(token);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        empId,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ✅ Public endpoints matcher
+    private boolean isPublicEndpoint(String path) {
+        return path.startsWith("/api/auth") ||
+                path.startsWith("/api/password-reset") ||
+                path.startsWith("/api/flash-news") ||
+                path.startsWith("/api/wfh") ||
+                path.startsWith("/api/announcements") ||
+                path.startsWith("/debug");
+    }
 
     private String extractBearerToken(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
+
         if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
+
         return null;
     }
 
     private void sendUnauthorized(HttpServletResponse response, String message)
             throws IOException {
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
-        response.getWriter().write("{\"error\": \"" + message + "\"}");
+
+        response.getWriter().write(
+                "{\"error\": \"" + message + "\"}"
+        );
     }
 }
