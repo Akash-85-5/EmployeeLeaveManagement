@@ -181,6 +181,9 @@ public class EmployeeService {
         // Patch only non-null text fields
         patchCommonFields(pd, request);
 
+        // Validate dates for only the fields that were actually sent
+        validateDatesForFresherUpdate(request);
+
         // Patch files: only replace if a new file was actually sent
         FresherDocument doc = Optional.ofNullable(pd.getFresherDocument())
                 .orElse(new FresherDocument());
@@ -249,6 +252,9 @@ public class EmployeeService {
         // Patch only non-null text fields
         patchCommonFields(pd, request);
 
+        // Validate dates for only the fields that were actually sent
+        validateDatesForExperiencedUpdate(request);
+
         // UAN — only update if sent
         if (request.getUanNumber() != null && !request.getUanNumber().isBlank()) {
             pd.setUanNumber(request.getUanNumber());
@@ -271,13 +277,10 @@ public class EmployeeService {
             if (experiences.isEmpty())
                 throw new BadRequestException("Experience entries cannot be empty. Send at least one entry.");
 
-            // Only validate date ranges when both dates are explicitly provided
+            // Validate date ranges (only when both dates are explicitly provided)
             for (int i = 0; i < experiences.size(); i++) {
                 ExperienceEntryDto e = experiences.get(i);
-                if (e.getFromDate() != null && e.getEndDate() != null
-                        && !e.getFromDate().isBefore(e.getEndDate()))
-                    throw new BadRequestException(
-                            "Experience entry " + (i + 1) + ": fromDate must be before endDate.");
+                validateExperienceDates(e.getFromDate(), e.getEndDate(), i);
             }
 
             // Only validate lastCompany count if more than one entry marks itself as last
@@ -459,6 +462,8 @@ public class EmployeeService {
                 request.getSpouseName(), request.getSpouseDateOfBirth(),
                 request.getSpouseOccupation(), request.getSpouseContactNumber());
 
+        validateDatesForFresherSubmit(request);
+
         existing.ifPresent(pd -> deleteFresherDocFiles(pd.getFresherDocument()));
 
         EmployeePersonalDetails pd = existing.orElse(new EmployeePersonalDetails());
@@ -524,17 +529,15 @@ public class EmployeeService {
         if (lastCount != 1)
             throw new BadRequestException("Exactly one experience entry must be marked as the last company.");
 
-        for (int i = 0; i < experiences.size(); i++) {
-            ExperienceEntryDto e = experiences.get(i);
-            if (e.getFromDate() != null && e.getEndDate() != null
-                    && !e.getFromDate().isBefore(e.getEndDate()))
-                throw new BadRequestException(
-                        "Experience entry " + (i + 1) + ": fromDate must be before endDate.");
-        }
+        for (int i = 0; i < experiences.size(); i++)
+            validateExperienceDates(experiences.get(i).getFromDate(),
+                    experiences.get(i).getEndDate(), i);
 
         validateSpouseForFullSubmit(request.getMaritalStatus(),
                 request.getSpouseName(), request.getSpouseDateOfBirth(),
                 request.getSpouseOccupation(), request.getSpouseContactNumber());
+
+        validateDatesForExperiencedSubmit(request);
 
         existing.ifPresent(pd -> deleteExperiencedDocFiles(pd.getExperiencedDocuments()));
 
@@ -1083,8 +1086,155 @@ public class EmployeeService {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Validation helpers
     // ─────────────────────────────────────────────────────────────
+
+    private static final int MIN_EMPLOYEE_AGE = 18;
+
+    // ── Common date/age rules ─────────────────────────────────────
+
+    /**
+     * Validates employee date of birth:
+     *   - must be in the past
+     *   - employee must be at least 18 years old
+     * Called from both POST (always) and PUT (only when the field is sent).
+     */
+    private void validateEmployeeDob(LocalDate dob) {
+        if (dob == null) return;
+        LocalDate today = LocalDate.now();
+        if (!dob.isBefore(today))
+            throw new BadRequestException("Date of birth must be in the past.");
+        if (dob.isAfter(today.minusYears(MIN_EMPLOYEE_AGE)))
+            throw new BadRequestException(
+                    "Employee must be at least " + MIN_EMPLOYEE_AGE + " years old.");
+    }
+
+    /**
+     * Validates a parent (father / mother) date of birth:
+     *   - must be in the past (no lower bound — parents can be any age above 0)
+     */
+    private void validateParentDob(LocalDate dob, String label) {
+        if (dob == null) return;
+        if (!dob.isBefore(LocalDate.now()))
+            throw new BadRequestException(label + " date of birth must be in the past.");
+    }
+
+    /**
+     * Validates spouse date of birth:
+     *   - must be in the past
+     *   - spouse must be at least 18 years old
+     */
+    private void validateSpouseDob(LocalDate dob) {
+        if (dob == null) return;
+        LocalDate today = LocalDate.now();
+        if (!dob.isBefore(today))
+            throw new BadRequestException("Spouse date of birth must be in the past.");
+        if (dob.isAfter(today.minusYears(MIN_EMPLOYEE_AGE)))
+            throw new BadRequestException("Spouse must be at least " + MIN_EMPLOYEE_AGE + " years old.");
+    }
+
+    /**
+     * Validates a list of children. Called whenever children are present or being replaced.
+     * Works for both POST (full list required) and PUT (called only when list is sent).
+     */
+    private void validateChildren(List<ChildDto> children) {
+        if (children == null || children.isEmpty()) return;
+        for (int i = 0; i < children.size(); i++) {
+            ChildDto child = children.get(i);
+            if (child.getChildName() == null || child.getChildName().isBlank())
+                throw new BadRequestException("Child " + (i + 1) + " name is required.");
+            if (child.getGender() == null)
+                throw new BadRequestException("Child " + (i + 1) + " gender is required.");
+            if (child.getAge() == null)
+                throw new BadRequestException("Child " + (i + 1) + " age is required.");
+        }
+    }
+
+    /**
+     * Validates a single experience entry's date range (only when both dates are present).
+     */
+    private void validateExperienceDates(LocalDate fromDate, LocalDate endDate, int entryIndex) {
+        if (fromDate == null || endDate == null) return;
+        if (!fromDate.isBefore(endDate))
+            throw new BadRequestException(
+                    "Experience entry " + (entryIndex + 1) + ": fromDate must be before endDate.");
+        if (endDate.isAfter(LocalDate.now()))
+            throw new BadRequestException(
+                    "Experience entry " + (entryIndex + 1) + ": endDate cannot be in the future.");
+    }
+
+    // ── Composite validators (POST) ───────────────────────────────
+
+    /**
+     * Full POST validation for all date-related fields in a fresher request.
+     * Called once before saving; all applicable fields are present.
+     */
+    private void validateDatesForFresherSubmit(FresherPersonalDetailsRequest r) {
+        validateEmployeeDob(r.getDateOfBirth());
+        validateParentDob(r.getFatherDateOfBirth(), "Father");
+        validateParentDob(r.getMotherDateOfBirth(), "Mother");
+        if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
+            validateSpouseDob(r.getSpouseDateOfBirth());
+        }
+        validateChildren(r.getChildren());
+    }
+
+    /**
+     * Full POST validation for all date-related fields in an experienced request.
+     */
+    private void validateDatesForExperiencedSubmit(ExperiencedPersonalDetailsRequest r) {
+        validateEmployeeDob(r.getDateOfBirth());
+        validateParentDob(r.getFatherDateOfBirth(), "Father");
+        validateParentDob(r.getMotherDateOfBirth(), "Mother");
+        if (r.getMaritalStatus() == MaritalStatus.MARRIED) {
+            validateSpouseDob(r.getSpouseDateOfBirth());
+        }
+        validateChildren(r.getChildren());
+        if (r.getExperiences() != null) {
+            for (int i = 0; i < r.getExperiences().size(); i++) {
+                ExperienceEntryDto e = r.getExperiences().get(i);
+                validateExperienceDates(e.getFromDate(), e.getEndDate(), i);
+            }
+        }
+    }
+
+    /**
+     * PUT partial validation — only validates fields that are actually present in the request.
+     * Used for both fresher and experienced updates.
+     */
+    private void validateDatesForFresherUpdate(FresherUpdateRequest r) {
+        validateEmployeeDob(r.getDateOfBirth());               // no-op if null
+        validateParentDob(r.getFatherDateOfBirth(), "Father"); // no-op if null
+        validateParentDob(r.getMotherDateOfBirth(), "Mother"); // no-op if null
+        // Validate spouse DOB only if it is being sent
+        if (r.getSpouseDateOfBirth() != null) {
+            validateSpouseDob(r.getSpouseDateOfBirth());
+        }
+        // Validate children only if the list is being replaced
+        if (r.getChildren() != null) {
+            validateChildren(r.getChildren());
+        }
+    }
+
+    /**
+     * PUT partial validation for experienced updates.
+     * Experience entry dates are validated inside updateExperiencedDetails itself
+     * (already inline) so only the common fields need covering here.
+     */
+    private void validateDatesForExperiencedUpdate(ExperiencedUpdateRequest r) {
+        validateEmployeeDob(r.getDateOfBirth());
+        validateParentDob(r.getFatherDateOfBirth(), "Father");
+        validateParentDob(r.getMotherDateOfBirth(), "Mother");
+        if (r.getSpouseDateOfBirth() != null) {
+            validateSpouseDob(r.getSpouseDateOfBirth());
+        }
+        if (r.getChildren() != null) {
+            validateChildren(r.getChildren());
+        }
+    }
+
+    // ── Spouse presence validator (POST only) ─────────────────────
 
     /** Full validation — used by POST only where all spouse fields are mandatory when MARRIED. */
     private void validateSpouseForFullSubmit(MaritalStatus status, String spouseName,
