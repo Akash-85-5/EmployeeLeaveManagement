@@ -4,6 +4,7 @@ import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
 import com.emp_management.feature.leave.annual.dto.LeaveDecisionRequest;
+import com.emp_management.feature.leave.annual.dto.LeaveRemarkDto;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveApproval;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
@@ -68,6 +69,21 @@ public class LeaveApprovalService {
         return toPageDto(convertToDto(all), pageable);
     }
 
+    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
+        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                .orElseThrow(() -> new EntityNotFoundException("Leave application not found"));
+
+        List<LeaveAttachment> attachments = leaveAttachmentRepository.findByLeaveApplicationId(leaveId);
+        // Fetch remarks/approvals for this leave
+        List<LeaveApproval> approvals = leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, Pageable.unpaged()).getContent();
+
+        LeaveApplicationWithAttachmentsDto dto = new LeaveApplicationWithAttachmentsDto(
+                LeaveApplicationMapper.toDTO(leave),
+                attachments
+        );
+        dto.setRemarks(LeaveApplicationMapper.mapToRemarks(approvals));
+        return dto;
+    }
 
 //    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
 //        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
@@ -150,7 +166,7 @@ public class LeaveApprovalService {
         req.setApproverId(approverId);
         req.setDecision(RequestStatus.REJECTED);
         req.setComments(comments);
-    decideLeave(req);
+        decideLeave(req);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -373,14 +389,24 @@ public class LeaveApprovalService {
                         .stream()
                         .collect(Collectors.groupingBy(LeaveAttachment::getLeaveApplicationId));
 
+        Map<Long, List<LeaveRemarkDto>> remarksByLeaveId =
+                leaveApprovalRepository.findByLeaveIdInOrderByDecidedAtAsc(leaveIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                LeaveApproval::getLeaveId,
+                                Collectors.mapping(LeaveRemarkDto::fromApproval, Collectors.toList())
+                        ));
         return leaves.stream()
-                .map(l -> new LeaveApplicationWithAttachmentsDto(
-                        LeaveApplicationMapper.toDTO(l), // ✅ USE MAPPER HERE
-                        byLeaveId.getOrDefault(l.getId(), List.of())
-                ))
+                .map(l -> {
+                    LeaveApplicationWithAttachmentsDto dto = new LeaveApplicationWithAttachmentsDto(
+                            LeaveApplicationMapper.toDTO(l),
+                            byLeaveId.getOrDefault(l.getId(), List.of())
+                    );
+                    dto.setRemarks(remarksByLeaveId.getOrDefault(l.getId(), List.of()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
-
     private <T> Page<T> toPageDto(List<T> list, Pageable pageable) {
         int start   = (int) pageable.getOffset();
         int end     = Math.min(start + pageable.getPageSize(), list.size());
