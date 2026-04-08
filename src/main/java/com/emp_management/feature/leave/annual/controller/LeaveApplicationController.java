@@ -182,11 +182,8 @@ public class LeaveApplicationController {
             @RequestParam(required = false) Long leaveTypeId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return leaveApplicationService.getLeavesByEmployee(employeeId, pageable);
+            @RequestParam(required = false) Integer year) {
+        return leaveApplicationService.getLeavesByEmployee(employeeId);
     }
 
     @PutMapping("/{id}")
