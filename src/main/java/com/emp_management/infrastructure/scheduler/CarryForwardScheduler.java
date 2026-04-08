@@ -1,99 +1,150 @@
 package com.emp_management.infrastructure.scheduler;
 
-
 import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
-import com.emp_management.feature.leave.carryforward.service.CarryForwardService;
+import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Map;
 
-// ✅ NEW IMPORT — added LeaveAllocationService
-// Reason: Combined carry forward + allocation in ONE scheduler
-
+/**
+ * Year-end scheduler — fires at midnight on Jan 1 every year.
+ *
+ * Step 1: CarryForwardBalanceService.processYearEndCarryForward(previousYear)
+ *         Reads unused annual-leave balance for every employee (December),
+ *         caps it at the admin-configured CARRY_FORWARD.allocatedDays,
+ *         and writes CarryForwardBalance rows for the new year.
+ *
+ * Step 2: LeaveAllocationService.createBulkAllocationsForAllEmployees(currentYear)
+ *         Allocates ANNUAL_LEAVE + SICK for the new year.
+ *         Must run AFTER Step 1 so January's opening balance can seed
+ *         correctly from the carry-forward record created in Step 1.
+ *
+ * ── Why NO @Transactional on this class ──────────────────────────────────────
+ *   Each service method owns its own @Transactional boundary.
+ *   Wrapping both steps in one outer transaction would:
+ *     • Hold DB locks across a potentially long bulk operation.
+ *     • Make Step 2's swallowed exception silently roll back Step 1's committed work.
+ *   Letting each step commit independently is the correct pattern here.
+ */
 @Component
 public class CarryForwardScheduler {
 
-    // ===================== EXISTING =====================
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(CarryForwardScheduler.class);
 
-    // ===================== EXISTING =====================
-    private final CarryForwardService carryForwardService;
+    private final CarryForwardBalanceService carryForwardBalanceService;
+    private final LeaveAllocationService     leaveAllocationService;
 
-    // ✅ NEW FIELD
-    // Reason: Allocate new year after carry forward
-    private final LeaveAllocationService leaveAllocationService;
-
-    public CarryForwardScheduler(CarryForwardService carryForwardService, LeaveAllocationService leaveAllocationService) {
-        this.carryForwardService = carryForwardService;
-        this.leaveAllocationService = leaveAllocationService;
+    public CarryForwardScheduler(CarryForwardBalanceService carryForwardBalanceService,
+                                 LeaveAllocationService leaveAllocationService) {
+        this.carryForwardBalanceService = carryForwardBalanceService;
+        this.leaveAllocationService     = leaveAllocationService;
     }
 
-    // ===================== EXISTING (UPDATED) =====================
-    // Added new year allocation after carry forward
-    // Reason: Both must happen together on Jan 1
-    // ❌ REMOVED LeaveAllocationSchedule.yearEndProcess()
-    //    to avoid carry forward running TWICE
+    // =========================================================================
+    // Scheduled trigger
+    // =========================================================================
+
+    /**
+     * Fires at midnight on January 1st every year.
+     * Cron: second=0, minute=0, hour=0, dayOfMonth=1, month=1, dayOfWeek=*
+     *
+     * FIX: @Transactional removed — see class-level javadoc.
+     */
     @Scheduled(cron = "0 0 0 1 1 *")
-    @Transactional
     public void processYearEndCarryForward() {
 
-        int previousYear = LocalDate.now().getYear() - 1;
-        int currentYear  = LocalDate.now().getYear();
+        // FIX: call LocalDate.now() ONCE.
+        // Calling it twice risks getting year=2024 for previousYear
+        // and year=2025 for currentYear if the clock ticks midnight between the two calls.
+        LocalDate today       = LocalDate.now();
+        int       currentYear = today.getYear();
+        int       previousYear = currentYear - 1;
 
-        log.info("[SCHEDULER] Year-End process started");
-        log.info("[SCHEDULER] Previous Year: {}", previousYear);
-        log.info("[SCHEDULER] New Year: {}", currentYear);
+        log.info("[SCHEDULER] Year-End process started. previousYear={}, currentYear={}",
+                previousYear, currentYear);
 
-        // ===================== EXISTING =====================
-        // Step 1: Carry forward for previous year
+        runYearEndProcess(previousYear, currentYear);
+
+        log.info("[SCHEDULER] Year-End process complete.");
+    }
+
+    // =========================================================================
+    // Manual / admin trigger
+    // =========================================================================
+
+    /**
+     * Admin-callable manual trigger for reruns or testing.
+     *
+     * FIX 1: visibility was package-private (no modifier).
+     *         Any controller outside this package calling this method would
+     *         get a compile-time error (or a proxying failure at runtime with Spring AOP).
+     *         Changed to public.
+     *
+     * FIX 2: the old version only ran Step 1 (carry forward) and skipped Step 2
+     *         (leave allocation), leaving the system half-processed after a manual trigger.
+     *         Now delegates to the shared runYearEndProcess() so both steps always run.
+     *
+     * @param forYear the PREVIOUS year whose unused leave should be carried forward
+     *                (e.g., pass 2024 to generate carry-forward rows for 2025).
+     */
+    public void triggerYearEndProcessing(Integer forYear) {
+        int previousYear = forYear;
+        int currentYear  = forYear + 1;
+
+        log.info("[MANUAL-TRIGGER] Admin triggered. previousYear={}, currentYear={}",
+                previousYear, currentYear);
+
+        runYearEndProcess(previousYear, currentYear);
+
+        log.info("[MANUAL-TRIGGER] Completed.");
+    }
+
+    // =========================================================================
+    // Shared logic
+    // =========================================================================
+
+    /**
+     * Core two-step logic shared by both the scheduled job and the manual trigger.
+     *
+     * Step 1 is mandatory: if it fails the whole process stops and the exception
+     * propagates so the caller (or the scheduler framework) can log/alert on it.
+     *
+     * Step 2 is best-effort: failure is logged but does NOT roll back Step 1,
+     * which has already been committed by its own @Transactional boundary.
+     * An operator can re-run Step 2 independently if needed.
+     */
+    private void runYearEndProcess(int previousYear, int currentYear) {
+
+        // ── Step 1: Carry forward (mandatory) ────────────────────────────────
         try {
-            carryForwardService
-                    .processYearEndCarryForward(previousYear);
-            log.info("[SCHEDULER] ✅ Carry forward done for {}",
-                    previousYear);
+            carryForwardBalanceService.processYearEndCarryForward(previousYear);
+            log.info("[SCHEDULER] Step 1 OK — carry-forward done for {}", previousYear);
         } catch (Exception e) {
-            log.error("[SCHEDULER] ❌ Carry forward failed: {}",
-                    e.getMessage(), e);
+            log.error("[SCHEDULER] Step 1 FAILED — carry-forward for {}: {}",
+                    previousYear, e.getMessage(), e);
+            // FIX: wrap cleanly so the scheduler framework receives a RuntimeException
+            // and can handle retries / dead-letter alerting if configured.
             throw new RuntimeException(
-                    "Year-end carry forward failed", e);
+                    "Year-end carry-forward failed for year " + previousYear, e);
         }
 
-        // ✅ NEW: Step 2 — Allocate new year for all employees
-        // Reason: Was in LeaveAllocationSchedule but caused
-        //         carry forward to run twice
+        // ── Step 2: Allocate new-year leaves (best-effort) ───────────────────
         try {
-            Map<String, Object> result = leaveAllocationService
-                    .createBulkAllocationsForAllEmployees(currentYear);
-            log.info("[SCHEDULER] ✅ Allocation done for {}: " +
-                            "success={}, skipped={}, failed={}",
+            Map<String, Object> result =
+                    leaveAllocationService.createBulkAllocationsForAllEmployees(currentYear);
+            log.info("[SCHEDULER] Step 2 OK — allocation done for {}: success={}, skipped={}, failed={}",
                     currentYear,
                     result.get("success"),
                     result.get("skipped"),
                     result.get("failed"));
         } catch (Exception e) {
-            log.error("[SCHEDULER] ❌ Allocation failed: {}",
-                    e.getMessage());
-        }
-
-        log.info("[SCHEDULER] ✅ Year-End process complete");
-    }
-
-    // ===================== EXISTING =====================
-    void triggerYearEndProcessing(Integer forYear) {
-        log.info("[MANUAL-TRIGGER] Admin triggered for year: {}",
-                forYear);
-        try {
-            carryForwardService.processYearEndCarryForward(forYear);
-            log.info("[MANUAL-TRIGGER] Completed for year: {}",
-                    forYear);
-        } catch (Exception e) {
-            log.error("[MANUAL-TRIGGER] Error: {}", e.getMessage());
-            throw new RuntimeException(
-                    "Year-end processing failed: " + e.getMessage(), e);
+            // Step 1 is already committed. Log loudly but do not throw —
+            // the process is partially successful and Step 2 can be manually retriggered.
+            log.error("[SCHEDULER] Step 2 FAILED — allocation for {} did not complete: {}",
+                    currentYear, e.getMessage(), e);
         }
     }
 }

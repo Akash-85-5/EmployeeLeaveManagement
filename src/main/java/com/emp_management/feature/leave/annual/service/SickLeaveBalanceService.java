@@ -2,6 +2,8 @@ package com.emp_management.feature.leave.annual.service;
 
 import com.emp_management.feature.leave.annual.entity.LeaveType;
 import com.emp_management.feature.leave.annual.entity.SickLeaveMonthlyBalance;
+import com.emp_management.feature.leave.annual.dto.SickLeaveBalanceResponse;
+import com.emp_management.feature.leave.annual.mapper.SickLeaveBalanceMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.annual.repository.SickLeaveMonthlyBalanceRepository;
 import com.emp_management.shared.exceptions.BadRequestException;
@@ -189,6 +191,27 @@ public class SickLeaveBalanceService {
 
     private SickLeaveMonthlyBalance getOrThrow(String employeeId, int year, int month) {
         return monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new BadRequestException(
+                        "Sick leave balance not found for employee "
+                                + employeeId + " " + year + "/" + month));
+    }
+    // ================= DTO METHODS (NEW - SAFE ADDITION) =================
+
+    @Transactional
+    public List<SickLeaveBalanceResponse> getYearSummaryDTO(String employeeId, int year) {
+        return getYearSummary(employeeId, year)
+                .stream()
+                .map(SickLeaveBalanceMapper::toDTO)
+                .toList();
+    }
+
+    @Transactional
+    public SickLeaveBalanceResponse getSingleMonthDTO(String employeeId, int year, int month) {
+        ensureCurrentMonthInitialized(employeeId, year, month);
+
+        return monthlyBalanceRepo
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .map(SickLeaveBalanceMapper::toDTO)
                 .orElseThrow(() -> new BadRequestException(
                         "Sick leave balance not found for employee "
                                 + employeeId + " " + year + "/" + month));
