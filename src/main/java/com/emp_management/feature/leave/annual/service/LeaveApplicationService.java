@@ -149,7 +149,7 @@ public class LeaveApplicationService {
             leave.setRequiredApprovalLevels(1);
         } else {
             Employee secondApprover = employeeRepository.findByEmpId(secondApproverNumericId)
-                    .orElseThrow(() -> new RuntimeException(
+                    .orElseThrow(() -> new BadRequestException(
                             "Second approver not found: " + secondApproverNumericId));
             leave.setSecondApproverId(secondApprover.getEmpId());
             leave.setRequiredApprovalLevels(2);

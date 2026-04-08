@@ -15,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.emp_management.shared.exceptions.BadRequestException;
+import com.emp_management.shared.exceptions.ResourceNotFoundException;
 
 import java.time.Instant;
 
@@ -53,10 +55,10 @@ public class AuthService {
 
         User user = userRepository.findByEmployee_Email(request.getIdentifier())
                 .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getStatus() != EmployeeStatus.ACTIVE) {
-            throw new RuntimeException("Account is disabled. Contact admin.");
+            throw new BadRequestException("Account is disabled. Please contact admin.");
         }
 
         String jwt = jwtTokenProvider.generateToken(user);
@@ -73,13 +75,12 @@ public class AuthService {
     public void forceChangePassword(ForceChangePasswordRequest request) {
 
         String empId = authenticatedEmpId();
-        System.out.println("DEBUG empId from token: " + empId);
         User user = userRepository.findByEmployee_Email(empId)
                 .or(() -> userRepository.findByEmployee_EmpId(empId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.isForcePwdChange()) {
-            throw new RuntimeException("Force password change is not required.");
+            throw new BadRequestException("Force password change is not required.");
         }
 
         // ✅ ADD THIS
@@ -99,11 +100,11 @@ public class AuthService {
         String empId = authenticatedEmpId();
 
         User user = userRepository.findByEmployee_EmpId(empId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // 1. Verify old password
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Old password is incorrect.");
+            throw new BadRequestException("Old password is incorrect.");
         }
 
         // 2. Complexity
