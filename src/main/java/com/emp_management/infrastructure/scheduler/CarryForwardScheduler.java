@@ -58,8 +58,8 @@ public class CarryForwardScheduler {
         } catch (Exception e) {
             log.error("[SCHEDULER] ❌ Carry forward failed: {}",
                     e.getMessage(), e);
-            throw new RuntimeException(
-                    "Year-end carry forward failed", e);
+            throw new IllegalStateException(
+                    "Year-end carry forward process failed", e);
         }
 
         // ✅ NEW: Step 2 — Allocate new year for all employees
@@ -92,8 +92,8 @@ public class CarryForwardScheduler {
                     forYear);
         } catch (Exception e) {
             log.error("[MANUAL-TRIGGER] Error: {}", e.getMessage());
-            throw new RuntimeException(
-                    "Year-end processing failed: " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Year-end processing failed", e);
         }
     }
 }

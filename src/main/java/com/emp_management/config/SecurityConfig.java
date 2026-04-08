@@ -35,30 +35,47 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> {}) // ✅ enable CORS
+                .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+
+                            // ✅ FIX: Add CORS headers manually
+                            response.setHeader("Access-Control-Allow-Origin", "*");
+                            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                            response.setHeader("Access-Control-Allow-Headers", "*");
+
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Token expired or missing. Please refresh.\"}");
+
+                            // ✅ FIX: return correct login error message
+                            response.getWriter().write(
+                                    "{\"status\":401,\"errorCode\":\"UNAUTHORIZED_ACCESS\",\"message\":\"Invalid username or password.\"}"
+                            );
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
+
+                            // ✅ also fix CORS here (important)
+                            response.setHeader("Access-Control-Allow-Origin", "*");
+                            response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                            response.setHeader("Access-Control-Allow-Headers", "*");
+
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"error\": \"Access denied. Insufficient permissions.\"}");
+
+                            response.getWriter().write(
+                                    "{\"status\":403,\"errorCode\":\"FORBIDDEN\",\"message\":\"Access denied. Insufficient permissions.\"}"
+                            );
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
 
-                        // ✅ VERY IMPORTANT → allow preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
 
-                        // 🔓 PUBLIC
                         .requestMatchers(
                                 "/api/auth/login",
                                 "/api/auth/refresh",
@@ -66,15 +83,9 @@ public class SecurityConfig {
                                 "/api/password-reset/**"
                         ).permitAll()
 
-//                        .requestMatchers(
-//                                "/api/password-reset/approve/**",
-//                                "/api/password-reset/reject/**",
-//                                "/api/admin/**"
-//                        ).hasRole("ADMIN")
                         .requestMatchers("/api/hr/**").hasRole("HR")
                         .requestMatchers("/api/payslip").hasAnyRole("CFO", "ADMIN","EMPLOYEE","MANAGER","HR")
 
-                        // 🌐 PUBLIC APIs
                         .requestMatchers(
                                 "/api/flash-news/**",
                                 "/api/wfh/**",
@@ -90,25 +101,18 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // REPLACE your corsConfigurationSource() bean with this:
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of("*")); // ✅ allows ALL (including IP)
-
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
         );
-
         configuration.setAllowedHeaders(List.of("*"));
-
-        configuration.setAllowCredentials(true); // ✅ required if using cookies/auth
-
+        configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
-
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

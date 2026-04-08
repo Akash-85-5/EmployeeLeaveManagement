@@ -38,7 +38,7 @@ public class DocumentStorageService {
             throw new BadRequestException("File is required for: " + subFolder);
 
         if (file.getSize() > MAX_SIZE)
-            throw new BadRequestException("File too large (max 5MB): " + subFolder);
+            throw new BadRequestException("File too large (max 10MB): " + subFolder);
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType))
@@ -55,7 +55,9 @@ public class DocumentStorageService {
             // Return relative path stored in DB
             return subFolder + "/" + fileName;
         } catch (IOException e) {
-            throw new RuntimeException("Failed to save file: " + e.getMessage(), e);
+            throw new BadRequestException(
+                    "Unable to upload file. Please try again."
+            );
         }
     }
 

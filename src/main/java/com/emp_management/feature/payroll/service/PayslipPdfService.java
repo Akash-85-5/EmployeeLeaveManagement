@@ -5,6 +5,7 @@ import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.payroll.dto.PayslipPdfData;
 import com.emp_management.feature.payroll.entity.Payslip;
+import com.emp_management.shared.exceptions.BadRequestException;
 import com.emp_management.shared.exceptions.ResourceNotFoundException;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +62,9 @@ public class PayslipPdfService {
             builder.useFastMode();
             builder.run();
         } catch (Exception ex) {
-            throw new RuntimeException("PDF generation failed", ex);
+            throw new BadRequestException(
+                    "Unable to generate payslip PDF. Please try again."
+            );
         }
 
         return new ByteArrayInputStream(out.toByteArray());
