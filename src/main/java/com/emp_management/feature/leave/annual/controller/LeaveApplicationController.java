@@ -78,11 +78,11 @@ public class LeaveApplicationController {
 
         LocalDate today   = LocalDate.now(IST);
         String   typeName = leaveType.getLeaveType().toUpperCase();
-
+        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
         // ── Date rules ────────────────────────────────────────────
         if ("SICK".equals(typeName)) {
-            if (startDate.isBefore(today))
-                throw new BadRequestException("Sick leave cannot be applied for past dates.");
+            if (startDate.isBefore(firstDayOfMonth))
+                throw new BadRequestException("Sick leave can only be applied within the current month.");
             if (startDate.isAfter(today)) {
                 if (!isAppointment)
                     throw new BadRequestException(
@@ -92,8 +92,8 @@ public class LeaveApplicationController {
                             "An attachment (appointment proof) is required for future sick leave.");
             }
         } else if (!"MATERNITY".equals(typeName) && !"PATERNITY".equals(typeName)) {
-            if (startDate.isBefore(today))
-                throw new BadRequestException("Leave cannot be applied for past dates.");
+            if (startDate.isBefore(firstDayOfMonth))
+                throw new BadRequestException("Leave can only be applied within the current month.");
         }
 
         LeaveApplication leave = new LeaveApplication();

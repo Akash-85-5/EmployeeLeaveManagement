@@ -4,7 +4,7 @@ import com.emp_management.feature.auth.entity.OtpToken;
 import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.OtpTokenRepository;
 import com.emp_management.feature.auth.repository.UserRepository;
-import com.emp_management.feature.auth.util.PasswordValidationUtil;
+import com.emp_management.feature.auth.utill.PasswordValidationUtil;
 import com.emp_management.infrastructure.messaging.EmailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;

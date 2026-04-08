@@ -6,7 +6,7 @@ import com.emp_management.feature.auth.dto.LoginRequest;
 import com.emp_management.feature.auth.dto.LoginResponse;
 import com.emp_management.feature.auth.entity.User;
 import com.emp_management.feature.auth.repository.UserRepository;
-import com.emp_management.feature.auth.util.PasswordValidationUtil;
+import com.emp_management.feature.auth.utill.PasswordValidationUtil;
 import com.emp_management.security.JwtTokenProvider;
 import com.emp_management.shared.enums.EmployeeStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -51,7 +51,8 @@ public class AuthService {
                 )
         );
 
-        User user = userRepository.findByEmployee_EmpId(request.getIdentifier())
+        User user = userRepository.findByEmployee_Email(request.getIdentifier())
+                .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getStatus() != EmployeeStatus.ACTIVE) {
@@ -72,8 +73,9 @@ public class AuthService {
     public void forceChangePassword(ForceChangePasswordRequest request) {
 
         String empId = authenticatedEmpId();
-
-        User user = userRepository.findByEmployee_EmpId(empId)
+        System.out.println("DEBUG empId from token: " + empId);
+        User user = userRepository.findByEmployee_Email(empId)
+                .or(() -> userRepository.findByEmployee_EmpId(empId))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!user.isForcePwdChange()) {
