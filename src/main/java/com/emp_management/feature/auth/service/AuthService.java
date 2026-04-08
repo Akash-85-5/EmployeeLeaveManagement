@@ -69,11 +69,10 @@ public class AuthService {
     }
 
     @Transactional
-    public void forceChangePassword(ForceChangePasswordRequest request) {
+    public void forceChangePassword(ForceChangePasswordRequest request,String userId) {
 
-        String empId = authenticatedEmpId();
 
-        User user = userRepository.findByEmployee_EmpId(empId)
+        User user = userRepository.findByEmployee_EmpId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!user.isForcePwdChange()) {
@@ -88,7 +87,7 @@ public class AuthService {
         user.setForcePwdChange(false);
         userRepository.save(user);
 
-        passwordAuditService.recordPassword(empId, newHash);
+        passwordAuditService.recordPassword(userId, newHash);
     }
 
     @Transactional

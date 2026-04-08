@@ -2,7 +2,9 @@ package com.emp_management.feature.auth.controller;
 
 import com.emp_management.feature.auth.dto.*;
 import com.emp_management.feature.auth.service.AuthService;
+import com.emp_management.security.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -69,8 +71,9 @@ public class AuthController {
      */
     @PostMapping("/force-change")
     public ResponseEntity<?> forceChangePassword(
-            @RequestBody ForceChangePasswordRequest request) {
-        authService.forceChangePassword(request);
+            @RequestBody ForceChangePasswordRequest request,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        authService.forceChangePassword(request,user.getEmployeeId());
         return ResponseEntity.ok(Map.of("message",
                 "Password changed. You may now access the system."));
     }
