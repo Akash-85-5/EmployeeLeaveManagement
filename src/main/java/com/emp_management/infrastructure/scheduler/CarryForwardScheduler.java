@@ -2,6 +2,7 @@ package com.emp_management.infrastructure.scheduler;
 
 import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
 import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
+import com.emp_management.shared.exceptions.BadRequestException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,8 +108,8 @@ public class CarryForwardScheduler {
                     previousYear, e.getMessage(), e);
             // FIX: wrap cleanly so the scheduler framework receives a RuntimeException
             // and can handle retries / dead-letter alerting if configured.
-            throw new RuntimeException(
-                    "Year-end carry-forward failed for year " + previousYear, e);
+            throw new BadRequestException(
+                    "Year-end carry-forward failed for year " + previousYear);
         }
 
         // ── Step 2: Allocate new-year leaves (best-effort) ───────────────────
