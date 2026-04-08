@@ -12,6 +12,7 @@ import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
+import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
 import com.emp_management.feature.leave.compoff.entity.CompOff;
 import com.emp_management.feature.leave.compoff.repository.CompOffRepository;
 import com.emp_management.feature.leave.compoff.service.CompOffService;
@@ -42,6 +43,7 @@ public class LeaveApplicationService {
     private final LeaveAttachmentRepository leaveAttachmentRepository;
     private final AnnualLeaveBalanceService    annualLeaveBalanceService;
     private final SickLeaveBalanceService      sickLeaveBalanceService;
+    private final CarryForwardBalanceService carryForwardBalanceService;// ✅ NEW FIELD
     private final EmployeePersonalDetailsRepository personalDetailsRepository;
 //    private final SeparationService            separationService;
 
@@ -56,6 +58,7 @@ public class LeaveApplicationService {
             LeaveAttachmentRepository leaveAttachmentRepository,
             AnnualLeaveBalanceService annualLeaveBalanceService,
             SickLeaveBalanceService sickLeaveBalanceService,
+            CarryForwardBalanceService carryForwardBalanceService,
             EmployeePersonalDetailsRepository personalDetailsRepository){
 //            SeparationService separationService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
@@ -68,6 +71,7 @@ public class LeaveApplicationService {
         this.leaveAttachmentRepository   = leaveAttachmentRepository;
         this.annualLeaveBalanceService   = annualLeaveBalanceService;
         this.sickLeaveBalanceService     = sickLeaveBalanceService;
+        this.carryForwardBalanceService  = carryForwardBalanceService; // ✅ NEW ASSIGNMENT
         this.personalDetailsRepository   = personalDetailsRepository;
 //        this.separationService           = separationService;
     }
@@ -90,7 +94,7 @@ public class LeaveApplicationService {
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);
 
-        Employee employee = leave.getEmployee(); // already set by controller
+        Employee employee = leave.getEmployee();
 
         validateLeaveTypeAndBalance(leave, employee, calculatedDays);
         setupApprovalChain(leave, employee);
@@ -124,6 +128,7 @@ public class LeaveApplicationService {
         if (firstApproverNumericId == null) {
             leave.setFirstApproverId(null);
             leave.setSecondApproverId(null);
+            leave.setCurrentApproverId(null);
             leave.setCurrentApprovalLevel(null);
             leave.setRequiredApprovalLevels(0);
             return;
@@ -144,7 +149,7 @@ public class LeaveApplicationService {
             leave.setRequiredApprovalLevels(1);
         } else {
             Employee secondApprover = employeeRepository.findByEmpId(secondApproverNumericId)
-                    .orElseThrow(() -> new EntityNotFoundException(
+                    .orElseThrow(() -> new RuntimeException(
                             "Second approver not found: " + secondApproverNumericId));
             leave.setSecondApproverId(secondApprover.getEmpId());
             leave.setRequiredApprovalLevels(2);
@@ -164,11 +169,12 @@ public class LeaveApplicationService {
         int month = leave.getStartDate().getMonthValue();
 
         switch (typeName) {
-            case "SICK"         -> validateSickLeave(leave, days, year, month);
-            case "ANNUAL" -> validateAnnualLeave(leave, days, year, month);
-            case "MATERNITY"    -> validateMaternity(leave, employee, days);
-            case "PATERNITY"    -> validatePaternity(leave, employee, days);
-            case "COMP_OFF"     -> validateCompOff(leave, days);
+            case "SICK"           -> validateSickLeave(leave, days, year, month);
+            case "ANNUAL"   -> validateAnnualLeave(leave, days, year, month);
+            case "CARRY_FORWARD"  -> validateCarryForward(leave, days, year); // ✅ NEW CASE
+            case "MATERNITY"      -> validateMaternity(leave, employee, days);
+            case "PATERNITY"      -> validatePaternity(leave, employee, days);
+            case "COMP_OFF"       -> validateCompOff(leave, days);
             default -> {
                 // Generic validation for any future leave types:
                 // Just check the total allocated days from the entity
@@ -205,6 +211,24 @@ public class LeaveApplicationService {
             throw new BadRequestException(
                     "Insufficient ANNUAL_LEAVE balance for "
                             + java.time.Month.of(month).name() + " " + year
+                            + ". Available: " + String.format("%.1f", available)
+                            + ", Requested: " + days);
+        }
+    }
+
+    /**
+     * ✅ NEW — Validates carry-forward balance before allowing application.
+     *
+     * Reads CarryForwardBalance.remaining for the employee in the leave year.
+     * If no balance record exists → employee has 0 carry-forward → reject.
+     * Balance is a yearly bucket (not monthly), so we only check by year.
+     */
+    private void validateCarryForward(LeaveApplication leave, BigDecimal days, int year) {
+        double available = carryForwardBalanceService
+                .getAvailableBalance(leave.getEmployee().getEmpId(), year);
+        if (days.doubleValue() > available) {
+            throw new BadRequestException(
+                    "Insufficient CARRY_FORWARD balance for year " + year
                             + ". Available: " + String.format("%.1f", available)
                             + ", Requested: " + days);
         }
@@ -269,10 +293,11 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL" -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
-            case "SICK"         -> sickLeaveBalanceService.deductLeave(empId, year, month, days);
-            case "COMP_OFF"     -> compOffService.useCompOff(empId, leave.getDays(), leave.getId());
-            default             -> { /* one-time types like MATERNITY/PATERNITY — no balance table */ }
+            case "ANNUAL"  -> annualLeaveBalanceService.deductLeave(empId, year, month, days);
+            case "SICK"          -> sickLeaveBalanceService.deductLeave(empId, year, month, days);
+            case "CARRY_FORWARD" -> carryForwardBalanceService.deductLeave(empId, year, days); // ✅ NEW
+            case "COMP_OFF"      -> compOffService.useCompOff(empId, leave.getDays(), leave.getId());
+            default              -> { /* MATERNITY/PATERNITY — no balance table */ }
         }
 
 //        if (separationService.isInNoticePeriod(empId)) {
@@ -289,9 +314,10 @@ public class LeaveApplicationService {
         String type  = leave.getLeaveType().getLeaveType().toUpperCase();
 
         switch (type) {
-            case "ANNUAL" -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
-            case "SICK"         -> sickLeaveBalanceService.restoreLeave(empId, year, month, days);
-            case "COMP_OFF"     -> {
+            case "ANNUAL"  -> annualLeaveBalanceService.restoreLeave(empId, year, month, days);
+            case "SICK"          -> sickLeaveBalanceService.restoreLeave(empId, year, month, days);
+            case "CARRY_FORWARD" -> carryForwardBalanceService.restoreLeave(empId, year, days); // ✅ NEW
+            case "COMP_OFF"      -> {
                 List<CompOff> linked = compOffRepository.findByUsedLeaveApplicationId(leave.getId());
                 BigDecimal restored = BigDecimal.ZERO;
                 for (CompOff c : linked) {
