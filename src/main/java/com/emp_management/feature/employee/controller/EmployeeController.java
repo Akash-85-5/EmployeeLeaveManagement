@@ -112,10 +112,9 @@ public class EmployeeController {
             @RequestPart("passportPhoto")                              MultipartFile passportPhoto,
             @RequestPart("experienceCerts")                            List<MultipartFile> experienceCerts,
             @RequestPart(value = "joiningLetters", required = false)   List<MultipartFile> joiningLetters,
-            @RequestPart("relievingLetter")                            MultipartFile relievingLetter) {
-
+            @RequestPart("relievingLetters")                            List<MultipartFile> relievingLetters) {
         employeeService.submitExperiencedDetails(employeeId, dataJson,
-                idProof, passportPhoto, experienceCerts, joiningLetters, relievingLetter);
+                idProof, passportPhoto, experienceCerts, joiningLetters, relievingLetters);
         return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
@@ -124,7 +123,6 @@ public class EmployeeController {
     public ResponseEntity<String> updateProfile(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
-            // shared / fresher files
             @RequestPart(value = "idProof",           required = false)    MultipartFile idProof,
             @RequestPart(value = "passportPhoto",     required = false)    MultipartFile passportPhoto,
             @RequestPart(value = "tenthMarksheet",    required = false)    MultipartFile tenthMarksheet,
@@ -133,12 +131,12 @@ public class EmployeeController {
             @RequestPart(value = "offerLetter",       required = false)    MultipartFile offerLetter,
             @RequestPart(value = "experienceCerts",   required = false)    List<MultipartFile> experienceCerts,
             @RequestPart(value = "joiningLetters",    required = false)    List<MultipartFile> joiningLetters,
-            @RequestPart(value = "relievingLetter",   required = false)    MultipartFile relievingLetter) {
+            @RequestPart(value = "relievingLetters",   required = false)    List<MultipartFile> relievingLetters) {
 
         employeeService.updateProfile(employeeId, dataJson,
                 idProof, passportPhoto,
                 tenthMarksheet, twelfthMarksheet, degreeCertificate, offerLetter,
-                experienceCerts, joiningLetters, relievingLetter);
+                experienceCerts, joiningLetters, relievingLetters);
 
         return ResponseEntity.ok("Profile updated successfully.");
     }

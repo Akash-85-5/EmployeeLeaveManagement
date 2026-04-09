@@ -4,6 +4,7 @@ public enum ErrorCode {
     // Auth & Access
     UNAUTHORIZED_ACCESS,
     FORBIDDEN,
+    BAD_CREDENTIAL,
 
     // Employee
     EMPLOYEE_NOT_FOUND,

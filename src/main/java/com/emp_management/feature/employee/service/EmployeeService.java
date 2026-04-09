@@ -168,7 +168,7 @@ public class EmployeeService {
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts,
             List<MultipartFile> joiningLetters,
-            MultipartFile relievingLetter) {
+            List<MultipartFile> relievingLetter) {
 
         Optional<EmployeePersonalDetails> existing =
                 personalDetailsRepository.findByEmployee_EmpId(employeeId);
@@ -194,7 +194,7 @@ public class EmployeeService {
             MultipartFile offerLetter,
             List<MultipartFile> experienceCerts,
             List<MultipartFile> joiningLetters,
-            MultipartFile relievingLetter) {
+            List<MultipartFile> relievingLetter) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
@@ -331,7 +331,7 @@ public class EmployeeService {
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts,
             List<MultipartFile> joiningLetters,
-            MultipartFile relievingLetter,
+            List<MultipartFile> relievingLetter,
             Optional<EmployeePersonalDetails> existing) {
 
         Employee employee = employeeRepository.findByEmpId(employeeId)
@@ -342,8 +342,6 @@ public class EmployeeService {
 
         validateFile(idProof,         "ID Proof");
         validateFile(passportPhoto,   "Passport-size Photo");
-        validateFile(relievingLetter, "Relieving Letter");
-
         if (experienceCerts == null || experienceCerts.isEmpty())
             throw new BadRequestException("At least one experience certificate is required.");
 
@@ -359,9 +357,23 @@ public class EmployeeService {
         for (int i = 0; i < experienceCerts.size(); i++)
             validateFile(experienceCerts.get(i), "Experience certificate for entry " + (i + 1));
 
-        long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
-        if (lastCount != 1)
-            throw new BadRequestException("Exactly one experience entry must be marked as the last company.");
+
+        if (joiningLetters.size() != experiences.size())
+            throw new BadRequestException(
+                    "experienceCerts count (" + joiningLetters.size()
+                            + ") must match experience entries (" + experiences.size() + ").");
+
+        for (int i = 0; i < joiningLetters.size(); i++)
+            validateFile(joiningLetters.get(i), "Experience certificate for entry " + (i + 1));
+
+
+        if (relievingLetter.size() != experiences.size())
+            throw new BadRequestException(
+                    "experienceCerts count (" + relievingLetter.size()
+                            + ") must match experience entries (" + experiences.size() + ").");
+
+        for (int i = 0; i < relievingLetter.size(); i++)
+            validateFile(relievingLetter.get(i), "Experience certificate for entry " + (i + 1));
 
         for (int i = 0; i < experiences.size(); i++)
             validateExperienceDates(experiences.get(i).getFromDate(),
@@ -393,23 +405,12 @@ public class EmployeeService {
             doc.setRole(entry.getRole());
             doc.setFromDate(entry.getFromDate());
             doc.setEndDate(entry.getEndDate());
-            doc.setExperienceCertPath(
-                    documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
-
-            // Joining letter — optional per entry
-            if (entry.isHasJoiningLetter() && joiningLetters != null
-                    && i < joiningLetters.size() && hasFile(joiningLetters.get(i))) {
-                doc.setJoiningLetterPath(
-                        documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
-            }
-
+            doc.setExperienceCertPath(documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
+            doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
+            doc.setRelievingLetterPath(documentStorageService.save(relievingLetter.get(i), "relieving-letter", employeeId));
             if (i == 0) {
                 doc.setIdProofPath(idProofPath);
                 doc.setPassportPhotoPath(passportPhotoPath);
-            }
-            if (entry.isLastCompany()) {
-                doc.setRelievingLetterPath(
-                        documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
             }
             pd.getExperiencedDocuments().add(doc);
         }
@@ -512,7 +513,7 @@ public class EmployeeService {
             MultipartFile idProof, MultipartFile passportPhoto,
             List<MultipartFile> experienceCerts,
             List<MultipartFile> joiningLetters,
-            MultipartFile relievingLetter) {
+            List<MultipartFile> relievingLetter) {
 
         if (experiences == null) {
             // No experience changes — only swap shared files on first entry if sent
@@ -536,9 +537,6 @@ public class EmployeeService {
         for (int i = 0; i < experiences.size(); i++)
             validateExperienceDates(experiences.get(i).getFromDate(), experiences.get(i).getEndDate(), i);
 
-        long lastCount = experiences.stream().filter(ExperienceEntryDto::isLastCompany).count();
-        if (lastCount > 1)
-            throw new BadRequestException("Only one experience entry can be marked as the last company.");
 
         List<ExperiencedDocument> existingDocs = pd.getExperiencedDocuments();
         int oldSize = existingDocs.size();
@@ -564,21 +562,11 @@ public class EmployeeService {
                     documentStorageService.delete(doc.getExperienceCertPath());
                     doc.setExperienceCertPath(documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
                 }
+                documentStorageService.delete(doc.getJoiningLetterPath());
+                doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
 
-                // Joining letter
-                boolean newJoiningLetterSent = entry.isHasJoiningLetter()
-                        && joiningLetters != null && i < joiningLetters.size()
-                        && hasFile(joiningLetters.get(i));
-                if (newJoiningLetterSent) {
-                    documentStorageService.delete(doc.getJoiningLetterPath());
-                    doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
-                }
-
-                // Relieving letter
-                if (entry.isLastCompany() && hasFile(relievingLetter)) {
-                    documentStorageService.delete(doc.getRelievingLetterPath());
-                    doc.setRelievingLetterPath(documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
-                }
+                documentStorageService.delete(doc.getRelievingLetterPath());
+                doc.setRelievingLetterPath(documentStorageService.save(relievingLetter.get(i), "relieving-letter", employeeId));
 
                 // Shared files on first entry
                 if (i == 0) {
@@ -640,8 +628,7 @@ public class EmployeeService {
                         ? documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId)
                         : (i < oldSize ? oldCertPaths.get(i) : null));
 
-                boolean newJoiningLetterSent = entry.isHasJoiningLetter()
-                        && joiningLetters != null && i < joiningLetters.size()
+                boolean newJoiningLetterSent = joiningLetters != null && i < joiningLetters.size()
                         && hasFile(joiningLetters.get(i));
                 if (newJoiningLetterSent) {
                     doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
@@ -649,8 +636,8 @@ public class EmployeeService {
                     doc.setJoiningLetterPath(i < oldSize ? oldJoiningPaths.get(i) : null);
                 }
 
-                if (entry.isLastCompany() && hasFile(relievingLetter)) {
-                    doc.setRelievingLetterPath(documentStorageService.save(relievingLetter, "relieving-letter", employeeId));
+                if (hasFile(relievingLetter.get(i))) {
+                    doc.setRelievingLetterPath(documentStorageService.save(relievingLetter.get(i), "relieving-letter", employeeId));
                 } else {
                     doc.setRelievingLetterPath(i < oldSize ? oldRelievingPaths.get(i) : null);
                 }

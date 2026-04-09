@@ -9,19 +9,6 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * JSON part of the experienced personal-details multipart request.
- *
- * Multipart files expected alongside this JSON:
- *   - idProof                        (mandatory, single file)
- *   - experienceCerts                (mandatory, List<MultipartFile> — one per experience entry)
- *   - relievingLetter                (mandatory, single file for the last company)
- *
- * The "experiences" list in this DTO must match the order of
- * files in "experienceCerts" by index.
- * The entry with isLastCompany = true determines which entry
- * gets the relievingLetterPath stored.
- */
 public class ExperiencedPersonalDetailsRequest {
 
     // ── Name ──────────────────────────────────────────────────────

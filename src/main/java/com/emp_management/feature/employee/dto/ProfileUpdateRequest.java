@@ -29,10 +29,6 @@ public class ProfileUpdateRequest {
 
     // ── Employee table fields ─────────────────────────────────────
     private String name;
-    private String reportingId;
-    private Long   departmentId;   // FK to Department
-    private Long   roleId;         // FK to Role
-    private Long   branchId;       // FK to Branch
     private LocalDate joiningDate;
     // ── Name ──────────────────────────────────────────────────────
     private String firstName;
@@ -107,17 +103,6 @@ public class ProfileUpdateRequest {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getReportingId() { return reportingId; }
-    public void setReportingId(String reportingId) { this.reportingId = reportingId; }
-
-    public Long getDepartmentId() { return departmentId; }
-    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
-
-    public Long getRoleId() { return roleId; }
-    public void setRoleId(Long roleId) { this.roleId = roleId; }
-
-    public Long getBranchId() { return branchId; }
-    public void setBranchId(Long branchId) { this.branchId = branchId; }
 
     public LocalDate getJoiningDate() {
         return joiningDate;
