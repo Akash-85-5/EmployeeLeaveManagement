@@ -13,7 +13,6 @@ import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.infrastructure.storage.DocumentStorageService;
 import com.emp_management.shared.dto.BranchListDto;
 import com.emp_management.shared.dto.EmployeeListDto;
-import com.emp_management.shared.entity.Branch;
 import com.emp_management.shared.entity.Department;
 import com.emp_management.shared.entity.Role;
 import com.emp_management.shared.enums.*;
