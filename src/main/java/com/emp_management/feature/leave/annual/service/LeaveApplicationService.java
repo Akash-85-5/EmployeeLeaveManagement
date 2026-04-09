@@ -407,9 +407,11 @@ public class LeaveApplicationService {
     // ═══════════════════════════════════════════════════════════════
 
     public LeaveApplication getLeaveById(Long id) {
-        return leaveApplicationRepository.findById(id)
+        LeaveApplication leave = leaveApplicationRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException(
                         "Leave application not found with ID: " + id));
+
+        return leave;
     }
 
     public List<LeaveApplicationResponseDTO> getLeavesByEmployee(String employeeId) {

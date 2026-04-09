@@ -237,7 +237,7 @@ public class LeaveApprovalService {
         leave.setApprovedRole(finalApprover.getRole().getRoleName());
         leave.setApprovedAt(LocalDateTime.now());
         leave.setEscalated(false);
-
+        leave.setRejectionReason(reason);
         if (finalStatus == RequestStatus.APPROVED) {
             leaveApplicationService.applyBalanceDeduction(leave);
         }

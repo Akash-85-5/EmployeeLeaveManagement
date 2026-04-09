@@ -73,6 +73,9 @@ public class LeaveApplication {
     @Column(name = "current_approver_id")
     private String currentApproverId;
 
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Column(name = "first_approver_id")
     private String firstApproverId;
 
@@ -158,6 +161,14 @@ public class LeaveApplication {
     }
 
     // ── Getters & Setters ─────────────────────────────────────────
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
