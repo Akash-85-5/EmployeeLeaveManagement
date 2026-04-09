@@ -1,0 +1,82 @@
+package com.emp_management.feature.attendance.service;
+
+import com.emp_management.feature.attendance.dto.*;
+import com.emp_management.feature.attendance.entity.AttendanceSummary;
+import com.emp_management.feature.attendance.repository.AttendanceSummaryRepository;
+import org.springframework.data.domain.*;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class AttendanceService {
+
+    private final AttendanceSummaryRepository repo;
+
+    public AttendanceService(AttendanceSummaryRepository repo) {
+        this.repo = repo;
+    }
+
+    // 🔹 Employee Monthly Calendar
+    public List<AttendanceCalendarDTO> getEmployeeMonthly(String empId, int year, int month) {
+
+        LocalDate from = LocalDate.of(year, month, 1);
+        LocalDate to   = from.withDayOfMonth(from.lengthOfMonth());
+
+        return repo
+                .findByEmployeeIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(empId, from, to)
+                .stream()
+                .map(this::mapToCalendar)
+                .toList();
+    }
+
+    // 🔹 Daily View
+    public List<AttendanceDetailDTO> getDailyAttendance(LocalDate date) {
+
+        return repo
+                .findByAttendanceDateOrderByEmployeeNameAsc(date)
+                .stream()
+                .map(this::mapToDetail)
+                .toList();
+    }
+
+    // 🔹 All Employees (Pagination + Filter)
+    public Page<AttendanceDetailDTO> getAllEmployeesAttendance(
+            LocalDate from,
+            LocalDate to,
+            String status,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return repo
+                .findFilteredAttendance(status, from, to, pageable)
+                .map(this::mapToDetail);
+    }
+
+    // 🔹 Mappers
+    private AttendanceCalendarDTO mapToCalendar(AttendanceSummary att) {
+        AttendanceCalendarDTO dto = new AttendanceCalendarDTO();
+        dto.setDate(att.getAttendanceDate());
+        dto.setStatus(att.getAttendanceStatus());
+        dto.setCheckIn(att.getCheckIn());
+        dto.setCheckOut(att.getCheckOut());
+        dto.setWorkingHours(att.getWorkingHours());
+        return dto;
+    }
+
+    private AttendanceDetailDTO mapToDetail(AttendanceSummary att) {
+        AttendanceDetailDTO dto = new AttendanceDetailDTO();
+        dto.setEmployeeId(att.getEmployeeId());
+        dto.setEmployeeName(att.getEmployeeName());
+        dto.setDate(att.getAttendanceDate());
+        dto.setStatus(att.getAttendanceStatus());
+        dto.setCheckIn(att.getCheckIn());
+        dto.setCheckOut(att.getCheckOut());
+        dto.setWorkingHours(att.getWorkingHours());
+        dto.setLopTriggered(att.isLopTriggered());
+        return dto;
+    }
+}
