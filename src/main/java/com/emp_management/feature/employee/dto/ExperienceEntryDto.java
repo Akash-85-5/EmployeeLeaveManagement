@@ -5,16 +5,12 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /**
- * Represents one experience entry in the experienced employee form.
+ * One experience entry sent from the frontend.
  *
- * The frontend sends this as JSON inside a JSON array string.
- * Each entry has its own experience certificate file, referenced
- * by a 0-based index that matches the multipart file list sent
- * under the key "experienceCerts".
- *
- * The last company is identified by setting isLastCompany = true.
- * That entry must also have an accompanying relieving letter file,
- * referenced by "relievingLetter" multipart key.
+ * Multipart file keys (indexed to match this entry's position):
+ *   experienceCerts[i]  — mandatory on POST, optional on PUT
+ *   joiningLetters[i]   — optional; only sent when hasJoiningLetter = true
+ *   relievingLetter     — single file, only required on POST when lastCompany = true
  */
 public class ExperienceEntryDto {
 
@@ -30,14 +26,15 @@ public class ExperienceEntryDto {
     @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    /**
-     * true = this is the most recent (last) company.
-     * Only one entry in the list should have this set to true.
-     * The relieving letter file is attached for this entry only.
-     */
+    /** Exactly one entry per submission must be marked true. */
     private boolean lastCompany;
 
-    // ── Getters & Setters ─────────────────────────────────────────
+    /**
+     * Set true when a joining letter file is being sent for this entry
+     * in joiningLetters[i]. Service uses this flag to know whether to
+     * look for a file at that index.
+     */
+    private boolean hasJoiningLetter;
 
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
@@ -53,4 +50,7 @@ public class ExperienceEntryDto {
 
     public boolean isLastCompany() { return lastCompany; }
     public void setLastCompany(boolean lastCompany) { this.lastCompany = lastCompany; }
+
+    public boolean isHasJoiningLetter() { return hasJoiningLetter; }
+    public void setHasJoiningLetter(boolean hasJoiningLetter) { this.hasJoiningLetter = hasJoiningLetter; }
 }

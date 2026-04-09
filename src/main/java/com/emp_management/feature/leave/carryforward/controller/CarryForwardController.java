@@ -1,9 +1,9 @@
 package com.emp_management.feature.leave.carryforward.controller;
 
-
 import com.emp_management.feature.leave.carryforward.dto.CarryForwardBalanceResponse;
 import com.emp_management.feature.leave.carryforward.dto.CarryForwardEligibilityResponse;
-import com.emp_management.feature.leave.carryforward.service.CarryForwardService;
+import com.emp_management.feature.leave.carryforward.dto.CarryForwardMonthlyUsageResponse;
+import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,40 +18,73 @@ public class CarryForwardController {
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(CarryForwardController.class);
 
-    private final CarryForwardService carryForwardService;
+    private final CarryForwardBalanceService carryForwardBalanceService;
 
-    public CarryForwardController(CarryForwardService carryForwardService) {
-        this.carryForwardService = carryForwardService;
+    public CarryForwardController(CarryForwardBalanceService carryForwardBalanceService) {
+        this.carryForwardBalanceService = carryForwardBalanceService;
     }
 
-    // ── Get balance for an employee ───────────────────────────────
+    // ── Yearly balance for one employee ─────────────────────────────
 
     @GetMapping("/balance/{employeeId}")
     public ResponseEntity<CarryForwardBalanceResponse> getBalance(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
+
         if (year == null) year = LocalDate.now().getYear();
+
         log.info("[CARRYFORWARD] Fetching balance: employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(carryForwardService.getBalance(employeeId, year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getBalance(employeeId, year)
+        );
     }
 
-    // ── Check eligibility for carry-forward ───────────────────────
+    // ── Eligibility check ───────────────────────────────────────────
 
     @GetMapping("/eligibility/{employeeId}")
     public ResponseEntity<CarryForwardEligibilityResponse> checkEligibility(
             @PathVariable String employeeId,
             @RequestParam(required = false) Integer year) {
+
         if (year == null) year = LocalDate.now().getYear();
+
         log.info("[CARRYFORWARD] Checking eligibility: employee={}, year={}", employeeId, year);
-        return ResponseEntity.ok(carryForwardService.checkEligibility(employeeId, year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.checkEligibility(employeeId, year)
+        );
     }
 
-    // ── HR / Admin: all balances for a year ───────────────────────
+    // ── All balances (HR/ADMIN) ─────────────────────────────────────
 
     @GetMapping("/balances/{year}")
     public ResponseEntity<List<CarryForwardBalanceResponse>> getAllBalances(
             @PathVariable Integer year) {
+
         log.info("[CARRYFORWARD] Fetching all balances for year: {}", year);
-        return ResponseEntity.ok(carryForwardService.getAllBalances(year));
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getAllBalances(year)
+        );
+    }
+
+    // ── Monthly usage ───────────────────────────────────────────────
+
+    @GetMapping("/monthly/{employeeId}")
+    @PreAuthorize("#employeeId == authentication.principal.user.id " +
+            "or hasRole('HR') or hasRole('ADMIN') " +
+            "or hasRole('MANAGER') or hasRole('TEAM_LEADER')")
+    public ResponseEntity<List<CarryForwardMonthlyUsageResponse>> getMonthlyUsage(
+            @PathVariable String employeeId,
+            @RequestParam(required = false) Integer year) {
+
+        if (year == null) year = LocalDate.now().getYear();
+
+        log.info("[CARRYFORWARD] Fetching monthly usage: employee={}, year={}", employeeId, year);
+
+        return ResponseEntity.ok(
+                carryForwardBalanceService.getMonthlyUsage(employeeId, year)
+        );
     }
 }

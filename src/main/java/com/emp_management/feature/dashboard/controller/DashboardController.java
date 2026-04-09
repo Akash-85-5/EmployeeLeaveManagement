@@ -3,6 +3,7 @@ package com.emp_management.feature.dashboard.controller;
 
 import com.emp_management.feature.dashboard.dto.*;
 import com.emp_management.feature.dashboard.service.DashboardService;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
 import com.emp_management.shared.enums.RequestStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,7 +49,7 @@ public class DashboardController {
     }
 
     @GetMapping("/employee/calendar/{employeeId}")
-    public ResponseEntity<Map<String, List<TeamMemberBalance>>> getEmployeeLeaveCalendar(
+    public ResponseEntity<Map<String, List<LeaveApplicationResponseDTO>>> getEmployeeLeaveCalendar(
             @PathVariable String employeeId) {
         return ResponseEntity.ok(
                 dashboardService.getMyLeaveCalendar(employeeId));
@@ -140,7 +141,11 @@ public class DashboardController {
     }
 
     @GetMapping("/team-calendar/{id}")
+<<<<<<< HEAD
     public ResponseEntity<Map<String, List<TeamMemberBalance>>> getManagerTeamLeaveCalendar(
+=======
+    public ResponseEntity<Map<String, List<LeaveApplicationResponseDTO>>> getManagerTeamLeaveCalendar(
+>>>>>>> 523ac0f4adb5a79fa972112d40b09821ea72603b
             @PathVariable String id) {
         return ResponseEntity.ok(
                 dashboardService.getTeamLeaveCalendar(id));

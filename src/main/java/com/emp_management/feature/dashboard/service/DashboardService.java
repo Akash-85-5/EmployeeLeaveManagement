@@ -12,7 +12,9 @@ import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.entity.EmployeeOnboarding;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
 import com.emp_management.feature.leave.annual.entity.*;
+import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
 import com.emp_management.feature.leave.annual.repository.*;
 import com.emp_management.feature.leave.annual.service.AnnualLeaveBalanceService;
 import com.emp_management.feature.leave.annual.service.SickLeaveBalanceService;
@@ -568,6 +570,7 @@ public class DashboardService {
                 }).collect(Collectors.toList());
     }
 
+<<<<<<< HEAD
     public Map<String, List<TeamMemberBalance>> getTeamLeaveCalendar(String managerId) {
         Map<String, List<TeamMemberBalance>> cal = new TreeMap<>();
         for (Employee m : employeeRepository.findActiveTeamMembers(managerId)) {
@@ -577,23 +580,83 @@ public class DashboardService {
 //            processODsIntoCalendar(cal, m,
 //                    odRepository.findByEmployee_EmpIdAndStatus(
 //                            m.getEmpId(), RequestStatus.APPROVED));
+=======
+    public Map<String, List<LeaveApplicationResponseDTO>> getTeamLeaveCalendar(String managerId) {
+
+        Map<String, List<LeaveApplicationResponseDTO>> cal = new TreeMap<>();
+
+        List<Employee> teamMembers = employeeRepository.findActiveTeamMembers(managerId);
+
+        for (Employee m : teamMembers) {
+
+            List<LeaveApplication> leaves =
+                    applicationRepository.findByEmployee_EmpId(m.getEmpId());
+
+            for (LeaveApplication leave : leaves) {
+
+                LeaveApplicationResponseDTO dto =
+                        LeaveApplicationMapper.toDTO(leave);
+
+                LocalDate d = leave.getStartDate();
+
+                while (!d.isAfter(leave.getEndDate())) {
+
+                    cal.computeIfAbsent(d.toString(), k -> new ArrayList<>())
+                            .add(dto);
+
+                    d = d.plusDays(1);
+                }
+            }
+>>>>>>> 523ac0f4adb5a79fa972112d40b09821ea72603b
         }
+
         return cal;
     }
 
-    public Map<String, List<TeamMemberBalance>> getMyLeaveCalendar(String employeeId) {
-        Employee m = employeeRepository.findByEmpId(employeeId)
+    //            processODsIntoCalendar(cal, m,
+//                    odRepository.findByEmployee_EmpIdAndStatus(
+//                            m.getEmpId(), RequestStatus.APPROVED));
+
+    public Map<String, List<LeaveApplicationResponseDTO>> getMyLeaveCalendar(String employeeId) {
+
+        employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new EntityNotFoundException("Employee not found"));
+<<<<<<< HEAD
         Map<String, List<TeamMemberBalance>> cal = new TreeMap<>();
         processLeavesIntoCalendar(cal, m,
                 applicationRepository.findByEmployee_EmpId(
                         employeeId));
-//        processODsIntoCalendar(cal, m,
-//                odRepository.findByEmployee_EmpIdAndStatus(
-//                        employeeId, RequestStatus.APPROVED));
+=======
+
+        Map<String, List<LeaveApplicationResponseDTO>> cal = new TreeMap<>();
+
+        List<LeaveApplication> leaves =
+                applicationRepository.findByEmployee_EmpId(employeeId);
+
+        for (LeaveApplication leave : leaves) {
+
+            // map once
+            LeaveApplicationResponseDTO dto =
+                    LeaveApplicationMapper.toDTO(leave);
+
+            LocalDate d = leave.getStartDate();
+
+            while (!d.isAfter(leave.getEndDate())) {
+
+                cal.computeIfAbsent(d.toString(), k -> new ArrayList<>())
+                        .add(dto);
+
+                d = d.plusDays(1);
+            }
+        }
+
         return cal;
     }
 
+>>>>>>> 523ac0f4adb5a79fa972112d40b09821ea72603b
+//        processODsIntoCalendar(cal, m,
+//                odRepository.findByEmployee_EmpIdAndStatus(
+//                        employeeId, RequestStatus.APPROVED));
     // ═══════════════════════════════════════════════════════════════
     // COMPANY-WIDE STATS
     // ═══════════════════════════════════════════════════════════════

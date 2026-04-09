@@ -7,9 +7,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Profile response DTO.
- * All fields are primitives or other DTOs — no JPA entities anywhere.
- * This prevents circular reference during JSON serialization.
+ * Read-only profile response DTO.
+ * No JPA entities — all nested types are plain DTOs.
  */
 public class ProfileResponse {
 
@@ -18,6 +17,7 @@ public class ProfileResponse {
     private String name;
     private String email;
     private String role;
+    private String departmentName;
     private String reportingId;
     private String reportingName;
     private boolean active;
@@ -64,7 +64,7 @@ public class ProfileResponse {
     private String pfNumber;
     private String uanNumber;
 
-    // ── Spouse (populated only when MARRIED) ──────────────────────
+    // ── Spouse (only when MARRIED) ────────────────────────────────
     private String spouseName;
     private LocalDate spouseDateOfBirth;
     private String spouseOccupation;
@@ -81,7 +81,6 @@ public class ProfileResponse {
     private String offerLetterPath;
     private String passportPhotoPath;
 
-    // ── EXPERIENCED document entries (flat DTOs, no entity) ───────
     private List<ExperiencedDocumentDto> experiencedDocuments;
 
     // ── Getters & Setters ─────────────────────────────────────────
@@ -97,6 +96,9 @@ public class ProfileResponse {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getDepartmentName() { return departmentName; }
+    public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
 
     public String getReportingId() { return reportingId; }
     public void setReportingId(String reportingId) { this.reportingId = reportingId; }
@@ -183,7 +185,7 @@ public class ProfileResponse {
     public void setBloodGroup(BloodGroup bloodGroup) { this.bloodGroup = bloodGroup; }
 
     public String getEmergencyContactNumber() { return emergencyContactNumber; }
-    public void setEmergencyContactNumber(String emergencyContactNumber) { this.emergencyContactNumber = emergencyContactNumber; }
+    public void setEmergencyContactNumber(String s) { this.emergencyContactNumber = s; }
 
     public String getFatherName() { return fatherName; }
     public void setFatherName(String fatherName) { this.fatherName = fatherName; }
@@ -219,13 +221,13 @@ public class ProfileResponse {
     public void setSpouseName(String spouseName) { this.spouseName = spouseName; }
 
     public LocalDate getSpouseDateOfBirth() { return spouseDateOfBirth; }
-    public void setSpouseDateOfBirth(LocalDate spouseDateOfBirth) { this.spouseDateOfBirth = spouseDateOfBirth; }
+    public void setSpouseDateOfBirth(LocalDate d) { this.spouseDateOfBirth = d; }
 
     public String getSpouseOccupation() { return spouseOccupation; }
     public void setSpouseOccupation(String spouseOccupation) { this.spouseOccupation = spouseOccupation; }
 
     public String getSpouseContactNumber() { return spouseContactNumber; }
-    public void setSpouseContactNumber(String spouseContactNumber) { this.spouseContactNumber = spouseContactNumber; }
+    public void setSpouseContactNumber(String s) { this.spouseContactNumber = s; }
 
     public List<ChildDto> getChildren() { return children; }
     public void setChildren(List<ChildDto> children) { this.children = children; }
@@ -234,13 +236,13 @@ public class ProfileResponse {
     public void setIdProofPath(String idProofPath) { this.idProofPath = idProofPath; }
 
     public String getTenthMarksheetPath() { return tenthMarksheetPath; }
-    public void setTenthMarksheetPath(String tenthMarksheetPath) { this.tenthMarksheetPath = tenthMarksheetPath; }
+    public void setTenthMarksheetPath(String p) { this.tenthMarksheetPath = p; }
 
     public String getTwelfthMarksheetPath() { return twelfthMarksheetPath; }
-    public void setTwelfthMarksheetPath(String twelfthMarksheetPath) { this.twelfthMarksheetPath = twelfthMarksheetPath; }
+    public void setTwelfthMarksheetPath(String p) { this.twelfthMarksheetPath = p; }
 
     public String getDegreeCertificatePath() { return degreeCertificatePath; }
-    public void setDegreeCertificatePath(String degreeCertificatePath) { this.degreeCertificatePath = degreeCertificatePath; }
+    public void setDegreeCertificatePath(String p) { this.degreeCertificatePath = p; }
 
     public String getOfferLetterPath() { return offerLetterPath; }
     public void setOfferLetterPath(String offerLetterPath) { this.offerLetterPath = offerLetterPath; }
@@ -249,5 +251,7 @@ public class ProfileResponse {
     public void setPassportPhotoPath(String passportPhotoPath) { this.passportPhotoPath = passportPhotoPath; }
 
     public List<ExperiencedDocumentDto> getExperiencedDocuments() { return experiencedDocuments; }
-    public void setExperiencedDocuments(List<ExperiencedDocumentDto> experiencedDocuments) { this.experiencedDocuments = experiencedDocuments; }
+    public void setExperiencedDocuments(List<ExperiencedDocumentDto> experiencedDocuments) {
+        this.experiencedDocuments = experiencedDocuments;
+    }
 }

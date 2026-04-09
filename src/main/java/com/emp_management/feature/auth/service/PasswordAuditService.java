@@ -2,6 +2,7 @@ package com.emp_management.feature.auth.service;
 
 import com.emp_management.feature.auth.entity.PasswordAudit;
 import com.emp_management.feature.auth.repository.PasswordAuditRepository;
+import com.emp_management.shared.exceptions.BadRequestException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,8 +64,9 @@ public class PasswordAuditService {
                 .anyMatch(a -> passwordEncoder.matches(candidatePassword, a.getPasswordHash()));
 
         if (reused) {
-            throw new RuntimeException(
-                    "New password must not match any of the last " + MAX_AUDIT_ENTRIES + " passwords.");
+            throw new BadRequestException(
+                    "New password must not match any of the last " + MAX_AUDIT_ENTRIES + " passwords."
+            );
         }
     }
 

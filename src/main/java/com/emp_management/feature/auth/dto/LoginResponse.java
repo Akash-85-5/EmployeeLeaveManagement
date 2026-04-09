@@ -23,4 +23,5 @@ public class LoginResponse {
     public String getRole()              { return role; }
     public String getToken()             { return token; }
     public boolean isForcePasswordChange() { return forcePasswordChange; }
+
 }
