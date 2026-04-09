@@ -4,33 +4,18 @@ import com.emp_management.feature.leave.annual.service.LeaveAllocationService;
 import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Map;
 
-/**
- * Year-end scheduler — fires at midnight on Jan 1 every year.
- *
- * Step 1: CarryForwardBalanceService.processYearEndCarryForward(previousYear)
- *         Reads unused annual-leave balance for every employee (December),
- *         caps it at the admin-configured CARRY_FORWARD.allocatedDays,
- *         and writes CarryForwardBalance rows for the new year.
- *
- * Step 2: LeaveAllocationService.createBulkAllocationsForAllEmployees(currentYear)
- *         Allocates ANNUAL_LEAVE + SICK for the new year.
- *         Must run AFTER Step 1 so January's opening balance can seed
- *         correctly from the carry-forward record created in Step 1.
- *
- * ── Why NO @Transactional on this class ──────────────────────────────────────
- *   Each service method owns its own @Transactional boundary.
- *   Wrapping both steps in one outer transaction would:
- *     • Hold DB locks across a potentially long bulk operation.
- *     • Make Step 2's swallowed exception silently roll back Step 1's committed work.
- *   Letting each step commit independently is the correct pattern here.
- */
+// ✅ NEW IMPORT — added LeaveAllocationService
+// Reason: Combined carry forward + allocation in ONE scheduler
+
 @Component
 public class CarryForwardScheduler {
 
+    // ===================== EXISTING =====================
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(CarryForwardScheduler.class);
 
@@ -43,16 +28,11 @@ public class CarryForwardScheduler {
         this.leaveAllocationService     = leaveAllocationService;
     }
 
-    // =========================================================================
-    // Scheduled trigger
-    // =========================================================================
-
-    /**
-     * Fires at midnight on January 1st every year.
-     * Cron: second=0, minute=0, hour=0, dayOfMonth=1, month=1, dayOfWeek=*
-     *
-     * FIX: @Transactional removed — see class-level javadoc.
-     */
+    // ===================== EXISTING (UPDATED) =====================
+    // Added new year allocation after carry forward
+    // Reason: Both must happen together on Jan 1
+    // ❌ REMOVED LeaveAllocationSchedule.yearEndProcess()
+    //    to avoid carry forward running TWICE
     @Scheduled(cron = "0 0 0 1 1 *")
     public void processYearEndCarryForward() {
 

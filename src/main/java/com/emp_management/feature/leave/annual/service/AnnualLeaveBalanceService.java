@@ -60,7 +60,7 @@ public class AnnualLeaveBalanceService {
 
     private LeaveType getAnnualLeaveType() {
         return leaveTypeRepository.findByLeaveType("ANNUAL")
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new BadRequestException(
                         "LeaveType 'ANNUAL_LEAVE' not found in DB. Please seed the leave_type table."));
     }
 

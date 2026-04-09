@@ -53,7 +53,8 @@ public class AuthService {
                 )
         );
 
-        User user = userRepository.findByEmployee_EmpId(request.getIdentifier())
+        User user = userRepository.findByEmployee_Email(request.getIdentifier())
+                .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getStatus() != EmployeeStatus.ACTIVE) {
@@ -74,8 +75,8 @@ public class AuthService {
     public void forceChangePassword(ForceChangePasswordRequest request) {
 
         String empId = authenticatedEmpId();
-
-        User user = userRepository.findByEmployee_EmpId(empId)
+        User user = userRepository.findByEmployee_Email(empId)
+                .or(() -> userRepository.findByEmployee_EmpId(empId))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.isForcePwdChange()) {

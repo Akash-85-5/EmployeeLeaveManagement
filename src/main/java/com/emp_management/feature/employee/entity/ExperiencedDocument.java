@@ -5,18 +5,14 @@ import java.time.LocalDate;
 
 /**
  * Each row = one experience entry for an EXPERIENCED employee.
- * An employee can have 1..N experience entries.
  *
- * Each entry carries:
- *  - experience certificate file path
- *  - company name
- *  - from/end dates
- *  - role held
+ * Documents per entry:
+ *   - experienceCertPath   (mandatory on POST, optional on PUT)
+ *   - joiningLetterPath    (optional — letter issued when employee joined that company)
+ *   - relievingLetterPath  (only for the last company entry)
  *
- * The last company's relieving letter is stored in a separate
- * column on this record — the frontend marks one entry as
- * "last company" by including the relieving letter file.
- * All other entries will have relievingLetterPath = null.
+ * idProofPath and passportPhotoPath are employee-level documents stored
+ * on the FIRST entry only; null on all subsequent entries.
  */
 @Entity
 @Table(name = "experienced_document")
@@ -26,15 +22,11 @@ public class ExperiencedDocument {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Many experience entries → one personal details record.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "personal_details_id", nullable = false)
     private EmployeePersonalDetails personalDetails;
 
-    // ── Mandatory for every experience entry ──────────────────────
-
+    // ── Per-entry fields ──────────────────────────────────────────
     @Column(name = "company_name", length = 200, nullable = false)
     private String companyName;
 
@@ -47,27 +39,23 @@ public class ExperiencedDocument {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    /** Stored path for the experience certificate of this company. */
     @Column(name = "experience_cert_path", nullable = false)
     private String experienceCertPath;
 
-    // ── Only the last company carries a relieving letter ──────────
-    /** Null for all entries except the most recent employer. */
+    /** Joining letter for this company (optional). */
+    @Column(name = "joining_letter_path")
+    private String joiningLetterPath;
+
+    /** Relieving letter — only on the last-company entry; null on all others. */
     @Column(name = "relieving_letter_path")
     private String relievingLetterPath;
 
-    // ── ID Proof & Passport Photo — stored on the FIRST entry only ─
-    /**
-     * The employee uploads their ID proof once.
-     * Stored on the first ExperiencedDocument entry; null on all others.
-     */
+    // ── Employee-level docs — first entry only ────────────────────
+    /** ID proof file — stored on the first entry; null on all others. */
     @Column(name = "id_proof_path")
     private String idProofPath;
 
-    /**
-     * Passport-size photo — uploaded once per employee.
-     * Stored on the first ExperiencedDocument entry; null on all others.
-     */
+    /** Passport-size photo — stored on the first entry; null on all others. */
     @Column(name = "passport_photo_path")
     private String passportPhotoPath;
 
@@ -98,6 +86,11 @@ public class ExperiencedDocument {
         this.experienceCertPath = experienceCertPath;
     }
 
+    public String getJoiningLetterPath() { return joiningLetterPath; }
+    public void setJoiningLetterPath(String joiningLetterPath) {
+        this.joiningLetterPath = joiningLetterPath;
+    }
+
     public String getRelievingLetterPath() { return relievingLetterPath; }
     public void setRelievingLetterPath(String relievingLetterPath) {
         this.relievingLetterPath = relievingLetterPath;
@@ -107,5 +100,7 @@ public class ExperiencedDocument {
     public void setIdProofPath(String idProofPath) { this.idProofPath = idProofPath; }
 
     public String getPassportPhotoPath() { return passportPhotoPath; }
-    public void setPassportPhotoPath(String passportPhotoPath) { this.passportPhotoPath = passportPhotoPath; }
+    public void setPassportPhotoPath(String passportPhotoPath) {
+        this.passportPhotoPath = passportPhotoPath;
+    }
 }

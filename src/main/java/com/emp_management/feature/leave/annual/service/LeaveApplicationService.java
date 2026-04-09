@@ -21,6 +21,7 @@ import com.emp_management.shared.enums.*;
 import com.emp_management.shared.exceptions.BadRequestException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -148,7 +149,7 @@ public class LeaveApplicationService {
             leave.setRequiredApprovalLevels(1);
         } else {
             Employee secondApprover = employeeRepository.findByEmpId(secondApproverNumericId)
-                    .orElseThrow(() -> new RuntimeException(
+                    .orElseThrow(() -> new BadRequestException(
                             "Second approver not found: " + secondApproverNumericId));
             leave.setSecondApproverId(secondApprover.getEmpId());
             leave.setRequiredApprovalLevels(2);
@@ -411,10 +412,9 @@ public class LeaveApplicationService {
                         "Leave application not found with ID: " + id));
     }
 
-    public List<LeaveApplicationResponseDTO> getLeavesByEmployee(String employeeId, Pageable pageable) {
+    public List<LeaveApplicationResponseDTO> getLeavesByEmployee(String employeeId) {
         return leaveApplicationRepository
-                .findByEmployee_EmpId(employeeId, pageable)
-                .getContent()
+                .findByEmployee_EmpId(employeeId)
                 .stream()
                 .map(LeaveApplicationMapper::toDTO)
                 .toList();

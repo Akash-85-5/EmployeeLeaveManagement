@@ -62,12 +62,10 @@ public class EmployeeController {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // FRESHER
+    // FRESHER — POST (first-time submission, all fields + files mandatory)
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * POST — first-time submission. All fields and all 6 files are mandatory.
-     *
      * Multipart keys:
      *   data              – JSON (FresherPersonalDetailsRequest)
      *   idProof, tenthMarksheet, twelfthMarksheet,
@@ -88,96 +86,61 @@ public class EmployeeController {
         employeeService.submitFresherDetails(employeeId, dataJson,
                 idProof, tenthMarksheet, twelfthMarksheet,
                 degreeCertificate, offerLetter, passportPhoto);
-
         return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
-    /**
-     * PUT — partial update. Only send the fields/files you want to change.
-     * Fields absent in JSON are left unchanged. Files not sent are kept as-is.
-     *
-     * Multipart keys (all optional):
-     *   data              – JSON (FresherUpdateRequest) — send only changed fields
-     *   idProof, tenthMarksheet, twelfthMarksheet,
-     *   degreeCertificate, offerLetter, passportPhoto
-     */
-    @PutMapping(value = "/personal-details/{employeeId}/fresher",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> updateFresherDetails(
-            @PathVariable String employeeId,
-            @RequestPart("data")                                        String dataJson,
-            @RequestPart(value = "idProof",           required = false) MultipartFile idProof,
-            @RequestPart(value = "tenthMarksheet",    required = false) MultipartFile tenthMarksheet,
-            @RequestPart(value = "twelfthMarksheet",  required = false) MultipartFile twelfthMarksheet,
-            @RequestPart(value = "degreeCertificate", required = false) MultipartFile degreeCertificate,
-            @RequestPart(value = "offerLetter",       required = false) MultipartFile offerLetter,
-            @RequestPart(value = "passportPhoto",     required = false) MultipartFile passportPhoto) {
-
-        employeeService.updateFresherDetails(employeeId, dataJson,
-                idProof, tenthMarksheet, twelfthMarksheet,
-                degreeCertificate, offerLetter, passportPhoto);
-
-        return ResponseEntity.ok("Personal details updated successfully.");
-    }
-
     // ─────────────────────────────────────────────────────────────
-    // EXPERIENCED
+    // EXPERIENCED — POST (first-time submission, all fields + files mandatory)
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * POST — first-time submission. All fields and files are mandatory.
-     *
      * Multipart keys:
-     *   data             – JSON (ExperiencedPersonalDetailsRequest)
-     *                      "experiences" array index matches "experienceCerts" order.
-     *   idProof, passportPhoto – single files
-     *   experienceCerts  – one file per experience entry
-     *   relievingLetter  – single file for last company
+     *   data              – JSON (ExperiencedPersonalDetailsRequest)
+     *                       "experiences" array index must match file lists.
+     *   idProof           – single file
+     *   passportPhoto     – single file
+     *   experienceCerts   – one file per experience entry (indexed list)
+     *   joiningLetters    – optional indexed list; send null/absent for entries without one
+     *   relievingLetter   – single file for the last-company entry
      */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> submitExperiencedDetails(
             @PathVariable String employeeId,
-            @RequestPart("data")             String dataJson,
-            @RequestPart("idProof")          MultipartFile idProof,
-            @RequestPart("passportPhoto")    MultipartFile passportPhoto,
-            @RequestPart("experienceCerts")  List<MultipartFile> experienceCerts,
-            @RequestPart("relievingLetter")  MultipartFile relievingLetter) {
+            @RequestPart("data")                                       String dataJson,
+            @RequestPart("idProof")                                    MultipartFile idProof,
+            @RequestPart("passportPhoto")                              MultipartFile passportPhoto,
+            @RequestPart("experienceCerts")                            List<MultipartFile> experienceCerts,
+            @RequestPart(value = "joiningLetters", required = false)   List<MultipartFile> joiningLetters,
+            @RequestPart("relievingLetter")                            MultipartFile relievingLetter) {
 
         employeeService.submitExperiencedDetails(employeeId, dataJson,
-                idProof, passportPhoto, experienceCerts, relievingLetter);
-
+                idProof, passportPhoto, experienceCerts, joiningLetters, relievingLetter);
         return ResponseEntity.ok("Personal details submitted successfully.");
     }
 
-    /**
-     * PUT — partial update. Only send what changed.
-     *
-     * Multipart keys (all optional):
-     *   data             – JSON (ExperiencedUpdateRequest) — send only changed fields.
-     *                      If "experiences" array is included, experienceCerts files
-     *                      must also be provided (one per entry), and relievingLetter
-     *                      must be sent if any entry is marked lastCompany.
-     *                      If "experiences" is absent, existing entries are untouched.
-     *   idProof          – replace ID proof file (optional)
-     *   passportPhoto    – replace passport photo (optional)
-     *   experienceCerts  – required only when "experiences" is in JSON
-     *   relievingLetter  – required only when an experience entry has lastCompany=true
-     */
-    @PutMapping(value = "/personal-details/{employeeId}/experienced",
+    @PutMapping(value = "/profile/{employeeId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> updateExperiencedDetails(
+    public ResponseEntity<String> updateProfile(
             @PathVariable String employeeId,
-            @RequestPart("data")                                          String dataJson,
-            @RequestPart(value = "idProof",         required = false)     MultipartFile idProof,
-            @RequestPart(value = "passportPhoto",   required = false)     MultipartFile passportPhoto,
-            @RequestPart(value = "experienceCerts", required = false)     List<MultipartFile> experienceCerts,
-            @RequestPart(value = "relievingLetter", required = false)     MultipartFile relievingLetter) {
+            @RequestPart("data") String dataJson,
+            // shared / fresher files
+            @RequestPart(value = "idProof",           required = false)    MultipartFile idProof,
+            @RequestPart(value = "passportPhoto",     required = false)    MultipartFile passportPhoto,
+            @RequestPart(value = "tenthMarksheet",    required = false)    MultipartFile tenthMarksheet,
+            @RequestPart(value = "twelfthMarksheet",  required = false)    MultipartFile twelfthMarksheet,
+            @RequestPart(value = "degreeCertificate", required = false)    MultipartFile degreeCertificate,
+            @RequestPart(value = "offerLetter",       required = false)    MultipartFile offerLetter,
+            @RequestPart(value = "experienceCerts",   required = false)    List<MultipartFile> experienceCerts,
+            @RequestPart(value = "joiningLetters",    required = false)    List<MultipartFile> joiningLetters,
+            @RequestPart(value = "relievingLetter",   required = false)    MultipartFile relievingLetter) {
 
-        employeeService.updateExperiencedDetails(employeeId, dataJson,
-                idProof, passportPhoto, experienceCerts, relievingLetter);
+        employeeService.updateProfile(employeeId, dataJson,
+                idProof, passportPhoto,
+                tenthMarksheet, twelfthMarksheet, degreeCertificate, offerLetter,
+                experienceCerts, joiningLetters, relievingLetter);
 
-        return ResponseEntity.ok("Personal details updated successfully.");
+        return ResponseEntity.ok("Profile updated successfully.");
     }
 
     // ── Personal details read ─────────────────────────────────────
