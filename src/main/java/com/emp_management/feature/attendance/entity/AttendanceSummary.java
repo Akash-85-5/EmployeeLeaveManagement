@@ -13,7 +13,6 @@ public class AttendanceSummary {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 🔴 FIXED → String (NOT Long)
     @Column(name = "employee_id", nullable = false)
     private String employeeId;
 
