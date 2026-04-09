@@ -233,9 +233,6 @@ public class LeaveApprovalService {
                                Employee finalApprover,
                                String reason) {
         leave.setStatus(finalStatus);
-        if (finalStatus == RequestStatus.REJECTED){
-            leave.setRejectionReason(reason);
-        }
         leave.setApprovedBy(finalApprover.getEmpId());
         leave.setApprovedRole(finalApprover.getRole().getRoleName());
         leave.setApprovedAt(LocalDateTime.now());
