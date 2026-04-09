@@ -3,12 +3,15 @@ package com.emp_management.feature.leave.annual.service;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.entity.AnnualLeaveMonthlyBalance;
+import com.emp_management.feature.leave.annual.dto.AnnualLeaveBalanceResponse;
+import com.emp_management.feature.leave.annual.mapper.AnnualLeaveBalanceMapper;
 import com.emp_management.feature.leave.annual.entity.LeaveType;
 import com.emp_management.feature.leave.annual.repository.AnnualLeaveMonthlyBalanceRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.carryforward.entity.CarryForwardBalance;
 import com.emp_management.feature.leave.carryforward.repository.CarryForwardBalanceRepository;
 import com.emp_management.shared.exceptions.BadRequestException;
+
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,25 +20,26 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Manages the cumulative ANNUAL leave monthly balance.
+ * Manages the cumulative ANNUAL_LEAVE monthly balance.
  *
  * RULES:
- *  - Each month, (allocatedDays / 12) days are accrued.
- *  - Only the CURRENT month's record is lazily created on first access.
- *  - Prior months are NOT backfilled — new employees joining mid-year
- *    start with a single month's accrual, not all months up to today.
- *  - Jan: available = monthlyRate + carry_forward_remaining (from previous year)
- *  - Feb onwards: available = previous month's remaining + monthlyRate
- *  - Dec year-end: unused remaining → carry forward (max 10 days).
+ *  - Each month, 2 days (ANNUAL_LEAVE_PER_MONTH) are added cumulatively.
+ *  - Employee can use up to their cumulative available days.
+ *  - Jan of year: available = 2 + carry_forward_remaining (from previous year)
+ *  - Feb: available = Jan_remaining + 2
+ *  - Mar: available = Feb_remaining + 2  ... and so on.
+ *  - Dec year-end: unused remaining → carry forward (max 10).
+ *
+ * This service ensures records are lazily initialized up to the current month
+ * whenever a balance check or deduction is needed.
  */
 @Service
 public class AnnualLeaveBalanceService {
 
     private static final Logger log = LoggerFactory.getLogger(AnnualLeaveBalanceService.class);
-
-    private static final double MAX_CARRY_FORWARD = 10.0;
 
     private final AnnualLeaveMonthlyBalanceRepository monthlyBalanceRepo;
     private final CarryForwardBalanceRepository       carryForwardRepo;
@@ -52,14 +56,22 @@ public class AnnualLeaveBalanceService {
         this.leaveTypeRepository = leaveTypeRepository;
     }
 
+    // ─── resolve from DB ─────────────────────────────────────────
+
+    private LeaveType getAnnualLeaveType() {
+        return leaveTypeRepository.findByLeaveType("ANNUAL")
+                .orElseThrow(() -> new RuntimeException(
+                        "LeaveType 'ANNUAL_LEAVE' not found in DB. Please seed the leave_type table."));
+    }
+
+    private double getMonthlyAccrualRate(LeaveType leaveType) {
+        return leaveType.getAllocatedDays() / 12.0;
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // PUBLIC API
     // ═══════════════════════════════════════════════════════════════
 
-    /**
-     * Returns the remaining (available) days for the given month.
-     * Initializes the current month's record if it doesn't exist yet.
-     */
     @Transactional
     public double getAvailableForMonth(String employeeId, int year, int month) {
         ensureCurrentMonthInitialized(employeeId, year, month);
@@ -100,9 +112,6 @@ public class AnnualLeaveBalanceService {
                 days, employeeId, month, year, newRemaining);
     }
 
-    /**
-     * Restores leave days back to the given month's balance (on cancellation/rejection).
-     */
     @Transactional
     public void restoreLeave(String employeeId, int year, int month, double days) {
         monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
@@ -117,10 +126,6 @@ public class AnnualLeaveBalanceService {
                 });
     }
 
-    /**
-     * Returns all monthly balance records for the given year.
-     * Only initializes the current month — does not backfill past months.
-     */
     @Transactional
     public List<AnnualLeaveMonthlyBalance> getYearSummary(String employeeId, int year) {
         int currentMonth = (year == LocalDate.now().getYear())
@@ -129,48 +134,12 @@ public class AnnualLeaveBalanceService {
         return monthlyBalanceRepo.findByEmployeeIdAndYearOrderByMonthAsc(employeeId, year);
     }
 
-    /**
-     * Year-end job: carries forward unused annual leave (max 10 days) to the next year.
-     * Should be triggered by a scheduler at the end of December.
-     */
-    @Transactional
-    public void processYearEndCarryForward(String employeeId, int fromYear) {
-        // Ensure December record exists before reading it
-        ensureCurrentMonthInitialized(employeeId, fromYear, 12);
-
-        double remaining = monthlyBalanceRepo
-                .findByEmployeeIdAndYearAndMonth(employeeId, fromYear, 12)
-                .map(AnnualLeaveMonthlyBalance::getRemainingDays)
-                .orElse(0.0);
-
-        double carryForward = Math.min(remaining, MAX_CARRY_FORWARD);
-        if (carryForward <= 0) {
-            log.info("[CF] No carry forward for employee {} from year {}", employeeId, fromYear);
-            return;
-        }
-
-        Employee employee = employeeRepository.findByEmpId(employeeId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Employee not found: " + employeeId));
-
-        int toYear = fromYear + 1;
-        CarryForwardBalance cf = carryForwardRepo
-                .findByEmployee_EmpIdAndYear(employeeId, toYear)
-                .orElse(new CarryForwardBalance());
-
-        cf.setEmployee(employee);
-        cf.setYear(toYear);
-        cf.setTotalCarriedForward(carryForward);
-        cf.setTotalUsed(0.0);
-        cf.setRemaining(carryForward);
-        carryForwardRepo.save(cf);
-
-        log.info("[CF] Carried forward {} days for employee {} to year {}",
-                carryForward, employeeId, toYear);
-    }
+    // ✅ REMOVED: processYearEndCarryForward() method.
+    //    It has been moved to CarryForwardBalanceService.processYearEndCarryForward().
+    //    The scheduler (CarryForwardScheduler) now calls it from there.
 
     // ═══════════════════════════════════════════════════════════════
-    // PRIVATE HELPERS
+    // INTERNAL
     // ═══════════════════════════════════════════════════════════════
 
     /**
@@ -212,14 +181,9 @@ public class AnnualLeaveBalanceService {
                 month, year, employeeId, monthlyRate, previousRemaining, available);
     }
 
-    /**
-     * For January: seeds from carry-forward balance of the previous year.
-     * For other months: reads the previous month's remaining days.
-     * If the previous month record doesn't exist (new employee joining mid-year),
-     * returns 0.0 — so they only get the current month's accrual, not a backfill.
-     */
     private double getPreviousRemaining(String employeeId, int year, int month) {
         if (month == 1) {
+            // Jan: seed from carry-forward balance of previous year
             double cf = carryForwardRepo
                     .findByEmployee_EmpIdAndYear(employeeId, year)
                     .map(CarryForwardBalance::getRemaining)
@@ -230,21 +194,32 @@ public class AnnualLeaveBalanceService {
         return monthlyBalanceRepo
                 .findByEmployeeIdAndYearAndMonth(employeeId, year, month - 1)
                 .map(AnnualLeaveMonthlyBalance::getRemainingDays)
-                .orElse(0.0); // 0.0 = new employee joining mid-year, no prior record
-    }
-
-    private LeaveType getAnnualLeaveType() {
-        return leaveTypeRepository.findByLeaveType("ANNUAL")
-                .orElseThrow(() -> new BadRequestException(
-                        "LeaveType 'ANNUAL' not found in DB. Please seed the leave_type table."));
-    }
-
-    private double getMonthlyAccrualRate(LeaveType leaveType) {
-        return leaveType.getAllocatedDays() / 12.0;
+                .orElse(0.0);
     }
 
     private AnnualLeaveMonthlyBalance getOrThrow(String employeeId, int year, int month) {
         return monthlyBalanceRepo.findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new BadRequestException(
+                        "Annual leave balance not found for employee "
+                                + employeeId + " " + year + "/" + month));
+    }
+    // ================= DTO METHODS (NEW - SAFE ADDITION) =================
+
+    @Transactional
+    public List<AnnualLeaveBalanceResponse> getYearSummaryDTO(String employeeId, int year) {
+        return getYearSummary(employeeId, year)
+                .stream()
+                .map(AnnualLeaveBalanceMapper::toDTO)
+                .toList();
+    }
+
+    @Transactional
+    public AnnualLeaveBalanceResponse getSingleMonthDTO(String employeeId, int year, int month) {
+        ensureCurrentMonthInitialized(employeeId, year, month);
+
+        return monthlyBalanceRepo
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .map(AnnualLeaveBalanceMapper::toDTO)
                 .orElseThrow(() -> new BadRequestException(
                         "Annual leave balance not found for employee "
                                 + employeeId + " " + year + "/" + month));

@@ -48,6 +48,11 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
 
     List<LeaveApplication> findByEmployee_EmpIdInAndStatus(
             List<String> empIds, RequestStatus status);
+    List<LeaveApplication> findByEmployee_EmpIdAndLeaveType_LeaveTypeAndStatus(
+            String empId,
+            String leaveType,
+            RequestStatus status);
+
 
     // ── Overlap check ─────────────────────────────────────────────
 
