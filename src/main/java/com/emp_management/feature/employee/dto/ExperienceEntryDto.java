@@ -26,16 +26,6 @@ public class ExperienceEntryDto {
     @NotNull(message = "End date is required")
     private LocalDate endDate;
 
-    /** Exactly one entry per submission must be marked true. */
-    private boolean lastCompany;
-
-    /**
-     * Set true when a joining letter file is being sent for this entry
-     * in joiningLetters[i]. Service uses this flag to know whether to
-     * look for a file at that index.
-     */
-    private boolean hasJoiningLetter;
-
     public String getCompanyName() { return companyName; }
     public void setCompanyName(String companyName) { this.companyName = companyName; }
 
@@ -47,10 +37,4 @@ public class ExperienceEntryDto {
 
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
-
-    public boolean isLastCompany() { return lastCompany; }
-    public void setLastCompany(boolean lastCompany) { this.lastCompany = lastCompany; }
-
-    public boolean isHasJoiningLetter() { return hasJoiningLetter; }
-    public void setHasJoiningLetter(boolean hasJoiningLetter) { this.hasJoiningLetter = hasJoiningLetter; }
 }

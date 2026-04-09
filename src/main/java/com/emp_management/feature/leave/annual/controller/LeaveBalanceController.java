@@ -16,7 +16,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/leave/balance")
-public class LeaveBalanceController {
+public class
+
+LeaveBalanceController {
 
     private final AnnualLeaveBalanceService annualService;
     private final SickLeaveBalanceService sickService;

@@ -3,6 +3,7 @@ package com.emp_management.infrastructure.storage;
 
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
+import com.emp_management.shared.exceptions.BadRequestException;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -42,7 +43,7 @@ public class FileController {
         try {
             Files.createDirectories(Paths.get(uploadDir));
         } catch (IOException e) {
-            throw new RuntimeException("Could not create upload folder", e);
+            throw new BadRequestException("Could not create upload folder");
         }
     }
 
