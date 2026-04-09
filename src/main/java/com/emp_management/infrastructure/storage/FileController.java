@@ -47,7 +47,7 @@ public class FileController {
 
     @GetMapping("/view")
 //    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
-    public ResponseEntity<Resource> viewDocument(@RequestParam String path) {
+    public ResponseEntity<Resource> viewFile(@RequestParam String path) {
 
         // Prevent path traversal attacks (e.g. ../../etc/passwd)
         if (path.contains("..")) {
@@ -118,5 +118,13 @@ public class FileController {
                 .stream()
                 .map(LeaveAttachment::getFileUrl)
                 .collect(Collectors.toList());
+    }
+
+    private String detectContentType(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".pdf"))  return "application/pdf";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".png"))  return "image/png";
+        return "application/octet-stream";
     }
 }

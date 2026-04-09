@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public class LeaveApplicationResponseDTO {
+public class
+
+LeaveApplicationResponseDTO {
 
     private Long id;
     private String employeeId;  // only the ID, not the whole Employee object
