@@ -11,12 +11,10 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -44,6 +42,37 @@ public class FileController {
             Files.createDirectories(Paths.get(uploadDir));
         } catch (IOException e) {
             throw new BadRequestException("Could not create upload folder");
+        }
+    }
+
+    @GetMapping("/view")
+//    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    public ResponseEntity<Resource> viewDocument(@RequestParam String path) {
+
+        // Prevent path traversal attacks (e.g. ../../etc/passwd)
+        if (path.contains("..")) {
+            throw new BadRequestException("Invalid document path.");
+        }
+
+        try {
+            Path filePath = Paths.get(uploadDir).resolve(path).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new BadRequestException("Document not found: " + path);
+            }
+
+            String contentType = detectContentType(path);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    // "inline" opens in browser, "attachment" forces download
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+
+        } catch (MalformedURLException e) {
+            throw new BadRequestException("Invalid document path: " + path);
         }
     }
 

@@ -73,7 +73,7 @@ public class AuthController {
     public ResponseEntity<?> forceChangePassword(
             @RequestBody ForceChangePasswordRequest request,
             @AuthenticationPrincipal CustomUserDetails user) {
-        authService.forceChangePassword(request,user.getEmployeeId());
+        authService.forceChangePassword(request);
         return ResponseEntity.ok(Map.of("message",
                 "Password changed. You may now access the system."));
     }
