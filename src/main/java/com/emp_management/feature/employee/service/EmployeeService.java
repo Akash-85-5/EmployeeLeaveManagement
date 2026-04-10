@@ -917,6 +917,8 @@ public class EmployeeService {
         r.setPfNumber(pd.getPfNumber());               r.setUanNumber(pd.getUanNumber());
         r.setSpouseName(pd.getSpouseName());           r.setSpouseDateOfBirth(pd.getSpouseDateOfBirth());
         r.setSpouseOccupation(pd.getSpouseOccupation()); r.setSpouseContactNumber(pd.getSpouseContactNumber());
+        r.setMotherDateOfBirth(pd.getMotherDateOfBirth()); r.setMotherOccupation(pd.getMotherOccupation());
+        r.setFatherDateOfBirth(pd.getFatherDateOfBirth()); r.setFatherOccupation(pd.getFatherOccupation());
 
         if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank())
             r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))
