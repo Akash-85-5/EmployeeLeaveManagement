@@ -162,14 +162,6 @@ public class LeaveApplication {
 
     // ── Getters & Setters ─────────────────────────────────────────
 
-    public String getRejectionReason() {
-        return rejectionReason;
-    }
-
-    public void setRejectionReason(String rejectionReason) {
-        this.rejectionReason = rejectionReason;
-    }
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
