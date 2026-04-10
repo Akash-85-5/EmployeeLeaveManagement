@@ -226,6 +226,14 @@ public class LeaveApplication {
         isAppointment = appointment;
     }
 
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
     public String getFirstApproverId() { return firstApproverId; }
     public void setFirstApproverId(String firstApproverId) { this.firstApproverId = firstApproverId; }
 

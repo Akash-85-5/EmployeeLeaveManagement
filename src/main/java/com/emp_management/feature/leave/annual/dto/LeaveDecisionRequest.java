@@ -1,10 +1,12 @@
 package com.emp_management.feature.leave.annual.dto;
 
 import com.emp_management.shared.enums.RequestStatus;
+import jakarta.validation.constraints.NotBlank;
 
 public class LeaveDecisionRequest {
     private Long leaveId;
     private RequestStatus decision;
+    @NotBlank(message = "Remark is required")
     private String comments;
     private String approverId;
 
