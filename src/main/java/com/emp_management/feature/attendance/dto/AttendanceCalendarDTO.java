@@ -11,7 +11,7 @@ public class AttendanceCalendarDTO {
     private LocalTime checkOut;
 
     // ✅ Double (hours as decimal like 8.5) — not LocalTime
-    private Double workingHours;
+    private LocalTime workingHours;
 
     // ✅ Added punch records
     private String punchRecords;
@@ -28,8 +28,8 @@ public class AttendanceCalendarDTO {
     public LocalTime getCheckOut() { return checkOut; }
     public void setCheckOut(LocalTime checkOut) { this.checkOut = checkOut; }
 
-    public Double getWorkingHours() { return workingHours; }
-    public void setWorkingHours(Double workingHours) { this.workingHours = workingHours; }
+    public LocalTime getWorkingHours() { return workingHours; }
+    public void setWorkingHours(LocalTime workingHours) { this.workingHours = workingHours; }
 
     public String getPunchRecords() { return punchRecords; }
     public void setPunchRecords(String punchRecords) { this.punchRecords = punchRecords; }

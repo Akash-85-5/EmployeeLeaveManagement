@@ -63,4 +63,11 @@ public class AttendanceController {
 
         return service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
     }
+    @GetMapping("/employee/{empId}/punch-records")
+    public AttendanceCalendarDTO getPunchRecords(
+            @PathVariable String empId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        return service.getPunchRecords(empId, date);
+    }
 }
