@@ -1,6 +1,7 @@
 package com.emp_management.feature.attendance.entity;
 
 import jakarta.persistence.*;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -31,22 +32,21 @@ public class AttendanceSummary {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
-    // ✅ DB stores double (e.g. 8.5 hours) — keep as Double
+    // ✅ NOW CONSISTENT: LocalTime everywhere
     @Column(name = "working_hours")
-    private Double workingHours;
+    private LocalTime workingHours;
 
-    // ✅ Added punch_records
     @Column(name = "punch_records")
     private String punchRecords;
+
+    @Column(name = "shift_id")
+    private Long shiftId;
 
     @Column(name = "late_by")
     private LocalTime lateBy;
 
     @Column(name = "early_going_by")
     private LocalTime earlyGoingBy;
-
-    @Column(name = "ot_hours")
-    private Double otHours;
 
     @Column(name = "leave_id")
     private Long leaveId;
@@ -62,19 +62,45 @@ public class AttendanceSummary {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    @Column(name = "created_by")
+    private LocalDateTime createdBy;
 
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Column(name = "updated_by")
+    private LocalDateTime updatedBy;
 
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    // 🔥 AUTO CALCULATE WORKING HOURS
+//    public void calculateWorkingHours() {
+//        if (checkIn != null && checkOut != null) {
+//
+//            Duration duration = Duration.between(checkIn, checkOut);
+//
+//            // ⚠️ Handle overnight shift (important)
+//            if (duration.isNegative()) {
+//                duration = duration.plusHours(24);
+//            }
+//
+//            long hours = duration.toHours();
+//            long minutes = duration.toMinutes() % 60;
+//
+//            this.workingHours = LocalTime.of((int) hours, (int) minutes);
+//        }
+//    }
+//
+//    @PrePersist
+//    public void onCreate() {
+//        this.createdAt = LocalDateTime.now();
+//        this.updatedAt = LocalDateTime.now();
+//        calculateWorkingHours(); // ✅ auto-set before insert
+//    }
+//
+//    @PreUpdate
+//    public void onUpdate() {
+//        this.updatedAt = LocalDateTime.now();
+//        calculateWorkingHours(); // ✅ auto-update
+//    }
 
-    // GETTERS & SETTERS
+    // ---------------- GETTERS & SETTERS ----------------
+
     public Long getId() { return id; }
 
     public String getEmployeeId() { return employeeId; }
@@ -95,20 +121,61 @@ public class AttendanceSummary {
     public LocalTime getCheckOut() { return checkOut; }
     public void setCheckOut(LocalTime checkOut) { this.checkOut = checkOut; }
 
-    public Double getWorkingHours() { return workingHours; }
-    public void setWorkingHours(Double workingHours) { this.workingHours = workingHours; }
+    public LocalTime getWorkingHours() { return workingHours; }
+    public void setWorkingHours(LocalTime workingHours) { this.workingHours = workingHours; }
 
     public String getPunchRecords() { return punchRecords; }
     public void setPunchRecords(String punchRecords) { this.punchRecords = punchRecords; }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getShiftId() {
+        return shiftId;
+    }
+
+    public void setShiftId(Long shiftId) {
+        this.shiftId = shiftId;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(LocalDateTime createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(LocalDateTime updatedBy) {
+        this.updatedBy = updatedBy;
+    }
 
     public LocalTime getLateBy() { return lateBy; }
     public void setLateBy(LocalTime lateBy) { this.lateBy = lateBy; }
 
     public LocalTime getEarlyGoingBy() { return earlyGoingBy; }
     public void setEarlyGoingBy(LocalTime earlyGoingBy) { this.earlyGoingBy = earlyGoingBy; }
-
-    public Double getOtHours() { return otHours; }
-    public void setOtHours(Double otHours) { this.otHours = otHours; }
 
     public Long getLeaveId() { return leaveId; }
     public void setLeaveId(Long leaveId) { this.leaveId = leaveId; }
