@@ -54,7 +54,6 @@ public class LeaveApplicationMapper {
         return dto;
     }
 
-    // ADD THIS NEW METHOD
     public static List<LeaveRemarkDto> mapToRemarks(List<LeaveApproval> approvals) {
         if (approvals == null) return List.of();
         return approvals.stream()

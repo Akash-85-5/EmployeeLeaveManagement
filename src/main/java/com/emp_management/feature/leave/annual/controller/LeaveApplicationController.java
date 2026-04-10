@@ -172,7 +172,7 @@ public class LeaveApplicationController {
     }
 
     @GetMapping("/{id}")
-    public LeaveApplication getLeaveById(@PathVariable Long id) {
+    public LeaveApplicationWithAttachmentsDto getLeaveById(@PathVariable Long id) {
         return leaveApplicationService.getLeaveById(id);
     }
 

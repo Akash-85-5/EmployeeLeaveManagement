@@ -49,7 +49,6 @@ public class FileController {
 //    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     public ResponseEntity<Resource> viewFile(@RequestParam String path) {
 
-        // Prevent path traversal attacks (e.g. ../../etc/passwd)
         if (path.contains("..")) {
             throw new BadRequestException("Invalid document path.");
         }
