@@ -4,6 +4,7 @@ import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
 import com.emp_management.feature.leave.annual.dto.LeaveDecisionRequest;
+import com.emp_management.feature.leave.annual.dto.LeaveRemarkDto;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveApproval;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
@@ -68,6 +69,21 @@ public class LeaveApprovalService {
         return toPageDto(convertToDto(all), pageable);
     }
 
+    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
+        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                .orElseThrow(() -> new EntityNotFoundException("Leave application not found"));
+
+        List<LeaveAttachment> attachments = leaveAttachmentRepository.findByLeaveApplicationId(leaveId);
+        // Fetch remarks/approvals for this leave
+        List<LeaveApproval> approvals = leaveApprovalRepository.findByLeaveIdOrderByDecidedAtDesc(leaveId, Pageable.unpaged()).getContent();
+
+        LeaveApplicationWithAttachmentsDto dto = new LeaveApplicationWithAttachmentsDto(
+                LeaveApplicationMapper.toDTO(leave),
+                attachments
+        );
+        dto.setRemarks(LeaveApplicationMapper.mapToRemarks(approvals));
+        return dto;
+    }
 
 //    public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
 //        LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
@@ -97,7 +113,7 @@ public class LeaveApprovalService {
 
     @Transactional
     public void decideLeave(LeaveDecisionRequest request) {
-        validateDecision(request.getDecision());
+        validateDecision(request.getDecision(), request.getComments());
 
         LeaveApplication leave = leaveApplicationRepository.findById(request.getLeaveId())
                 .orElseThrow(() -> new EntityNotFoundException("Leave not found"));
@@ -105,6 +121,9 @@ public class LeaveApprovalService {
         if (leave.getStatus() != RequestStatus.PENDING) {
             throw new BadRequestException(
                     "Leave is already processed with status: " + leave.getStatus());
+        }
+        if (request.getComments() == null || request.getComments().trim().isEmpty()) {
+            throw new BadRequestException("Remark is required for both approval and rejection");
         }
 
         Employee approver = employeeRepository.findByEmpId(request.getApproverId())
@@ -126,6 +145,9 @@ public class LeaveApprovalService {
 
     @Transactional
     public void approveLeave(Long leaveId, String approverId, String comments) {
+        if (comments == null || comments.trim().isEmpty()) {
+            throw new BadRequestException("Remark is required when approving the leave");
+        }
         LeaveDecisionRequest req = new LeaveDecisionRequest();
         req.setLeaveId(leaveId);
         req.setApproverId(approverId);
@@ -136,12 +158,15 @@ public class LeaveApprovalService {
 
     @Transactional
     public void rejectLeave(Long leaveId, String approverId, String comments) {
+        if (comments == null || comments.trim().isEmpty()) {
+            throw new BadRequestException("Remark is required when rejecting the leave");
+        }
         LeaveDecisionRequest req = new LeaveDecisionRequest();
         req.setLeaveId(leaveId);
         req.setApproverId(approverId);
         req.setDecision(RequestStatus.REJECTED);
         req.setComments(comments);
-    decideLeave(req);
+        decideLeave(req);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -233,11 +258,13 @@ public class LeaveApprovalService {
                                Employee finalApprover,
                                String reason) {
         leave.setStatus(finalStatus);
+        if (finalStatus == RequestStatus.REJECTED){
+            leave.setRejectionReason(reason);
+        }
         leave.setApprovedBy(finalApprover.getEmpId());
         leave.setApprovedRole(finalApprover.getRole().getRoleName());
         leave.setApprovedAt(LocalDateTime.now());
         leave.setEscalated(false);
-        leave.setRejectionReason(reason);
         if (finalStatus == RequestStatus.APPROVED) {
             leaveApplicationService.applyBalanceDeduction(leave);
         }
@@ -325,13 +352,17 @@ public class LeaveApprovalService {
                 case REJECTED -> "Your " + leave.getLeaveType().getLeaveType() + " leave from "
                         + leave.getStartDate() + " to " + leave.getEndDate()
                         + " has been rejected. Reason: "
-                        + (leave.getReason() != null ? leave.getReason() : "");
+                        + (leave.getRejectionReason() != null ? leave.getRejectionReason() : "");
                 default -> "A meeting is required regarding your leave from "
                         + leave.getStartDate() + " to " + leave.getEndDate() + ".";
             };
             notificationService.createNotification(
                     emp.getEmpId(), approver.getEmail(), emp.getEmail(),
-                    mapEventType(decision),  Channel.EMAIL, context);
+                    switch (decision) {
+                        case APPROVED -> EventType.LEAVE_APPROVED;
+                        case REJECTED -> EventType.LEAVE_REJECTED;
+                        default -> EventType.LEAVE_IN_PROGRESS;
+                    },  Channel.EMAIL, context);
         });
     }
 
@@ -350,48 +381,61 @@ public class LeaveApprovalService {
     // ═══════════════════════════════════════════════════════════════
 
     private List<LeaveApplicationWithAttachmentsDto> convertToDto(List<LeaveApplication> leaves) {
-        if (leaves.isEmpty()) return List.of();
+        if (leaves == null || leaves.isEmpty()) return List.of();
 
         List<Long> leaveIds = leaves.stream()
                 .map(LeaveApplication::getId)
                 .collect(Collectors.toList());
 
-        Map<Long, List<LeaveAttachment>> byLeaveId =
+        // Batch fetch attachments
+        Map<Long, List<LeaveAttachment>> attachmentsByLeaveId =
                 leaveAttachmentRepository.findByLeaveApplicationIdIn(leaveIds)
                         .stream()
+                        .filter(a -> a.getLeaveApplicationId() != null)
                         .collect(Collectors.groupingBy(LeaveAttachment::getLeaveApplicationId));
 
+        // Batch fetch remarks (Approvals)
+        // This satisfies: Emp sees both, and Managers see each other's remarks
+        Map<Long, List<LeaveRemarkDto>> remarksByLeaveId =
+                leaveApprovalRepository.findByLeaveIdInOrderByDecidedAtAsc(leaveIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                LeaveApproval::getLeaveId,
+                                Collectors.mapping(LeaveRemarkDto::fromApproval, Collectors.toList())
+                        ));
+
         return leaves.stream()
-                .map(l -> new LeaveApplicationWithAttachmentsDto(
-                        LeaveApplicationMapper.toDTO(l), // ✅ USE MAPPER HERE
-                        byLeaveId.getOrDefault(l.getId(), List.of())
-                ))
+                .map(l -> {
+                    LeaveApplicationWithAttachmentsDto dto = new LeaveApplicationWithAttachmentsDto(
+                            LeaveApplicationMapper.toDTO(l),
+                            attachmentsByLeaveId.getOrDefault(l.getId(), List.of())
+                    );
+                    // Attach the remarks to the DTO
+                    dto.setRemarks(remarksByLeaveId.getOrDefault(l.getId(), List.of()));
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
     private <T> Page<T> toPageDto(List<T> list, Pageable pageable) {
-        int start   = (int) pageable.getOffset();
-        int end     = Math.min(start + pageable.getPageSize(), list.size());
-        List<T> content = start > list.size() ? List.of() : list.subList(start, end);
-        return new PageImpl<>(content, pageable, list.size());
+        if (list == null) return new PageImpl<>(List.of(), pageable, 0);
+
+        int start = (int) pageable.getOffset();
+        // Safety check: if start is beyond list size, return empty page
+        if (start >= list.size()) {
+            return new PageImpl<>(List.of(), pageable, list.size());
+        }
+
+        int end = Math.min(start + pageable.getPageSize(), list.size());
+        return new PageImpl<>(list.subList(start, end), pageable, list.size());
     }
 
-    private <T> Page<T> toPage(List<T> list, Pageable pageable) {
-        return toPageDto(list, pageable);
-    }
-
-    private void validateDecision(RequestStatus decision) {
-        if (decision != RequestStatus.APPROVED
-                && decision != RequestStatus.REJECTED) {
+    private void validateDecision(RequestStatus decision, String comments) {
+        if (decision != RequestStatus.APPROVED && decision != RequestStatus.REJECTED) {
             throw new BadRequestException("Invalid decision: " + decision);
         }
-    }
-
-    private EventType mapEventType(RequestStatus status) {
-        return switch (status) {
-            case APPROVED         -> EventType.LEAVE_APPROVED;
-            case REJECTED         -> EventType.LEAVE_REJECTED;
-            default               -> EventType.LEAVE_APPLIED;
-        };
-    }
-}
+        // Final safety check: ensuring remarks are present at the service level
+        if (comments == null || comments.isBlank()) {
+            throw new BadRequestException("Remarks are mandatory for " + decision.toString().toLowerCase());
+        }
+    }}

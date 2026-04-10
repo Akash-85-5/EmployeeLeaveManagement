@@ -4,12 +4,14 @@ import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmen
 import com.emp_management.feature.leave.annual.dto.LeaveDecisionRequest;
 import com.emp_management.feature.leave.annual.entity.LeaveApproval;
 import com.emp_management.feature.leave.annual.service.LeaveApprovalService;
+import com.emp_management.shared.exceptions.BadRequestException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/leave-approvals")
@@ -70,7 +72,7 @@ public class LeaveApprovalController {
     // ── Core decision ─────────────────────────────────────────────
 
     @PatchMapping("/decision")
-    public ResponseEntity<String> decideLeave(@RequestBody LeaveDecisionRequest request) {
+    public ResponseEntity<String> decideLeave(@Valid @RequestBody LeaveDecisionRequest request) {
         leaveApprovalService.decideLeave(request);
         return ResponseEntity.ok("Decision recorded: " + request.getDecision());
     }
@@ -79,7 +81,11 @@ public class LeaveApprovalController {
     public ResponseEntity<String> approveLeave(
             @PathVariable Long leaveId,
             @RequestParam String approverId,
-            @RequestParam(required = false) String comments) {
+            @RequestParam String comments) { // ❌ make required
+        if (comments == null || comments.isBlank()) {
+            throw new BadRequestException("Remarks are required for approval");
+        }
+
         leaveApprovalService.approveLeave(leaveId, approverId, comments);
         return ResponseEntity.ok("Leave approved successfully");
     }
@@ -88,7 +94,11 @@ public class LeaveApprovalController {
     public ResponseEntity<String> rejectLeave(
             @PathVariable Long leaveId,
             @RequestParam String approverId,
-            @RequestParam(required = false) String comments) {
+            @RequestParam String comments) { // ❌ make required
+        if (comments == null || comments.isBlank()) {
+            throw new BadRequestException("Remarks are required for rejection");
+        }
+
         leaveApprovalService.rejectLeave(leaveId, approverId, comments);
         return ResponseEntity.ok("Leave rejected successfully");
     }
