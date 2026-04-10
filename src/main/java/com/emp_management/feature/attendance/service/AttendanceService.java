@@ -22,7 +22,7 @@ public class AttendanceService {
     public List<AttendanceCalendarDTO> getEmployeeMonthly(String empId, int year, int month) {
 
         LocalDate from = LocalDate.of(year, month, 1);
-        LocalDate to   = from.withDayOfMonth(from.lengthOfMonth());
+        LocalDate to = from.withDayOfMonth(from.lengthOfMonth());
 
         return repo
                 .findByEmployeeIdAndAttendanceDateBetweenOrderByAttendanceDateAsc(empId, from, to)
@@ -63,7 +63,8 @@ public class AttendanceService {
         dto.setStatus(att.getAttendanceStatus());
         dto.setCheckIn(att.getCheckIn());
         dto.setCheckOut(att.getCheckOut());
-        dto.setWorkingHours(att.getWorkingHours());
+        dto.setWorkingHours(att.getWorkingHours());     // ✅ Double → Double, no mismatch
+        dto.setPunchRecords(att.getPunchRecords());     // ✅ punch_records added
         return dto;
     }
 
@@ -75,7 +76,8 @@ public class AttendanceService {
         dto.setStatus(att.getAttendanceStatus());
         dto.setCheckIn(att.getCheckIn());
         dto.setCheckOut(att.getCheckOut());
-        dto.setWorkingHours(att.getWorkingHours());
+        dto.setWorkingHours(att.getWorkingHours());     // ✅ Double → Double
+        dto.setPunchRecords(att.getPunchRecords());     // ✅ punch_records added
         dto.setLopTriggered(att.isLopTriggered());
         return dto;
     }
