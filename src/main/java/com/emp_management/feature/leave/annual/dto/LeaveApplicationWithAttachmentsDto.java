@@ -12,6 +12,7 @@ public class LeaveApplicationWithAttachmentsDto {
     private LeaveApplicationResponseDTO leaveApplicationResponseDTO;
     private List<LeaveAttachment> attachments;
     private int attachmentCount;
+    private List<LeaveRemarkDto> remarks;
 
     // ── Constructors ──────────────────────────────────────────────
 
@@ -26,6 +27,13 @@ public class LeaveApplicationWithAttachmentsDto {
 
     // ── Getters & Setters ──────────────────────────────────────────
 
+    public List<LeaveRemarkDto> getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(List<LeaveRemarkDto> remarks) {
+        this.remarks = remarks;
+    }
     public List<LeaveAttachment> getAttachments() {
         return attachments;
     }
