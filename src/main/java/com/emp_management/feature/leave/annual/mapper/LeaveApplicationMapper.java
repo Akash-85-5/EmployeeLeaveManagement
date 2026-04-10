@@ -1,11 +1,18 @@
 package com.emp_management.feature.leave.annual.mapper;
 
 import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
+import com.emp_management.feature.leave.annual.dto.LeaveRemarkDto;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
+import com.emp_management.feature.leave.annual.entity.LeaveApproval;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class LeaveApplicationMapper {
 
     public static LeaveApplicationResponseDTO toDTO(LeaveApplication entity) {
+        if (entity == null) return null;
+
         LeaveApplicationResponseDTO dto = new LeaveApplicationResponseDTO();
 
         dto.setId(entity.getId());
@@ -24,6 +31,7 @@ public class LeaveApplicationMapper {
         dto.setStatus(entity.getStatus());
         dto.setCurrentApprovalLevel(entity.getCurrentApprovalLevel());
         dto.setRequiredApprovalLevels(entity.getRequiredApprovalLevels());
+        dto.setRejectionReason(entity.getRejectionReason());
         dto.setCurrentApproverId(entity.getCurrentApproverId());
         dto.setFirstApproverId(entity.getFirstApproverId());
         dto.setFirstApproverDecision(entity.getFirstApproverDecision());
@@ -44,5 +52,13 @@ public class LeaveApplicationMapper {
         dto.setEscalatedAt(entity.getEscalatedAt());
 
         return dto;
+    }
+
+    // ADD THIS NEW METHOD
+    public static List<LeaveRemarkDto> mapToRemarks(List<LeaveApproval> approvals) {
+        if (approvals == null) return List.of();
+        return approvals.stream()
+                .map(LeaveRemarkDto::fromApproval)
+                .collect(Collectors.toList());
     }
 }
