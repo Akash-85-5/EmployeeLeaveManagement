@@ -195,6 +195,7 @@ public class EmployeeService {
             List<MultipartFile> joiningLetters,
             List<MultipartFile> relievingLetter) {
 
+        System.out.println(employeeId);
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
@@ -561,12 +562,16 @@ public class EmployeeService {
                     documentStorageService.delete(doc.getExperienceCertPath());
                     doc.setExperienceCertPath(documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
                 }
-                documentStorageService.delete(doc.getJoiningLetterPath());
-                doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
-
+                boolean newJoiningSent = experienceCerts != null && i < experienceCerts.size() && hasFile(experienceCerts.get(i));
+                if(newJoiningSent) {
+                    documentStorageService.delete(doc.getJoiningLetterPath());
+                    doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
+                }
+                boolean newRelievingSent = experienceCerts != null && i < experienceCerts.size() && hasFile(experienceCerts.get(i));
+                if (newRelievingSent){
                 documentStorageService.delete(doc.getRelievingLetterPath());
                 doc.setRelievingLetterPath(documentStorageService.save(relievingLetter.get(i), "relieving-letter", employeeId));
-
+                }
                 // Shared files on first entry
                 if (i == 0) {
                     if (newIdProofPath != null) { documentStorageService.delete(doc.getIdProofPath()); doc.setIdProofPath(newIdProofPath); }

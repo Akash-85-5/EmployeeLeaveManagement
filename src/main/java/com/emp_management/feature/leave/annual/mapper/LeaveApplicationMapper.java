@@ -25,6 +25,7 @@ public class LeaveApplicationMapper {
         dto.setCurrentApprovalLevel(entity.getCurrentApprovalLevel());
         dto.setRequiredApprovalLevels(entity.getRequiredApprovalLevels());
         dto.setCurrentApproverId(entity.getCurrentApproverId());
+        dto.setRejectionReason(entity.getRejectionReason());
         dto.setFirstApproverId(entity.getFirstApproverId());
         dto.setFirstApproverDecision(entity.getFirstApproverDecision());
         dto.setFirstApproverDecidedAt(entity.getFirstApproverDecidedAt());
