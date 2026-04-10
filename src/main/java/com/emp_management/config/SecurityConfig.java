@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh",
                                 "/api/password-reset/request",
-                                "/api/password-reset/**"
+                                "/api/password-reset/**",
+                                "/api/auth/force-change"
                         ).permitAll()
 
                         .requestMatchers("/api/hr/**").hasRole("HR")

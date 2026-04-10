@@ -61,9 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // ✅ 4. Load user
         String empId = jwtTokenProvider.getEmployeeIdFromToken(token);
-
         User user = userRepository.findByEmployee_EmpId(empId).orElse(null);
-
         if (user == null) {
             sendUnauthorized(response, "User not found");
             return;
@@ -82,7 +80,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         CustomUserDetails userDetails = new CustomUserDetails(user);
-
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
                         userDetails,

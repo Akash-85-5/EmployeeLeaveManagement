@@ -3,6 +3,8 @@ package com.emp_management.feature.employee.entity;
 import com.emp_management.shared.enums.Gender;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "employee_child")
 public class EmployeeChild {
@@ -27,8 +29,8 @@ public class EmployeeChild {
     private Gender gender;
 
     /** Age in years. */
-    @Column(name = "age", nullable = false)
-    private Integer age;
+    @Column(name = "child_date_of_birth", nullable = false)
+    private LocalDate childDateOfBirth;
 
     // ── Getters & Setters ─────────────────────────────────────────
 
@@ -46,6 +48,11 @@ public class EmployeeChild {
     public Gender getGender() { return gender; }
     public void setGender(Gender gender) { this.gender = gender; }
 
-    public Integer getAge() { return age; }
-    public void setAge(Integer age) { this.age = age; }
+    public LocalDate getChildDateOfBirth() {
+        return childDateOfBirth;
+    }
+
+    public void setChildDateOfBirth(LocalDate childDateOfBirth) {
+        this.childDateOfBirth = childDateOfBirth;
+    }
 }

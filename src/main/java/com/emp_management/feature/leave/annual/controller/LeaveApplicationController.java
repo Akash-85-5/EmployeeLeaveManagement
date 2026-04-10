@@ -3,6 +3,7 @@ package com.emp_management.feature.leave.annual.controller;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
 import com.emp_management.feature.leave.annual.dto.LeaveResponse;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
@@ -171,7 +172,7 @@ public class LeaveApplicationController {
     }
 
     @GetMapping("/{id}")
-    public LeaveApplication getLeaveById(@PathVariable Long id) {
+    public LeaveApplicationWithAttachmentsDto getLeaveById(@PathVariable Long id) {
         return leaveApplicationService.getLeaveById(id);
     }
 

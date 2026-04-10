@@ -16,4 +16,6 @@ public interface LeaveApprovalRepository extends JpaRepository<LeaveApproval, Lo
     Page<LeaveApproval> findByApproverIdOrderByDecidedAtDesc(String approverId, Pageable pageable);
 
     List<LeaveApproval> findByLeaveIdAndApprovalLevel(Long leaveId, ApprovalLevel approvalLevel);
+
+    List<LeaveApproval> findByLeaveIdInOrderByDecidedAtAsc(List<Long> leaveIds);
 }

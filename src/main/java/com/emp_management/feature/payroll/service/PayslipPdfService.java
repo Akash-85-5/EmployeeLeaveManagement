@@ -41,11 +41,12 @@ public class PayslipPdfService {
     // ─────────────────────────────────────────────────────────────────────────
     public ByteArrayInputStream generatePdf(Payslip payslip, EmployeePersonalDetails emp) {
 
-        // Fetch Employee (name, joiningDate) using the employeeId stored on emp
-        Employee employee = employeeRepository.findByEmpId(emp.getEmployee().getEmpId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+        // emp.getEmployee() is already loaded — no need for a second DB call
+        Employee employee = emp.getEmployee();
+        if (employee == null) {
+            throw new ResourceNotFoundException("Employee not found");
+        }
 
-        // Build the flat DTO — only this goes to the template
         PayslipPdfData data = buildPdfData(payslip, emp, employee);
 
         Context context = new Context();
@@ -57,14 +58,14 @@ public class PayslipPdfService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             PdfRendererBuilder builder = new PdfRendererBuilder();
-            String baseUrl = new ClassPathResource("static/").getURL().toExternalForm();            builder.withHtmlContent(html, baseUrl);
+            String baseUrl = new ClassPathResource("static/").getURL().toExternalForm();
+            builder.withHtmlContent(html, baseUrl);
             builder.toStream(out);
             builder.useFastMode();
             builder.run();
         } catch (Exception ex) {
-            throw new BadRequestException(
-                    "Unable to generate payslip PDF. Please try again."
-            );
+            ex.printStackTrace(); // keep this until confirmed working
+            throw new BadRequestException("Unable to generate payslip PDF. Please try again.");
         }
 
         return new ByteArrayInputStream(out.toByteArray());
@@ -171,7 +172,8 @@ public class PayslipPdfService {
                 return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
             }
         } catch (Exception e) {
-            return ""; // logo missing — PDF still generates, just without logo
+            e.printStackTrace(); // log this so you know if logo fails to load
+            return "";
         }
     }
 

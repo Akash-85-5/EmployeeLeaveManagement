@@ -67,6 +67,7 @@ public class ProfileUpdateRequest {
 
     // ── UAN (experienced only) ────────────────────────────────────
     private String uanNumber;
+    private String pfNumber;
 
     // ── Father details ────────────────────────────────────────────
     private String fatherName;
@@ -210,4 +211,12 @@ public class ProfileUpdateRequest {
 
     public List<ExperienceEntryDto> getExperiences() { return experiences; }
     public void setExperiences(List<ExperienceEntryDto> experiences) { this.experiences = experiences; }
+
+    public String getPfNumber() {
+        return pfNumber;
+    }
+
+    public void setPfNumber(String pfNumber) {
+        this.pfNumber = pfNumber;
+    }
 }

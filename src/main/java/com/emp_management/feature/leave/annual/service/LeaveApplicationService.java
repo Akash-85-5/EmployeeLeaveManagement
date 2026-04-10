@@ -6,10 +6,16 @@ import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRep
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.holiday.utils.HolidayChecker;
 import com.emp_management.feature.leave.annual.dto.LeaveApplicationResponseDTO;
+import com.emp_management.feature.leave.annual.dto.LeaveApplicationWithAttachmentsDto;
+import com.emp_management.feature.leave.annual.dto.LeaveRemarkDto;
 import com.emp_management.feature.leave.annual.dto.LeaveResponse;
 import com.emp_management.feature.leave.annual.entity.LeaveApplication;
+import com.emp_management.feature.leave.annual.entity.LeaveApproval;
+import com.emp_management.feature.leave.annual.entity.LeaveAttachment;
 import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
+import com.emp_management.feature.leave.annual.mapper.LeaveApplicationWithAttachmentsDtoMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
+import com.emp_management.feature.leave.annual.repository.LeaveApprovalRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
 import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
@@ -36,7 +42,8 @@ public class LeaveApplicationService {
     private final LeaveApplicationRepository leaveApplicationRepository;
     private final NotificationService notificationService;
     private final EmployeeRepository employeeRepository;
-    private final LeaveTypeRepository           leaveTypeRepository;
+    private final LeaveApprovalRepository leaveApprovalRepository;
+    private final LeaveTypeRepository   leaveTypeRepository;
     private final HolidayChecker holidayChecker;
     private final CompOffService compOffService;
     private final CompOffRepository compOffRepository;
@@ -59,7 +66,9 @@ public class LeaveApplicationService {
             AnnualLeaveBalanceService annualLeaveBalanceService,
             SickLeaveBalanceService sickLeaveBalanceService,
             CarryForwardBalanceService carryForwardBalanceService,
-            EmployeePersonalDetailsRepository personalDetailsRepository){
+            EmployeePersonalDetailsRepository personalDetailsRepository,
+            LeaveApprovalRepository leaveApprovalRepository
+            ){
 //            SeparationService separationService) {
         this.leaveApplicationRepository = leaveApplicationRepository;
         this.notificationService         = notificationService;
@@ -73,6 +82,7 @@ public class LeaveApplicationService {
         this.sickLeaveBalanceService     = sickLeaveBalanceService;
         this.carryForwardBalanceService  = carryForwardBalanceService; // ✅ NEW ASSIGNMENT
         this.personalDetailsRepository   = personalDetailsRepository;
+        this.leaveApprovalRepository = leaveApprovalRepository;
 //        this.separationService           = separationService;
     }
 
@@ -406,10 +416,14 @@ public class LeaveApplicationService {
     // QUERIES
     // ═══════════════════════════════════════════════════════════════
 
-    public LeaveApplication getLeaveById(Long id) {
-        return leaveApplicationRepository.findById(id)
+    public LeaveApplicationWithAttachmentsDto getLeaveById(Long id) {
+        LeaveApplication leave = leaveApplicationRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException(
                         "Leave application not found with ID: " + id));
+        List<LeaveAttachment> attachments = leaveAttachmentRepository.findByLeaveApplicationId(leave.getId());
+
+        List<LeaveApproval> remarks =leaveApprovalRepository.findByLeaveIdInOrderByDecidedAtAsc(List.of(leave.getId()));
+        return LeaveApplicationWithAttachmentsDtoMapper.toDTO(leave , attachments,remarks);
     }
 
     public List<LeaveApplicationResponseDTO> getLeavesByEmployee(String employeeId) {
