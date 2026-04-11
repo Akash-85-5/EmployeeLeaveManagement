@@ -7,6 +7,7 @@ public class AttendanceCalendarDTO {
 
     private LocalDate date;
     private String status;
+
     private LocalTime checkIn;
     private LocalTime checkOut;
 
@@ -15,6 +16,7 @@ public class AttendanceCalendarDTO {
 
     // ✅ Added punch records
     private String punchRecords;
+
 
     public LocalDate getDate() { return date; }
     public void setDate(LocalDate date) { this.date = date; }
