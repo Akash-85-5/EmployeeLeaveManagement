@@ -944,12 +944,14 @@ public class EmployeeService {
                 r.setPassportPhotoPath(doc.getPassportPhotoPath());
             }
         } else if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.EXPERIENCED) {
+            List<ExperiencedDocument> doc = pd.getExperiencedDocuments();
+            r.setIdProofPath(doc.stream().map(a -> a.getIdProofPath()).findFirst().orElse(null));
+            r.setPassportPhotoPath(doc.stream().map(A -> A.getPassportPhotoPath()).findFirst().orElse(null));
             r.setExperiencedDocuments(pd.getExperiencedDocuments().stream()
                     .map(this::toExperiencedDocumentDto)
                     .collect(Collectors.toList()));
         }
     }
-
     private ExperiencedDocumentDto toExperiencedDocumentDto(ExperiencedDocument doc) {
         ExperiencedDocumentDto dto = new ExperiencedDocumentDto();
         dto.setId(doc.getId());
