@@ -1,7 +1,7 @@
 package com.emp_management.feature.attendance.entity;
 
+import com.emp_management.shared.converter.SafeLocalTimeConverter;
 import jakarta.persistence.*;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -27,13 +27,16 @@ public class AttendanceSummary {
     private String attendanceStatus;
 
     @Column(name = "check_in")
+    @Convert(converter = SafeLocalTimeConverter.class)
     private LocalTime checkIn;
 
     @Column(name = "check_out")
+    @Convert(converter = SafeLocalTimeConverter.class)
     private LocalTime checkOut;
 
     // ✅ NOW CONSISTENT: LocalTime everywhere
     @Column(name = "working_hours")
+    @Convert(converter = SafeLocalTimeConverter.class)
     private LocalTime workingHours;
 
     @Column(name = "punch_records")
@@ -43,9 +46,11 @@ public class AttendanceSummary {
     private Long shiftId;
 
     @Column(name = "late_by")
+    @Convert(converter = SafeLocalTimeConverter.class)
     private LocalTime lateBy;
 
     @Column(name = "early_going_by")
+    @Convert(converter = SafeLocalTimeConverter.class)
     private LocalTime earlyGoingBy;
 
     @Column(name = "leave_id")
