@@ -108,9 +108,12 @@ public class AttendanceService {
         dto.setEmployeeId(att.getEmployeeId());
         dto.setEmployeeName(att.getEmployeeName());
         dto.setDate(att.getAttendanceDate());
-        dto.setStatus(att.getAttendanceStatus());
+        dto.setStatus(att.getAttendanceStatus() != null
+                ? att.getAttendanceStatus().trim()
+                : null);
         dto.setCheckIn(att.getCheckIn());
         dto.setCheckOut(att.getCheckOut());
+        dto.setWorkingHours(att.getWorkingHours());
 
 
         // ✅ Same fix here

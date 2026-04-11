@@ -1,10 +1,10 @@
 package com.emp_management.feature.attendance.entity;
 
 import jakarta.persistence.*;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Duration;
 
 @Entity
 @Table(name = "attendance_summary")
@@ -32,7 +32,6 @@ public class AttendanceSummary {
     @Column(name = "check_out")
     private LocalTime checkOut;
 
-    // ✅ NOW CONSISTENT: LocalTime everywhere
     @Column(name = "working_hours")
     private LocalTime workingHours;
 
@@ -57,51 +56,31 @@ public class AttendanceSummary {
     @Column(name = "lop_triggered")
     private boolean lopTriggered;
 
-    @Column(name = "created_at")
+    @Column(name = "biometric_in_id")
+    private Long biometricInId;
+
+    @Column(name = "biometric_out_id")
+    private Long biometricOutId;
+
+    @Column(name = "ot_hours")
+    private Double otHours;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    @Column(name = "created_by")
-    private LocalDateTime createdBy;
+
+    @Column(name = "created_by", updatable = false)
+    private Long createdBy;
 
     @Column(name = "updated_by")
-    private LocalDateTime updatedBy;
-
-    // 🔥 AUTO CALCULATE WORKING HOURS
-//    public void calculateWorkingHours() {
-//        if (checkIn != null && checkOut != null) {
-//
-//            Duration duration = Duration.between(checkIn, checkOut);
-//
-//            // ⚠️ Handle overnight shift (important)
-//            if (duration.isNegative()) {
-//                duration = duration.plusHours(24);
-//            }
-//
-//            long hours = duration.toHours();
-//            long minutes = duration.toMinutes() % 60;
-//
-//            this.workingHours = LocalTime.of((int) hours, (int) minutes);
-//        }
-//    }
-//
-//    @PrePersist
-//    public void onCreate() {
-//        this.createdAt = LocalDateTime.now();
-//        this.updatedAt = LocalDateTime.now();
-//        calculateWorkingHours(); // ✅ auto-set before insert
-//    }
-//
-//    @PreUpdate
-//    public void onUpdate() {
-//        this.updatedAt = LocalDateTime.now();
-//        calculateWorkingHours(); // ✅ auto-update
-//    }
+    private Long updatedBy;
 
     // ---------------- GETTERS & SETTERS ----------------
 
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public String getEmployeeId() { return employeeId; }
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
@@ -127,49 +106,8 @@ public class AttendanceSummary {
     public String getPunchRecords() { return punchRecords; }
     public void setPunchRecords(String punchRecords) { this.punchRecords = punchRecords; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getShiftId() {
-        return shiftId;
-    }
-
-    public void setShiftId(Long shiftId) {
-        this.shiftId = shiftId;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public LocalDateTime getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(LocalDateTime createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public LocalDateTime getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public void setUpdatedBy(LocalDateTime updatedBy) {
-        this.updatedBy = updatedBy;
-    }
+    public Long getShiftId() { return shiftId; }
+    public void setShiftId(Long shiftId) { this.shiftId = shiftId; }
 
     public LocalTime getLateBy() { return lateBy; }
     public void setLateBy(LocalTime lateBy) { this.lateBy = lateBy; }
@@ -185,4 +123,25 @@ public class AttendanceSummary {
 
     public boolean isLopTriggered() { return lopTriggered; }
     public void setLopTriggered(boolean lopTriggered) { this.lopTriggered = lopTriggered; }
+
+    public Long getBiometricInId() { return biometricInId; }
+    public void setBiometricInId(Long biometricInId) { this.biometricInId = biometricInId; }
+
+    public Long getBiometricOutId() { return biometricOutId; }
+    public void setBiometricOutId(Long biometricOutId) { this.biometricOutId = biometricOutId; }
+
+    public Double getOtHours() { return otHours; }
+    public void setOtHours(Double otHours) { this.otHours = otHours; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+
+    public Long getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
 }

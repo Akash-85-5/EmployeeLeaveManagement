@@ -24,7 +24,7 @@ public interface AttendanceSummaryRepository extends JpaRepository<AttendanceSum
 
     @Query("""
         SELECT a FROM AttendanceSummary a
-        WHERE (:status IS NULL OR a.attendanceStatus = :status)
+        WHERE (:status IS NULL OR TRIM(a.attendanceStatus) = TRIM(:status))
           AND (:from IS NULL OR a.attendanceDate >= :from)
           AND (:to IS NULL OR a.attendanceDate <= :to)
     """)
