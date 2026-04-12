@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/payslip")
+@RequestMapping("/payslip")
 public class PayslipController {
 
     private final PayslipService payslipService;

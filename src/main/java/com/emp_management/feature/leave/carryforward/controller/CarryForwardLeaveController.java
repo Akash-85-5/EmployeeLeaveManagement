@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/carryforward/leave")
+@RequestMapping("/carryforward/leave")
 public class CarryForwardLeaveController {
 
     private final CarryForwardLeaveService cfLeaveService;

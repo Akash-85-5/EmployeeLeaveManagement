@@ -27,7 +27,7 @@ import java.util.Map;
  *  GET  /api/password-reset/admin/list           ADMIN only
  */
 @RestController
-@RequestMapping("/api/password-reset")
+@RequestMapping("/password-reset")
 public class PasswordResetController {
 
     private final PasswordResetService resetService;

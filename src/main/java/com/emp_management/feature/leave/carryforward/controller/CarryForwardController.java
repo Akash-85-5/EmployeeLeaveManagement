@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/carryforward")
+@RequestMapping("/carryforward")
 public class CarryForwardController {
 
     private static final org.slf4j.Logger log =

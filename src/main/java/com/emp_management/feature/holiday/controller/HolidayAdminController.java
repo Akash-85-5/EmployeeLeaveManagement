@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/holidays")
+@RequestMapping("/admin/holidays")
 @PreAuthorize("hasRole('ADMIN') or hasRole('HR')")
 public class HolidayAdminController {
 
