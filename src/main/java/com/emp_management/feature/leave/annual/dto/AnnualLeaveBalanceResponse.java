@@ -1,5 +1,7 @@
 package com.emp_management.feature.leave.annual.dto;
 
+import com.emp_management.feature.leave.annual.entity.LeaveType;
+
 public class AnnualLeaveBalanceResponse {
 
     private String  employeeId;

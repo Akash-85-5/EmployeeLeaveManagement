@@ -20,8 +20,6 @@ public class UpdateUserRequest {
     private LocalDate joiningDate;
     private BiometricVpnStatus biometricStatus;
     private BiometricVpnStatus vpnStatus;
-    private String password;
-    private EmployeeStatus status;
 
     public String getEmpId() {
         return empId;
@@ -117,21 +115,5 @@ public class UpdateUserRequest {
 
     public void setVpnStatus(BiometricVpnStatus vpnStatus) {
         this.vpnStatus = vpnStatus;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public EmployeeStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(EmployeeStatus status) {
-        this.status = status;
     }
 }

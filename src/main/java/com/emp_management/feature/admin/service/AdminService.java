@@ -169,15 +169,6 @@ public class AdminService {
         if (request.getVpnStatus() != null)
             eo.setVpnStatus(request.getVpnStatus());
 
-        // ✅ User updates
-        if (request.getStatus() != null)
-            user.setStatus(request.getStatus());
-
-        if (request.getPassword() != null) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-            user.setForcePwdChange(true);
-        }
-
         // ✅ Save (optional, Hibernate auto flush handles this)
         employeeRepository.save(emp);
         employeeOnboardingRepository.save(eo);

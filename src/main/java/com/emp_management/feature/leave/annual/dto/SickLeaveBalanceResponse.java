@@ -9,6 +9,7 @@ public class SickLeaveBalanceResponse {
     private Double  usedDays;
     private Double  remainingDays;
 
+
     public SickLeaveBalanceResponse() {}
 
     public String getEmployeeId() { return employeeId; }
