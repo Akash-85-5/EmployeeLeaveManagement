@@ -23,7 +23,7 @@ import java.util.Map;
  * Removed: /refresh, /logout  (stateless JWT — no server-side session to clear)
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -53,6 +53,7 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        System.out.println("authcontroller /login");
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }

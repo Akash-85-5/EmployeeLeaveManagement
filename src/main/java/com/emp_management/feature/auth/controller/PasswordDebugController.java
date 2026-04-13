@@ -4,7 +4,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/debug")
+@RequestMapping("/v1/debug")
 public class PasswordDebugController {
 
     private final PasswordEncoder passwordEncoder;

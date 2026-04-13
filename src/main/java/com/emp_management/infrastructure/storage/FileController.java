@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/v1/files")
 public class FileController {
 
     private final LeaveAttachmentRepository attachmentRepository;

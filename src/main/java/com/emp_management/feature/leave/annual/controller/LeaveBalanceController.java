@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/leave/balance")
+@RequestMapping("/v1/leave/balance")
 public class
 
 LeaveBalanceController {
