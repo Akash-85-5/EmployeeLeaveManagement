@@ -515,7 +515,6 @@ public class EmployeeService {
             List<MultipartFile> experienceCerts,
             List<MultipartFile> joiningLetters,
             List<MultipartFile> relievingLetter) {
-        System.out.println(joiningLetters);
 
         if (experiences == null) {
             // No experience changes — only swap shared files on first entry if sent
@@ -565,10 +564,7 @@ public class EmployeeService {
                     doc.setExperienceCertPath(documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
                 }
                 boolean newJoiningSent = experienceCerts != null && i < experienceCerts.size() && hasFile(experienceCerts.get(i));
-                System.out.println(joiningLetters);
-                System.out.println(newJoiningSent);
                 if (newJoiningSent) {
-                    System.out.println("inside if");
                     documentStorageService.delete(doc.getJoiningLetterPath());
                     doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
                 }

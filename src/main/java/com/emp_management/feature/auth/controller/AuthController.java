@@ -53,7 +53,6 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        System.out.println("authcontroller /login");
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
