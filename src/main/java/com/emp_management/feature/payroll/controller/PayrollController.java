@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/payroll")
+@RequestMapping("/v1/payroll")
 public class PayrollController {
 
     private final PayrollService payrollService;

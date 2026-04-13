@@ -23,7 +23,7 @@ import java.util.Map;
  * Removed: /refresh, /logout  (stateless JWT — no server-side session to clear)
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
 
     private final AuthService authService;

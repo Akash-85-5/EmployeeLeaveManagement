@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/dashboard")
+@RequestMapping("/v1/dashboard")
 public class DashboardController {
 
     private static final org.slf4j.Logger log =

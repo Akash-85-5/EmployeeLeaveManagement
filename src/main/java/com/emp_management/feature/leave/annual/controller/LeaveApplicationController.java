@@ -34,7 +34,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 @RestController
-@RequestMapping("/leaves")
+@RequestMapping("/v1/leaves")
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;

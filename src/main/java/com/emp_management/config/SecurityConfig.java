@@ -74,25 +74,25 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/refresh").permitAll()
+                        .requestMatchers("/v1/auth/refresh").permitAll()
 
                         .requestMatchers(
-                                "/auth/login",
-                                "/auth/refresh",
-                                "/password-reset/request",
-                                "/password-reset/**",
-                                "/auth/force-change"
+                                "/v1/auth/login",
+                                "/v1/auth/refresh",
+                                "/v1/password-reset/request",
+                                "/v1/password-reset/**",
+                                "/v1/auth/force-change"
                         ).permitAll()
 
-                        .requestMatchers("/hr/**").hasRole("HR")
-                        .requestMatchers("/payslip").hasAnyRole("CFO", "ADMIN","EMPLOYEE","MANAGER","HR")
+                        .requestMatchers("/v1/hr/**").hasRole("HR")
+                        .requestMatchers("/v1/payslip").hasAnyRole("CFO", "ADMIN","EMPLOYEE","MANAGER","HR")
 
                         .requestMatchers(
-                                "/flash-news/**",
-                                "/wfh/**",
-                                "/debug/**"
+                                "/v1/flash-news/**",
+                                "/v1/wfh/**",
+                                "/v1/debug/**"
                         ).permitAll()
-                        .requestMatchers("/announcements/**").permitAll()
+                        .requestMatchers("/v1/announcements/**").permitAll()
 
                         .anyRequest().authenticated()
                 )
