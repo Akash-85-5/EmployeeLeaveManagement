@@ -69,7 +69,7 @@ public class AttendanceSummary {
     private Long biometricOutId;
 
     @Column(name = "ot_hours")
-    private Double otHours;
+    private LocalTime otHours;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -136,8 +136,13 @@ public class AttendanceSummary {
     public Long getBiometricOutId() { return biometricOutId; }
     public void setBiometricOutId(Long biometricOutId) { this.biometricOutId = biometricOutId; }
 
-    public Double getOtHours() { return otHours; }
-    public void setOtHours(Double otHours) { this.otHours = otHours; }
+    public LocalTime getOtHours() {
+        return otHours;
+    }
+
+    public void setOtHours(LocalTime otHours) {
+        this.otHours = otHours;
+    }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

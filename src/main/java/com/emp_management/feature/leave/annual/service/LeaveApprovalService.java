@@ -64,10 +64,12 @@ public class LeaveApprovalService {
     public Page<LeaveApplicationWithAttachmentsDto> getPendingLeavesForManagerWithAttachments(
             String approverId, Pageable pageable) {
         List<LeaveApplication> all = leaveApplicationRepository
-                .findByCurrentApproverIdAndStatus(
-                        approverId, RequestStatus.PENDING);
+                .findByCurrentApproverId(
+                        approverId);
         return toPageDto(convertToDto(all), pageable);
     }
+
+
 
     public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
         LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
