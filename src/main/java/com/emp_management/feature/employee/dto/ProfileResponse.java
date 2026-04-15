@@ -52,6 +52,10 @@ public class ProfileResponse {
     private BloodGroup bloodGroup;
     private String emergencyContactNumber;
     private String fatherName;
+    private LocalDate fatherDateOfBirth;
+    private LocalDate motherDateOfBirth;
+    private String fatherOccupation;
+    private String motherOccupation;
     private String motherName;
     private String designation;
     private List<String> skillSet;
@@ -253,5 +257,37 @@ public class ProfileResponse {
     public List<ExperiencedDocumentDto> getExperiencedDocuments() { return experiencedDocuments; }
     public void setExperiencedDocuments(List<ExperiencedDocumentDto> experiencedDocuments) {
         this.experiencedDocuments = experiencedDocuments;
+    }
+
+    public LocalDate getFatherDateOfBirth() {
+        return fatherDateOfBirth;
+    }
+
+    public void setFatherDateOfBirth(LocalDate fatherDateOfBirth) {
+        this.fatherDateOfBirth = fatherDateOfBirth;
+    }
+
+    public LocalDate getMotherDateOfBirth() {
+        return motherDateOfBirth;
+    }
+
+    public void setMotherDateOfBirth(LocalDate motherDateOfBirth) {
+        this.motherDateOfBirth = motherDateOfBirth;
+    }
+
+    public String getFatherOccupation() {
+        return fatherOccupation;
+    }
+
+    public void setFatherOccupation(String fatherOccupation) {
+        this.fatherOccupation = fatherOccupation;
+    }
+
+    public String getMotherOccupation() {
+        return motherOccupation;
+    }
+
+    public void setMotherOccupation(String motherOccupation) {
+        this.motherOccupation = motherOccupation;
     }
 }

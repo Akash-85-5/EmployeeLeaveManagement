@@ -45,18 +45,15 @@ public class AuthService {
     // ── LOGIN ─────────────────────────────────────────────────────────────
 
     public LoginResponse login(LoginRequest request) {
-
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getIdentifier(),
                         request.getPassword()
                 )
         );
-
         User user = userRepository.findByEmployee_Email(request.getIdentifier())
                 .or(() -> userRepository.findByEmployee_EmpId(request.getIdentifier()))
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
         if (user.getStatus() != EmployeeStatus.ACTIVE) {
             throw new BadRequestException("Account is disabled. Please contact admin.");
         }

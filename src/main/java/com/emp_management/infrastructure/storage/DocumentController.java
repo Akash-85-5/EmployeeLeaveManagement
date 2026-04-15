@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @RestController
-@RequestMapping("/api/documents")
+@RequestMapping("/v1/documents")
 public class DocumentController {
 
     @Value("${app.document.upload-dir}")

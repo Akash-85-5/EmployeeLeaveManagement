@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/leave-approvals")
+@RequestMapping("/v1/leave-approvals")
 public class LeaveApprovalController {
 
     private final LeaveApprovalService leaveApprovalService;

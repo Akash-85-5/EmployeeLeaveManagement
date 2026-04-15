@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/attendance")
+@RequestMapping("/v1/attendance")
 public class AttendanceController {
 
     private final AttendanceService service;
@@ -62,5 +62,12 @@ public class AttendanceController {
     ) {
 
         return service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
+    }
+    @GetMapping("/employee/{empId}/punch-records")
+    public AttendanceCalendarDTO getPunchRecords(
+            @PathVariable String empId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+
+        return service.getPunchRecords(empId, date);
     }
 }

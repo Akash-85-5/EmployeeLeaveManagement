@@ -195,7 +195,7 @@ public class EmployeeService {
             List<MultipartFile> joiningLetters,
             List<MultipartFile> relievingLetter) {
 
-        System.out.println(employeeId);
+
         Employee employee = employeeRepository.findByEmpId(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
@@ -447,6 +447,7 @@ public class EmployeeService {
         if (r.getIfscCode()      != null && !r.getIfscCode().isBlank())      pd.setIfscCode(r.getIfscCode());
         if (r.getBankBranchName()!= null && !r.getBankBranchName().isBlank()) pd.setBankBranchName(r.getBankBranchName());
         if (r.getUanNumber()     != null && !r.getUanNumber().isBlank())     pd.setUanNumber(r.getUanNumber());
+        if (r.getPfNumber() != null && !r.getPfNumber().isBlank()) pd.setPfNumber(r.getPfNumber());
         if (r.getFatherName()    != null)  pd.setFatherName(r.getFatherName());
         if (r.getFatherDateOfBirth() != null) pd.setFatherDateOfBirth(r.getFatherDateOfBirth());
         if (r.getFatherOccupation()  != null) pd.setFatherOccupation(r.getFatherOccupation());
@@ -563,7 +564,7 @@ public class EmployeeService {
                     doc.setExperienceCertPath(documentStorageService.save(experienceCerts.get(i), "experience-cert", employeeId));
                 }
                 boolean newJoiningSent = experienceCerts != null && i < experienceCerts.size() && hasFile(experienceCerts.get(i));
-                if(newJoiningSent) {
+                if (newJoiningSent) {
                     documentStorageService.delete(doc.getJoiningLetterPath());
                     doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
                 }
@@ -634,6 +635,7 @@ public class EmployeeService {
 
                 boolean newJoiningLetterSent = joiningLetters != null && i < joiningLetters.size()
                         && hasFile(joiningLetters.get(i));
+
                 if (newJoiningLetterSent) {
                     doc.setJoiningLetterPath(documentStorageService.save(joiningLetters.get(i), "joining-letter", employeeId));
                 } else {
@@ -843,7 +845,7 @@ public class EmployeeService {
             EmployeeChild child = new EmployeeChild();
             child.setChildName(dto.getChildName());
             child.setGender(dto.getGender());
-            child.setAge(dto.getAge());
+            child.setChildDateOfBirth(dto.getChildDateOfBirth());
             child.setPersonalDetails(pd);
             pd.getChildren().add(child);
         }
@@ -917,6 +919,8 @@ public class EmployeeService {
         r.setPfNumber(pd.getPfNumber());               r.setUanNumber(pd.getUanNumber());
         r.setSpouseName(pd.getSpouseName());           r.setSpouseDateOfBirth(pd.getSpouseDateOfBirth());
         r.setSpouseOccupation(pd.getSpouseOccupation()); r.setSpouseContactNumber(pd.getSpouseContactNumber());
+        r.setMotherDateOfBirth(pd.getMotherDateOfBirth()); r.setMotherOccupation(pd.getMotherOccupation());
+        r.setFatherDateOfBirth(pd.getFatherDateOfBirth()); r.setFatherOccupation(pd.getFatherOccupation());
 
         if (pd.getSkillSet() != null && !pd.getSkillSet().isBlank())
             r.setSkillSet(Arrays.stream(pd.getSkillSet().split(","))
@@ -927,7 +931,7 @@ public class EmployeeService {
                 ChildDto dto = new ChildDto();
                 dto.setChildName(c.getChildName());
                 dto.setGender(c.getGender());
-                dto.setAge(c.getAge());
+                dto.setChildDateOfBirth(c.getChildDateOfBirth());
                 return dto;
             }).collect(Collectors.toList()));
 
@@ -942,12 +946,14 @@ public class EmployeeService {
                 r.setPassportPhotoPath(doc.getPassportPhotoPath());
             }
         } else if (pd.getEmployee().getEmployeeExperience() == EmployeeExperience.EXPERIENCED) {
+            List<ExperiencedDocument> doc = pd.getExperiencedDocuments();
+            r.setIdProofPath(doc.stream().map(a -> a.getIdProofPath()).findFirst().orElse(null));
+            r.setPassportPhotoPath(doc.stream().map(A -> A.getPassportPhotoPath()).findFirst().orElse(null));
             r.setExperiencedDocuments(pd.getExperiencedDocuments().stream()
                     .map(this::toExperiencedDocumentDto)
                     .collect(Collectors.toList()));
         }
     }
-
     private ExperiencedDocumentDto toExperiencedDocumentDto(ExperiencedDocument doc) {
         ExperiencedDocumentDto dto = new ExperiencedDocumentDto();
         dto.setId(doc.getId());
@@ -1026,11 +1032,8 @@ public class EmployeeService {
                 throw new BadRequestException("Child " + (i + 1) + " name is required.");
             if (c.getGender() == null)
                 throw new BadRequestException("Child " + (i + 1) + " gender is required.");
-            if (c.getAge() == null)
-                throw new BadRequestException("Child " + (i + 1) + " age is required.");
-            if (c.getAge() < 0 || c.getAge() > MAX_CHILD_AGE)
-                throw new BadRequestException(
-                        "Child " + (i + 1) + " age must be between 0 and " + MAX_CHILD_AGE + ".");
+            if (c.getChildDateOfBirth() == null)
+                throw new BadRequestException("Child " + (i + 1) + " DOB is required.");
         }
     }
 

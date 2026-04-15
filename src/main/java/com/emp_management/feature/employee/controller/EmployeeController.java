@@ -4,6 +4,7 @@ import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
 import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
 import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.employee.service.EmployeeService;
 import com.emp_management.shared.dto.BranchListDto;
 import com.emp_management.shared.dto.EmployeeListDto;
@@ -16,17 +17,24 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/employees")
+@RequestMapping("/v1/employees")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final EmployeeRepository employeeRepository;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(EmployeeService employeeService,
+                              EmployeeRepository employeeRepository) {
         this.employeeService = employeeService;
+        this.employeeRepository = employeeRepository;
     }
 
     // ── Lookups ───────────────────────────────────────────────────
@@ -179,5 +187,19 @@ public class EmployeeController {
     public ResponseEntity<String> deleteEmployee(@PathVariable String id) {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully.");
+    }
+    @GetMapping("/by-email")
+    public ResponseEntity<?> getEmployeeByEmail(
+            @RequestParam String email) {
+        Employee employee = employeeRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Employee not found: " + email));
+
+        Map<String, String> result = new HashMap<>();
+        result.put("empId", employee.getEmpId());
+        result.put("name", employee.getName());
+        result.put("email", employee.getEmail());
+
+        return ResponseEntity.ok(result);
     }
 }

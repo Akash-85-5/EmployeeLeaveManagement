@@ -2,7 +2,9 @@ package com.emp_management.feature.auth.controller;
 
 import com.emp_management.feature.auth.dto.*;
 import com.emp_management.feature.auth.service.AuthService;
+import com.emp_management.security.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -21,7 +23,7 @@ import java.util.Map;
  * Removed: /refresh, /logout  (stateless JWT — no server-side session to clear)
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -69,7 +71,8 @@ public class AuthController {
      */
     @PostMapping("/force-change")
     public ResponseEntity<?> forceChangePassword(
-            @RequestBody ForceChangePasswordRequest request) {
+            @RequestBody ForceChangePasswordRequest request,
+            @AuthenticationPrincipal CustomUserDetails user) {
         authService.forceChangePassword(request);
         return ResponseEntity.ok(Map.of("message",
                 "Password changed. You may now access the system."));

@@ -11,72 +11,39 @@ public class AttendanceDetailDTO {
     private String status;
     private LocalTime checkIn;
     private LocalTime checkOut;
-    private Double workingHours;
+
+    // ✅ Double — matches DB column type
+    private LocalTime workingHours;
+
+    // ✅ Added punch records
+    private String punchRecords;
+
     private boolean lopTriggered;
 
-    // 🔹 GETTERS & SETTERS
+    public String getEmployeeId() { return employeeId; }
+    public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
 
-    public String getEmployeeId() {
-        return employeeId;
-    }
+    public String getEmployeeName() { return employeeName; }
+    public void setEmployeeName(String employeeName) { this.employeeName = employeeName; }
 
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
+    public LocalDate getDate() { return date; }
+    public void setDate(LocalDate date) { this.date = date; }
 
-    public String getEmployeeName() {
-        return employeeName;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public void setEmployeeName(String employeeName) {
-        this.employeeName = employeeName;
-    }
+    public LocalTime getCheckIn() { return checkIn; }
+    public void setCheckIn(LocalTime checkIn) { this.checkIn = checkIn; }
 
-    public LocalDate getDate() {
-        return date;
-    }
+    public LocalTime getCheckOut() { return checkOut; }
+    public void setCheckOut(LocalTime checkOut) { this.checkOut = checkOut; }
 
-    public void setDate(LocalDate date) {
-        this.date = date;
-    }
+    public LocalTime getWorkingHours() { return workingHours; }
+    public void setWorkingHours(LocalTime workingHours) { this.workingHours = workingHours; }
 
-    public String getStatus() {
-        return status;
-    }
+    public String getPunchRecords() { return punchRecords; }
+    public void setPunchRecords(String punchRecords) { this.punchRecords = punchRecords; }
 
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalTime getCheckIn() {
-        return checkIn;
-    }
-
-    public void setCheckIn(LocalTime checkIn) {
-        this.checkIn = checkIn;
-    }
-
-    public LocalTime getCheckOut() {
-        return checkOut;
-    }
-
-    public void setCheckOut(LocalTime checkOut) {
-        this.checkOut = checkOut;
-    }
-
-    public Double getWorkingHours() {
-        return workingHours;
-    }
-
-    public void setWorkingHours(Double workingHours) {
-        this.workingHours = workingHours;
-    }
-
-    public boolean isLopTriggered() {
-        return lopTriggered;
-    }
-
-    public void setLopTriggered(boolean lopTriggered) {
-        this.lopTriggered = lopTriggered;
-    }
+    public boolean isLopTriggered() { return lopTriggered; }
+    public void setLopTriggered(boolean lopTriggered) { this.lopTriggered = lopTriggered; }
 }

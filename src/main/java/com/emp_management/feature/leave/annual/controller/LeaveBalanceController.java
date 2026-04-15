@@ -1,6 +1,7 @@
 package com.emp_management.feature.leave.annual.controller;
 
 import com.emp_management.feature.leave.annual.dto.AnnualLeaveBalanceResponse;
+import com.emp_management.feature.leave.annual.dto.MonthlyLeaveBalanceDTO;
 import com.emp_management.feature.leave.annual.dto.LeaveBalanceSummaryResponse;
 import com.emp_management.feature.leave.annual.dto.SickLeaveBalanceResponse;
 import com.emp_management.feature.leave.annual.service.AnnualLeaveBalanceService;
@@ -15,7 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/leave/balance")
+@RequestMapping("/v1/leave/balance")
 public class
 
 LeaveBalanceController {
@@ -138,5 +139,26 @@ LeaveBalanceController {
         );
 
         return ResponseEntity.ok(summary);
+    }
+    @GetMapping("/{employeeId}")
+    public ResponseEntity<MonthlyLeaveBalanceDTO> getCombinedBalance(
+            @PathVariable String employeeId) {
+
+        LocalDate today = LocalDate.now();
+        int resolvedYear =  today.getYear();
+        int resolvedMonth = today.getMonthValue();
+
+        AnnualLeaveBalanceResponse monthlyAnnualBalance =
+                annualService.getSingleMonthDTO(employeeId, resolvedYear, resolvedMonth);
+
+        SickLeaveBalanceResponse monthlySickBalance =
+                sickService.getSingleMonthDTO(employeeId, resolvedYear, resolvedMonth);
+
+
+        MonthlyLeaveBalanceDTO response = new MonthlyLeaveBalanceDTO(
+                monthlyAnnualBalance,monthlySickBalance
+        );
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -19,7 +19,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/compoff")
+@RequestMapping("/v1/compoff")
 public class CompOffController {
 
     private final CompOffService compOffService;

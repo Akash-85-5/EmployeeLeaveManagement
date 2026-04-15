@@ -34,7 +34,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/leaves")
+@RequestMapping("/v1/leaves")
 public class LeaveApplicationController {
 
     private final LeaveApplicationService leaveApplicationService;
@@ -172,7 +172,7 @@ public class LeaveApplicationController {
     }
 
     @GetMapping("/{id}")
-    public LeaveApplication getLeaveById(@PathVariable Long id) {
+    public LeaveApplicationWithAttachmentsDto getLeaveById(@PathVariable Long id) {
         return leaveApplicationService.getLeaveById(id);
     }
 
