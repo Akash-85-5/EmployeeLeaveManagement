@@ -728,6 +728,12 @@ public class EmployeeService {
                 createSpecification(name, email, role, reportingId, active), pageable);
         return page.map(EmployeeMapper::toDTO);
     }
+    public List<EmployeeResponseDTO> globalSearch(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return employeeRepository.findAll().stream().map(EmployeeMapper :: toDTO).toList();
+        }
+        return employeeRepository.searchByAnyField(query).stream().map(EmployeeMapper :: toDTO).toList();
+    }
 
     @Transactional
     public void deleteEmployee(String id) {
