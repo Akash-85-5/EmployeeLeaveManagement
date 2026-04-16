@@ -179,8 +179,8 @@ public class EmployeeController {
     }
 
     @GetMapping("/search")
-    public List<Employee> searchEmployees(@RequestParam String query) {
-        return employeeService.searchEmployees(query);
+    public List<EmployeeResponseDTO> searchEmployees(@RequestParam String query) {
+        return employeeService.globalSearch(query);
     }
 
     @DeleteMapping("/{id}")
