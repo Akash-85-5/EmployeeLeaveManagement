@@ -2,73 +2,63 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+
     <style>
+        @font-face {
+            font-family: 'NotoSans';
+            src: url('fonts/NotoSans-Regular.ttf') format('truetype');
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
           font-family: "Times New Roman", Times, serif;
           font-size: 11pt;
           color: #000;
-          padding: 30px 40px;
+          padding: 24px 36px;
           background: #fff;
         }
-
-        /* ── HEADER ─────────────────────────────────────────── */
-
-
-.logo {
-    width: 60px;
-    height: 60px;
-    margin-right: 12px;
-    margin-top: 4px;
-
-}
-
-.company-info {
-    display: block;
-    }
 
         .company-name {
             font-size: 16pt;
             font-weight: bold;
         }
 
-
         .company-address {
             font-size: 10pt;
         }
 
-        /* ── TITLE ───────────────────────────────────────────── */
         .payslip-title {
           text-align: center;
           font-size: 12pt;
           font-weight: bold;
-          text-decoration: underline;
-          margin: 14px 0 10px 0;
+          margin: 12px 0;
         }
 
-        /* ── TABLES ──────────────────────────────────────────── */
         table {
           width: 100%;
           border-collapse: collapse;
         }
 
         td {
-            border: 1.2px solid #000;
+            border: 1px solid #000;
+            padding: 7px 11px;
+            font-size: 11pt;
         }
 
         .label {
           font-weight: bold;
-          width: 25%;
-        }
-
-        .value {
-          width: 25%;
+          width: 22%;
         }
 
         .section-header {
           text-align: center;
           font-weight: bold;
+          background-color: #d9d9d9;
+        }
+
+        .amount {
+          text-align: right;
         }
 
         .net-value {
@@ -77,152 +67,179 @@
           text-align: center;
         }
 
-        .spacer { margin-top: 8px; }
+        .gap-md { margin-top: 20px; }
+        .gap-xl { margin-top: 40px; }
 
-        /* ── FOOTER ──────────────────────────────────────────── */
         .computer-generated {
           text-align: center;
-          font-size: 9pt;
+          font-size: 10pt;
           font-style: italic;
-          margin-top: 24px;
-          color: #444;
+          margin-top: 25px;
         }
     </style>
 </head>
+
 <body>
 
-<!-- ── HEADER ─────────────────────────────────────────── -->
-<table style="width:100%; border:none; margin-bottom:10px;">
+<!-- HEADER -->
+<table style="border:none;">
     <tr>
-        <td style="width:80px; border:none; vertical-align:middle;">
-            <img th:src="${logoBase64}" style="width:60px; height:60px;" />
+        <td style="width:75px; border:none; padding:0;">
+            <img th:src="${logoBase64}" style="width:70px; height:70px;" />
         </td>
-        <td style="border:none; vertical-align:middle;">
+        <td style="border:none; padding-left:10px;">
             <div class="company-name">WENXT TECHNOLOGIES PRIVATE LIMITED</div>
             <div class="company-address">
-                Office Address: Type II / 1, Ground Floor, Dr.V.S.I Estate, Thiruvanmiyur, Chennai- 600041
+                Office Address: S. No.56/3A, Stilt Floor, Fayola Towers, 200 Feet Road, Pallikaranai, Chennai - 600100
             </div>
         </td>
     </tr>
 </table>
 
-<!-- ── TITLE ──────────────────────────────────────────── -->
+<div class="gap-md"></div>
+
 <div class="payslip-title">MONTHLY SALARY PAYSLIP</div>
 
-<!-- ── EMPLOYEE DETAILS TABLE ─────────────────────────── -->
-<!--
-    d = PayslipPdfData (flat DTO — no entity ever reaches the template)
--->
+<div class="gap-md"></div>
+
+<!-- EMPLOYEE DETAILS -->
 <table>
     <tr>
         <td class="label">Employee ID</td>
-        <td class="value" th:text="${d.employeeCode}">WENXT042</td>
+        <td th:text="${d.employeeCode}"></td>
         <td class="label">Employee Name</td>
-        <td class="value" th:text="${d.employeeName}">Mr. Santhosh K</td>
+        <td th:text="${d.employeeName}"></td>
     </tr>
     <tr>
         <td class="label">Designation</td>
-        <td class="value" th:text="${d.designation}">Trainee Test Engineer</td>
+        <td th:text="${d.designation}"></td>
         <td class="label">Month / Year</td>
-        <td class="value" th:text="${d.monthYear}">Feb 2026</td>
+        <td th:text="${d.monthYear}"></td>
     </tr>
     <tr>
         <td class="label">Date of Joining</td>
-        <td class="value" th:text="${d.joiningDate}">03 October 2025</td>
+        <td th:text="${d.joiningDate}"></td>
         <td class="label">Aadhar Card No</td>
-        <td class="value" th:text="${d.aadharNumber}">4179 6888 8233</td>
+        <td th:text="${d.aadharNumber}"></td>
     </tr>
     <tr>
         <td class="label">UAN No</td>
-        <td class="value" th:text="${d.uanNumber}">102259247370</td>
+        <td th:text="${d.uanNumber}"></td>
         <td class="label">PF Number</td>
-        <td class="value" th:text="${d.pfNumber}">TBTAM29454030000010039</td>
+        <td th:text="${d.pfNumber}"></td>
     </tr>
     <tr>
         <td class="label">Account Number</td>
-        <td class="value" th:text="${d.accountNumber}">43782556977</td>
+        <td th:text="${d.accountNumber}"></td>
         <td class="label">Bank Name</td>
-        <td class="value" th:text="${d.bankName}">SBI</td>
+        <td th:text="${d.bankName}"></td>
     </tr>
     <tr>
         <td class="label">No. of Days</td>
-        <td class="value" th:text="${d.workingDays}">28</td>
-        <td></td>
-        <td></td>
+        <td th:text="${d.workingDays}"></td>
+        <td class="label">LOP Days</td>
+        <td th:text="${d.lopDays}"></td>
     </tr>
 </table>
 
-<div class="spacer"></div>
+<div class="gap-xl"></div>
 
-<!-- ── INCOME / DEDUCTIONS TABLE ──────────────────────── -->
+<!-- INCOME / DEDUCTIONS -->
 <table>
     <tr>
-        <td class="section-header" colspan="2">Income</td>
-        <td class="section-header" colspan="2">Deductions</td>
+        <td class="section-header" colspan="2">
+            Income (<span style="font-family:NotoSans;">₹</span>)
+        </td>
+        <td class="section-header" colspan="2">
+            Deductions (<span style="font-family:NotoSans;">₹</span>)
+        </td>
     </tr>
+
     <tr>
         <td>Basic Salary</td>
-        <td th:text="${d.basicSalary}">7450</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.basicSalary)}"></td>
+
         <td>Provident Fund</td>
-        <td th:text="${d.pf}">1442</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.pf)}"></td>
     </tr>
+
     <tr>
         <td>House Rent Allowance</td>
-        <td th:text="${d.hra}">2980</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.hra)}"></td>
+
         <td>TDS</td>
-        <td th:text="${d.tds}">0</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.tds)}"></td>
     </tr>
+
     <tr>
         <td>Conveyance</td>
-        <td th:text="${d.conveyance}">1600</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.conveyance)}"></td>
+
         <td>Professional Tax</td>
-        <td th:text="${d.professionalTax}">208</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.professionalTax)}"></td>
     </tr>
+
     <tr>
         <td>Medical Allowance</td>
-        <td th:text="${d.medical}">1250</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.medical)}"></td>
+
         <td>Variable Pay</td>
-        <td th:text="${d.variablePay}">0</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.variablePay)}"></td>
     </tr>
+
     <tr>
         <td>Other Allowances</td>
-        <td th:text="${d.otherAllowance}">1720</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.otherAllowance)}"></td>
+
         <td>ESI</td>
-        <td th:text="${d.esi}">113</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.esi)}"></td>
     </tr>
+
     <tr>
         <td>Bonus</td>
-        <td th:text="${d.bonus}">0</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.bonus)}"></td>
+
         <td>LOP</td>
-        <td th:text="${d.lop}">0</td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.lop)}"></td>
     </tr>
+
     <tr>
         <td><strong>Total</strong></td>
-        <td><strong th:text="${d.grossSalary}">15000</strong></td>
+        <td class="amount">
+            <strong th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.grossSalary)}"></strong>
+        </td>
+
         <td><strong>Total Deduction</strong></td>
-        <td><strong th:text="${d.totalDeduction}">1763</strong></td>
-    </tr>
-</table>
-
-<div class="spacer"></div>
-
-<!-- ── NET SALARY ──────────────────────────────────────── -->
-<table>
-    <tr>
-        <td class="label" style="width:25%">Net Salary</td>
-        <td class="net-value" colspan="3" th:text="${d.netSalary}">13237</td>
-    </tr>
-    <tr>
-        <td>Salary in words</td>
-        <td colspan="3" th:text="${d.netSalaryInWords}">
-            Rupees Thirteen Thousand Two Hundred and Thirty Seven Only
+        <td class="amount">
+            <strong th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.totalDeduction)}"></strong>
         </td>
     </tr>
 </table>
 
-<!-- ── FOOTER ──────────────────────────────────────────── -->
+<div class="gap-xl"></div>
+
+<!-- NET SALARY -->
+<table>
+    <tr>
+        <td class="label">Net Salary</td>
+        <td class="net-value" colspan="3">
+            <span style="font-family:NotoSans;">₹</span>
+            <span th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.netSalary)}"></span>
+        </td>
+    </tr>
+
+    <tr>
+        <td class="label">Salary in words</td>
+        <td colspan="3" style="text-align:center;"
+            th:text="${d.netSalaryInWords}">
+        </td>
+    </tr>
+</table>
+
+<div class="gap-md"></div>
+
 <p class="computer-generated">
-    This is a computer generated payslip and does not require a signature.
+    This is a computer-generated document. No signature is required
 </p>
 
 </body>

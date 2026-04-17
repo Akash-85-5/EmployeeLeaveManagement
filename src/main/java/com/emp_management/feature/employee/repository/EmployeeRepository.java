@@ -78,6 +78,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 """)
     List<Employee> findActiveTeamMembers(@Param("managerId") String managerId);
 
+
+    @Query("""
+    SELECT e FROM Employee e 
+    WHERE LOWER(e.empId) LIKE LOWER(CONCAT('%', :query, '%')) 
+       OR LOWER(e.name) LIKE LOWER(CONCAT('%', :query, '%')) 
+       OR LOWER(e.email) LIKE LOWER(CONCAT('%', :query, '%'))
+""")
+    List<Employee> searchByAnyField(@Param("query") String query);
     // All active employees
     @Query("SELECT e FROM Employee e WHERE e.active = true")
     List<Employee> findActiveEmployees();

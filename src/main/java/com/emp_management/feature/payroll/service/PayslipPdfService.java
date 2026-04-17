@@ -41,7 +41,6 @@ public class PayslipPdfService {
     // ─────────────────────────────────────────────────────────────────────────
     public ByteArrayInputStream generatePdf(Payslip payslip, EmployeePersonalDetails emp) {
 
-        // emp.getEmployee() is already loaded — no need for a second DB call
         Employee employee = emp.getEmployee();
         if (employee == null) {
             throw new ResourceNotFoundException("Employee not found");
@@ -58,13 +57,31 @@ public class PayslipPdfService {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             PdfRendererBuilder builder = new PdfRendererBuilder();
+
             String baseUrl = new ClassPathResource("static/").getURL().toExternalForm();
             builder.withHtmlContent(html, baseUrl);
+
+            // ✅ CORRECT FONT LOADING (JAR SAFE + NO ERROR)
+            ClassPathResource fontResource =
+                    new ClassPathResource("static/fonts/NotoSans-Regular.ttf");
+
+            builder.useFont(
+                    () -> {
+                        try {
+                            return fontResource.getInputStream();
+                        } catch (Exception e) {
+                            throw new RuntimeException("Font loading failed", e);
+                        }
+                    },
+                    "NotoSans"
+            );
+
             builder.toStream(out);
             builder.useFastMode();
             builder.run();
+
         } catch (Exception ex) {
-            ex.printStackTrace(); // keep this until confirmed working
+            ex.printStackTrace();
             throw new BadRequestException("Unable to generate payslip PDF. Please try again.");
         }
 
@@ -229,4 +246,25 @@ public class PayslipPdfService {
 
         return sb.toString();
     }
+    public static String formatIndianCurrency(BigDecimal amount) {
+        if (amount == null) return "0.00";
+
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+
+        String[] parts = amount.toString().split("\\.");
+        String intPart = parts[0];
+        String decimalPart = parts.length > 1 ? parts[1] : "00";
+
+        if (intPart.length() <= 3) {
+            return intPart + "." + decimalPart;
+        }
+
+        String last3 = intPart.substring(intPart.length() - 3);
+        String rest = intPart.substring(0, intPart.length() - 3);
+
+        rest = rest.replaceAll("(\\d)(?=(\\d{2})+(?!\\d))", "$1,");
+
+        return rest + "," + last3 + "." + decimalPart;
+    }
 }
+
