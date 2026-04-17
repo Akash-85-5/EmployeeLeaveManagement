@@ -3,6 +3,8 @@ package com.emp_management.feature.attendance.service;
 import com.emp_management.feature.attendance.dto.*;
 import com.emp_management.feature.attendance.entity.AttendanceSummary;
 import com.emp_management.feature.attendance.repository.AttendanceSummaryRepository;
+import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.feature.employee.repository.EmployeeRepository;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +17,10 @@ import java.util.List;
 public class AttendanceService {
 
     private final AttendanceSummaryRepository repo;
-
-    public AttendanceService(AttendanceSummaryRepository repo) {
+    private final EmployeeRepository employeeRepository;
+    public AttendanceService(AttendanceSummaryRepository repo, EmployeeRepository employeeRepository) {
         this.repo = repo;
+        this.employeeRepository = employeeRepository;
     }
 
     // 🔹 Employee Monthly Calendar
@@ -99,6 +102,31 @@ public class AttendanceService {
         dto.setPunchRecords(att.getPunchRecords());
 
         return dto;
+    }
+
+    public Page<AttendanceDetailDTO> getTeamAttendance(
+            String managerId,
+            LocalDate from,
+            LocalDate to,
+            String status,
+            int page,
+            int size) {
+
+        // 1. Get all subordinates
+        List<String> reporteeIds = employeeRepository.findByReportingId(managerId)
+                .stream()
+                .map(Employee :: getEmpId)
+                .toList();
+
+        if (reporteeIds.isEmpty()) {
+            return Page.empty();
+        }
+
+        // 2. Fetch their attendance records
+        Pageable pageable = PageRequest.of(page, size, Sort.by("attendanceDate").descending());
+
+        return repo.findByEmployeeIdIn(reporteeIds, status, from, to, pageable)
+                .map(this::mapToDetail);
     }
 
     private AttendanceDetailDTO mapToDetail(AttendanceSummary att) {

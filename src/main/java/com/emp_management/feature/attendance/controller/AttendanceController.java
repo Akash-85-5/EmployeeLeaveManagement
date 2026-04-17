@@ -70,4 +70,16 @@ public class AttendanceController {
 
         return service.getPunchRecords(empId, date);
     }
+
+    @GetMapping("/team/{reportingId}")
+    public Page<AttendanceDetailDTO> getTeamAttendance(
+            @PathVariable String reportingId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return service.getTeamAttendance(reportingId, fromDate, toDate, status, page, size);
+    }
 }
