@@ -94,6 +94,8 @@ public class SecurityConfig {
                                 "/v1/birthday/test-email"
                         ).permitAll()
                         .requestMatchers("/v1/announcements/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/leaves/apply").permitAll()
+                        .requestMatchers(HttpMethod.GET,  "/v1/employees/by-email").permitAll()
 
                         .anyRequest().authenticated()
                 )

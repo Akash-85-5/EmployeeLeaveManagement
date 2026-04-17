@@ -75,21 +75,21 @@ public class EmployeeController {
 
     /**
      * Multipart keys:
-     *   data              – JSON (FresherPersonalDetailsRequest)
-     *   idProof, tenthMarksheet, twelfthMarksheet,
-     *   degreeCertificate, offerLetter, passportPhoto
+     * data              – JSON (FresherPersonalDetailsRequest)
+     * idProof, tenthMarksheet, twelfthMarksheet,
+     * degreeCertificate, offerLetter, passportPhoto
      */
     @PostMapping(value = "/personal-details/{employeeId}/fresher",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> submitFresherDetails(
             @PathVariable String employeeId,
-            @RequestPart("data")               String dataJson,
-            @RequestPart("idProof")            MultipartFile idProof,
-            @RequestPart("tenthMarksheet")     MultipartFile tenthMarksheet,
-            @RequestPart("twelfthMarksheet")   MultipartFile twelfthMarksheet,
-            @RequestPart("degreeCertificate")  MultipartFile degreeCertificate,
-            @RequestPart("offerLetter")        MultipartFile offerLetter,
-            @RequestPart("passportPhoto")      MultipartFile passportPhoto) {
+            @RequestPart("data") String dataJson,
+            @RequestPart("idProof") MultipartFile idProof,
+            @RequestPart("tenthMarksheet") MultipartFile tenthMarksheet,
+            @RequestPart("twelfthMarksheet") MultipartFile twelfthMarksheet,
+            @RequestPart("degreeCertificate") MultipartFile degreeCertificate,
+            @RequestPart("offerLetter") MultipartFile offerLetter,
+            @RequestPart("passportPhoto") MultipartFile passportPhoto) {
 
         employeeService.submitFresherDetails(employeeId, dataJson,
                 idProof, tenthMarksheet, twelfthMarksheet,
@@ -103,24 +103,24 @@ public class EmployeeController {
 
     /**
      * Multipart keys:
-     *   data              – JSON (ExperiencedPersonalDetailsRequest)
-     *                       "experiences" array index must match file lists.
-     *   idProof           – single file
-     *   passportPhoto     – single file
-     *   experienceCerts   – one file per experience entry (indexed list)
-     *   joiningLetters    – optional indexed list; send null/absent for entries without one
-     *   relievingLetter   – single file for the last-company entry
+     * data              – JSON (ExperiencedPersonalDetailsRequest)
+     * "experiences" array index must match file lists.
+     * idProof           – single file
+     * passportPhoto     – single file
+     * experienceCerts   – one file per experience entry (indexed list)
+     * joiningLetters    – optional indexed list; send null/absent for entries without one
+     * relievingLetter   – single file for the last-company entry
      */
     @PostMapping(value = "/personal-details/{employeeId}/experienced",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> submitExperiencedDetails(
             @PathVariable String employeeId,
-            @RequestPart("data")                                       String dataJson,
-            @RequestPart("idProof")                                    MultipartFile idProof,
-            @RequestPart("passportPhoto")                              MultipartFile passportPhoto,
-            @RequestPart("experienceCerts")                            List<MultipartFile> experienceCerts,
-            @RequestPart(value = "joiningLetters", required = false)   List<MultipartFile> joiningLetters,
-            @RequestPart("relievingLetters")                            List<MultipartFile> relievingLetters) {
+            @RequestPart("data") String dataJson,
+            @RequestPart("idProof") MultipartFile idProof,
+            @RequestPart("passportPhoto") MultipartFile passportPhoto,
+            @RequestPart("experienceCerts") List<MultipartFile> experienceCerts,
+            @RequestPart(value = "joiningLetters", required = false) List<MultipartFile> joiningLetters,
+            @RequestPart("relievingLetters") List<MultipartFile> relievingLetters) {
         employeeService.submitExperiencedDetails(employeeId, dataJson,
                 idProof, passportPhoto, experienceCerts, joiningLetters, relievingLetters);
         return ResponseEntity.ok("Personal details submitted successfully.");
@@ -131,15 +131,15 @@ public class EmployeeController {
     public ResponseEntity<String> updateProfile(
             @PathVariable String employeeId,
             @RequestPart("data") String dataJson,
-            @RequestPart(value = "idProof",           required = false)    MultipartFile idProof,
-            @RequestPart(value = "passportPhoto",     required = false)    MultipartFile passportPhoto,
-            @RequestPart(value = "tenthMarksheet",    required = false)    MultipartFile tenthMarksheet,
-            @RequestPart(value = "twelfthMarksheet",  required = false)    MultipartFile twelfthMarksheet,
-            @RequestPart(value = "degreeCertificate", required = false)    MultipartFile degreeCertificate,
-            @RequestPart(value = "offerLetter",       required = false)    MultipartFile offerLetter,
-            @RequestPart(value = "experienceCerts",   required = false)    List<MultipartFile> experienceCerts,
-            @RequestPart(value = "joiningLetters",    required = false)    List<MultipartFile> joiningLetters,
-            @RequestPart(value = "relievingLetters",   required = false)    List<MultipartFile> relievingLetters) {
+            @RequestPart(value = "idProof", required = false) MultipartFile idProof,
+            @RequestPart(value = "passportPhoto", required = false) MultipartFile passportPhoto,
+            @RequestPart(value = "tenthMarksheet", required = false) MultipartFile tenthMarksheet,
+            @RequestPart(value = "twelfthMarksheet", required = false) MultipartFile twelfthMarksheet,
+            @RequestPart(value = "degreeCertificate", required = false) MultipartFile degreeCertificate,
+            @RequestPart(value = "offerLetter", required = false) MultipartFile offerLetter,
+            @RequestPart(value = "experienceCerts", required = false) List<MultipartFile> experienceCerts,
+            @RequestPart(value = "joiningLetters", required = false) List<MultipartFile> joiningLetters,
+            @RequestPart(value = "relievingLetters", required = false) List<MultipartFile> relievingLetters) {
 
         employeeService.updateProfile(employeeId, dataJson,
                 idProof, passportPhoto,
@@ -188,6 +188,7 @@ public class EmployeeController {
         employeeService.deleteEmployee(id);
         return ResponseEntity.ok("Employee deactivated successfully.");
     }
+
     @GetMapping("/by-email")
     public ResponseEntity<?> getEmployeeByEmail(
             @RequestParam String email) {
