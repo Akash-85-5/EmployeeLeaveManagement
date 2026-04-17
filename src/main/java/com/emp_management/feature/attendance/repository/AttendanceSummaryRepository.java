@@ -33,4 +33,31 @@ public interface AttendanceSummaryRepository extends JpaRepository<AttendanceSum
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             Pageable pageable);
+
+
+    @Query("""
+    SELECT a FROM AttendanceSummary a
+    WHERE a.employeeId IN :empIds
+      AND (:status IS NULL OR TRIM(a.attendanceStatus) = TRIM(:status))
+      AND (:from IS NULL OR a.attendanceDate >= :from)
+      AND (:to IS NULL OR a.attendanceDate <= :to)
+""")
+    Page<AttendanceSummary> findByEmployeeIdIn(
+            @Param("empIds") List<String> empIds,
+            @Param("status") String status,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
+
+    @Query("""
+    SELECT a FROM AttendanceSummary a 
+    WHERE a.employeeId = :empId 
+      AND (:from IS NULL OR a.attendanceDate >= :from)
+      AND (:to IS NULL OR a.attendanceDate <= :to)
+""")
+    Page<AttendanceSummary> findByEmployeeIdAndDateRange(
+            @Param("empId") String empId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to,
+            Pageable pageable);
 }

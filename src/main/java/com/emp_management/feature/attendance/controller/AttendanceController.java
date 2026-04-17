@@ -2,10 +2,18 @@ package com.emp_management.feature.attendance.controller;
 
 import com.emp_management.feature.attendance.dto.*;
 import com.emp_management.feature.attendance.service.AttendanceService;
+import com.emp_management.feature.employee.dto.NameDto;
+import com.emp_management.feature.employee.entity.Employee;
+import com.emp_management.feature.employee.service.EmployeeService;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -14,12 +22,25 @@ import java.util.List;
 public class AttendanceController {
 
     private final AttendanceService service;
+    private final EmployeeService empService;
 
-    public AttendanceController(AttendanceService service) {
+    public AttendanceController(AttendanceService service, EmployeeService empService) {
         this.service = service;
+        this.empService = empService;
     }
 
     // 🔹 Employee Calendar
+    @GetMapping("/{empId}")
+    public Page<AttendanceCalendarDTO> getEmployeeAttendanceByRange(
+            @PathVariable String empId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return service.getEmployeeAttendanceByRange(empId, fromDate, toDate, page, size);
+    }
+
     @GetMapping("/employee/{empId}")
     public List<AttendanceCalendarDTO> getEmployeeAttendance(
             @PathVariable String empId,
@@ -27,6 +48,31 @@ public class AttendanceController {
             @RequestParam int month) {
 
         return service.getEmployeeMonthly(empId, year, month);
+    }
+
+    @GetMapping("/download/excel/{employeeId}")
+    public ResponseEntity<InputStreamResource> downloadExcel(
+            @PathVariable String employeeId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+
+        // Fallback: If dates are missing, default to the current month
+        LocalDate start = (fromDate != null) ? fromDate : LocalDate.now().withDayOfMonth(1);
+        LocalDate end = (toDate != null) ? toDate : LocalDate.now();
+
+        // Fetch records using the resolved dates
+        List<AttendanceCalendarDTO> records = service.getEmployeeAttendanceByRange(
+                employeeId, start, end, 0, 2000).getContent();
+        NameDto empName = empService.getEmployeeName(employeeId);
+        ByteArrayInputStream in = service.exportAttendanceToExcel(records, empName.getEmpName(), employeeId);
+
+        // Dynamic filename based on dates used
+        String fileName = "Attendance_" + employeeId + "_" + start + "_to_" + end + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new InputStreamResource(in));
     }
 
     // 🔹 Daily View
@@ -63,11 +109,24 @@ public class AttendanceController {
 
         return service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
     }
+
     @GetMapping("/employee/{empId}/punch-records")
     public AttendanceCalendarDTO getPunchRecords(
             @PathVariable String empId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         return service.getPunchRecords(empId, date);
+    }
+
+    @GetMapping("/team/{reportingId}")
+    public Page<AttendanceDetailDTO> getTeamAttendance(
+            @PathVariable String reportingId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return service.getTeamAttendance(reportingId, fromDate, toDate, status, page, size);
     }
 }
