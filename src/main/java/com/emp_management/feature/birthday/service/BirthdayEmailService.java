@@ -45,8 +45,8 @@ public class BirthdayEmailService {
         && dob.getDayOfMonth() == today.getDayOfMonth()) {
 
     // ✅ already sent today check
-    if (details.getBirthdayEmailSentDate() != null &&
-        details.getBirthdayEmailSentDate().isEqual(today)) {
+    if (details.getBirthEmailSentDate() != null &&
+        details.getBirthEmailSentDate().isEqual(today)) {
         continue;
     }
 
@@ -56,7 +56,7 @@ public class BirthdayEmailService {
         sendHtmlEmail(user.getEmail(), details.getFirstName(), details.getLastName());
 
         // ✅ mark as sent
-        details.setBirthdayEmailSentDate(today);
+        details.setBirthEmailSentDate(today);
         personalDetailsRepository.save(details);
 
     } catch (MessagingException e) {

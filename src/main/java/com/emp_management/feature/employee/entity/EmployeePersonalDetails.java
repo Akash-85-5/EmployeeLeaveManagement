@@ -193,6 +193,8 @@ public class EmployeePersonalDetails {
 
     @Column(name = "spouse_contact_number", length = 15)
     private String spouseContactNumber;
+    @Column(name = "birthday_email_sent_date")
+    private LocalDate birthEmailSentDate;
 
     // ── Children (one-to-many) ────────────────────────────────────
     /**
@@ -240,6 +242,14 @@ public class EmployeePersonalDetails {
     }
 
     // ── Getters & Setters ─────────────────────────────────────────
+
+    public LocalDate getBirthEmailSentDate() {
+        return birthEmailSentDate;
+    }
+
+    public void setBirthEmailSentDate(LocalDate birthEmailSentDate) {
+        this.birthEmailSentDate = birthEmailSentDate;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

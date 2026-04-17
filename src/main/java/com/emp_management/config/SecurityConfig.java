@@ -90,7 +90,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/v1/flash-news/**",
                                 "/v1/wfh/**",
-                                "/v1/debug/**"
+                                "/v1/debug/**",
+                                "/v1/birthday/test-email"
                         ).permitAll()
                         .requestMatchers("/v1/announcements/**").permitAll()
 
