@@ -2,7 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+
     <style>
+        @font-face {
+            font-family: 'NotoSans';
+            src: url('fonts/NotoSans-Regular.ttf') format('truetype');
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -45,10 +51,6 @@
           width: 22%;
         }
 
-        .value {
-          width: 28%;
-        }
-
         .section-header {
           text-align: center;
           font-weight: bold;
@@ -76,12 +78,14 @@
         }
     </style>
 </head>
+
 <body>
 
+<!-- HEADER -->
 <table style="border:none;">
     <tr>
         <td style="width:75px; border:none; padding:0;">
-            <img th:src="${logoBase64}" style="width:62px; height:62px;" />
+            <img th:src="${logoBase64}" style="width:70px; height:70px;" />
         </td>
         <td style="border:none; padding-left:10px;">
             <div class="company-name">WENXT TECHNOLOGIES PRIVATE LIMITED</div>
@@ -98,6 +102,7 @@
 
 <div class="gap-md"></div>
 
+<!-- EMPLOYEE DETAILS -->
 <table>
     <tr>
         <td class="label">Employee ID</td>
@@ -139,68 +144,100 @@
 
 <div class="gap-xl"></div>
 
+<!-- INCOME / DEDUCTIONS -->
 <table>
     <tr>
-        <td class="section-header" colspan="2">Income</td>
-        <td class="section-header" colspan="2">Deductions</td>
+        <td class="section-header" colspan="2">
+            Income (<span style="font-family:NotoSans;">₹</span>)
+        </td>
+        <td class="section-header" colspan="2">
+            Deductions (<span style="font-family:NotoSans;">₹</span>)
+        </td>
     </tr>
+
     <tr>
         <td>Basic Salary</td>
-        <td class="amount" th:text="${d.basicSalary}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.basicSalary)}"></td>
+
         <td>Provident Fund</td>
-        <td class="amount" th:text="${d.pf}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.pf)}"></td>
     </tr>
+
     <tr>
         <td>House Rent Allowance</td>
-        <td class="amount" th:text="${d.hra}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.hra)}"></td>
+
         <td>TDS</td>
-        <td class="amount" th:text="${d.tds}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.tds)}"></td>
     </tr>
+
     <tr>
         <td>Conveyance</td>
-        <td class="amount" th:text="${d.conveyance}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.conveyance)}"></td>
+
         <td>Professional Tax</td>
-        <td class="amount" th:text="${d.professionalTax}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.professionalTax)}"></td>
     </tr>
+
     <tr>
         <td>Medical Allowance</td>
-        <td class="amount" th:text="${d.medical}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.medical)}"></td>
+
         <td>Variable Pay</td>
-        <td class="amount" th:text="${d.variablePay}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.variablePay)}"></td>
     </tr>
+
     <tr>
         <td>Other Allowances</td>
-        <td class="amount" th:text="${d.otherAllowance}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.otherAllowance)}"></td>
+
         <td>ESI</td>
-        <td class="amount" th:text="${d.esi}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.esi)}"></td>
     </tr>
+
     <tr>
         <td>Bonus</td>
-        <td class="amount" th:text="${d.bonus}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.bonus)}"></td>
+
         <td>LOP</td>
-        <td class="amount" th:text="${d.lop}"></td>
+        <td class="amount" th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.lop)}"></td>
     </tr>
+
     <tr>
         <td><strong>Total</strong></td>
-        <td class="amount"><strong th:text="${d.grossSalary}"></strong></td>
+        <td class="amount">
+            <strong th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.grossSalary)}"></strong>
+        </td>
+
         <td><strong>Total Deduction</strong></td>
-        <td class="amount"><strong th:text="${d.totalDeduction}"></strong></td>
+        <td class="amount">
+            <strong th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.totalDeduction)}"></strong>
+        </td>
     </tr>
 </table>
 
 <div class="gap-xl"></div>
+
+<!-- NET SALARY -->
 <table>
     <tr>
         <td class="label">Net Salary</td>
-        <td class="net-value" colspan="3" th:text="${d.netSalary}"></td>
+        <td class="net-value" colspan="3">
+            <span style="font-family:NotoSans;">₹</span>
+            <span th:text="${T(com.emp_management.feature.payroll.service.PayslipPdfService).formatIndianCurrency(d.netSalary)}"></span>
+        </td>
     </tr>
+
     <tr>
         <td class="label">Salary in words</td>
-        <td colspan="3" style="text-align:center;" th:text="${d.netSalaryInWords}"></td>
+        <td colspan="3" style="text-align:center;"
+            th:text="${d.netSalaryInWords}">
+        </td>
     </tr>
 </table>
 
 <div class="gap-md"></div>
+
 <p class="computer-generated">
     This is a computer-generated document. No signature is required
 </p>
