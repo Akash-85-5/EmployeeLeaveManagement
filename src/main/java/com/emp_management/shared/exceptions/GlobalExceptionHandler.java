@@ -172,6 +172,28 @@ public class GlobalExceptionHandler {
                         "Something went wrong on our end. Please try again later."));
     }
 
+    // ── Standard JDK exceptions used for business validation ──────
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Bad request (IllegalArgumentException): {}", ex.getMessage());
+        return respond(HttpStatus.BAD_REQUEST,
+                ErrorResponse.of(400, ErrorCode.INVALID_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+        log.warn("Bad request (IllegalStateException): {}", ex.getMessage());
+        return respond(HttpStatus.BAD_REQUEST,
+                ErrorResponse.of(400, ErrorCode.INVALID_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException ex) {
+        log.warn("Forbidden (SecurityException): {}", ex.getMessage());
+        return respond(HttpStatus.FORBIDDEN,
+                ErrorResponse.of(403, ErrorCode.FORBIDDEN, ex.getMessage()));
+    }
     // ── Helper ────────────────────────────────────────────────────
 
     private ResponseEntity<ErrorResponse> respond(HttpStatus status, ErrorResponse body) {
