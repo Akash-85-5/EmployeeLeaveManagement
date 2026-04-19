@@ -18,6 +18,7 @@ import com.emp_management.feature.leave.annual.repository.LeaveApplicationReposi
 import com.emp_management.feature.leave.annual.repository.LeaveApprovalRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveTypeRepository;
+import com.emp_management.feature.leave.annual.utils.DateUtils;
 import com.emp_management.feature.leave.carryforward.service.CarryForwardBalanceService;
 import com.emp_management.feature.leave.compoff.entity.CompOff;
 import com.emp_management.feature.leave.compoff.repository.CompOffRepository;
@@ -87,12 +88,7 @@ public class LeaveApplicationService {
 //        this.separationService           = separationService;
     }
 
-    private Employee getAdmin() {
-        return employeeRepository.findAllByRoleName("ADMIN")
-                .stream()
-                .findFirst()
-                .orElse(null); // Handle cases where no admin is found
-    }
+
     // ═══════════════════════════════════════════════════════════════
     // APPLY LEAVE
     // ═══════════════════════════════════════════════════════════════
@@ -120,11 +116,17 @@ public class LeaveApplicationService {
                     .orElse("Unknown Approver");
         }
 
-        String message = String.format("%s has applied for %s leave from %s to %s. Awaiting approval from: %s.",
+
+        boolean isSingleDay = leave.getStartDate().isEqual(leave.getEndDate());
+        String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+
+        String preposition = isSingleDay ? "on" : "from";
+
+        String message = String.format("%s has applied for %s leave %s %s. Awaiting approval from: %s.",
                 employee.getName(),
                 leave.getLeaveType().getLeaveType(),
-                leave.getStartDate(),
-                leave.getEndDate(),
+                preposition, // "on" or "from"
+                dateRange,
                 approverName);
         // No manager → auto-approve
         if (leave.getRequiredApprovalLevels() == 0) {
@@ -525,13 +527,23 @@ public class LeaveApplicationService {
 
         Employee approver = employeeRepository.findByEmpId(leave.getFirstApproverId())
                 .orElseThrow(() -> new EntityNotFoundException("Approver not found"));
+
+        String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+
+        boolean isSingleDay = leave.getStartDate().isEqual(leave.getEndDate());
+        String timePhrase = isSingleDay ? "on" : "from";
+
         notificationService.createNotification(
-                approver.getEmpId(), employee.getEmail(), approver.getEmail(),
-                EventType.LEAVE_APPLIED, Channel.EMAIL,
-                employee.getName() + " applied for "
-                        + leave.getLeaveType().getLeaveType() + " leave from "
-                        + leave.getStartDate() + " to " + leave.getEndDate()
-                        + ". Awaiting your approval.");
+                approver.getEmpId(),
+                employee.getEmail(),
+                approver.getEmail(),
+                EventType.LEAVE_APPLIED,
+                Channel.EMAIL,
+                String.format("%s applied for %s leave %s %s. Awaiting your approval.",
+                        employee.getName(),
+                        leave.getLeaveType().getLeaveType(),
+                        timePhrase,
+                        dateRange));
     }
 
     private void sendNotificationToAdmin(String message, String senderEmail) {
@@ -551,5 +563,12 @@ public class LeaveApplicationService {
                 Channel.EMAIL,
                 message
         );
+    }
+
+    private Employee getAdmin() {
+        return employeeRepository.findAllByRoleName("ADMIN")
+                .stream()
+                .findFirst()
+                .orElse(null); // Handle cases where no admin is found
     }
 }

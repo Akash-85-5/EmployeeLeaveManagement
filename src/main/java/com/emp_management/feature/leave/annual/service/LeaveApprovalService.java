@@ -12,6 +12,7 @@ import com.emp_management.feature.leave.annual.mapper.LeaveApplicationMapper;
 import com.emp_management.feature.leave.annual.repository.LeaveApplicationRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveApprovalRepository;
 import com.emp_management.feature.leave.annual.repository.LeaveAttachmentRepository;
+import com.emp_management.feature.leave.annual.utils.DateUtils;
 import com.emp_management.feature.notification.service.NotificationService;
 import com.emp_management.shared.enums.ApprovalLevel;
 import com.emp_management.shared.enums.Channel;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -35,9 +37,9 @@ public class LeaveApprovalService {
 
     private final EmployeeRepository employeeRepository;
     private final LeaveApplicationRepository leaveApplicationRepository;
-    private final NotificationService           notificationService;
-    private final LeaveApprovalRepository       leaveApprovalRepository;
-    private final LeaveApplicationService       leaveApplicationService;
+    private final NotificationService notificationService;
+    private final LeaveApprovalRepository leaveApprovalRepository;
+    private final LeaveApplicationService leaveApplicationService;
     private final LeaveAttachmentRepository leaveAttachmentRepository;
 
     public LeaveApprovalService(EmployeeRepository employeeRepository,
@@ -46,12 +48,12 @@ public class LeaveApprovalService {
                                 LeaveApprovalRepository leaveApprovalRepository,
                                 LeaveApplicationService leaveApplicationService,
                                 LeaveAttachmentRepository leaveAttachmentRepository) {
-        this.employeeRepository         = employeeRepository;
+        this.employeeRepository = employeeRepository;
         this.leaveApplicationRepository = leaveApplicationRepository;
-        this.notificationService        = notificationService;
-        this.leaveApprovalRepository    = leaveApprovalRepository;
-        this.leaveApplicationService    = leaveApplicationService;
-        this.leaveAttachmentRepository  = leaveAttachmentRepository;
+        this.notificationService = notificationService;
+        this.leaveApprovalRepository = leaveApprovalRepository;
+        this.leaveApplicationService = leaveApplicationService;
+        this.leaveAttachmentRepository = leaveAttachmentRepository;
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -68,7 +70,6 @@ public class LeaveApprovalService {
                         approverId);
         return toPageDto(convertToDto(all), pageable);
     }
-
 
 
     public LeaveApplicationWithAttachmentsDto getLeaveApplicationWithAttachments(Long leaveId) {
@@ -139,8 +140,7 @@ public class LeaveApprovalService {
 
         if (request.getDecision() == RequestStatus.REJECTED) {
             finalizeLeave(leave, RequestStatus.REJECTED, approver, request.getComments());
-        }
-        else {
+        } else {
             advanceOrFinalize(leave, approver, request.getComments());
         }
     }
@@ -236,7 +236,7 @@ public class LeaveApprovalService {
 
     private void advanceOrFinalize(LeaveApplication leave, Employee currentApprover, String comments) {
         ApprovalLevel current = leave.getCurrentApprovalLevel();
-        int required          = leave.getRequiredApprovalLevels();
+        int required = leave.getRequiredApprovalLevels();
 
         if (current == ApprovalLevel.FIRST_APPROVER) {
             if (required >= 2) {
@@ -247,11 +247,11 @@ public class LeaveApprovalService {
                 notifyEmployeeProgress(leave, currentApprover,
                         "Your leave has been approved at level 1. Pending final approval.");
             } else {
-                finalizeLeave(leave, RequestStatus.APPROVED, currentApprover,comments);
+                finalizeLeave(leave, RequestStatus.APPROVED, currentApprover, comments);
             }
         } else {
             // MANAGER or HR → final level
-            finalizeLeave(leave, RequestStatus.APPROVED, currentApprover,comments);
+            finalizeLeave(leave, RequestStatus.APPROVED, currentApprover, comments);
         }
     }
 
@@ -260,7 +260,7 @@ public class LeaveApprovalService {
                                Employee finalApprover,
                                String reason) {
         leave.setStatus(finalStatus);
-        if (finalStatus == RequestStatus.REJECTED){
+        if (finalStatus == RequestStatus.REJECTED) {
             leave.setRejectionReason(reason);
         }
         leave.setApprovedBy(finalApprover.getEmpId());
@@ -272,6 +272,22 @@ public class LeaveApprovalService {
         }
 
         leaveApplicationRepository.save(leave);
+        String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+        String preposition = getPreposition(leave.getStartDate(), leave.getEndDate());
+
+        String message = String.format("Leave %s: %s (%s) %s %s. Handled by: %s.",
+                finalStatus,
+                leave.getEmployee().getName(),
+                leave.getLeaveType().getLeaveType(),
+                preposition, // "on" or "from"
+                dateRange,
+                finalApprover.getName());
+
+        EventType eventType = (finalStatus == RequestStatus.APPROVED)
+                ? EventType.LEAVE_APPROVED
+                : EventType.LEAVE_REJECTED;
+
+        sendNotificationToAdmin(message, finalApprover.getEmail(), eventType);
         notifyEmployee(leave, finalApprover, finalStatus);
     }
 
@@ -335,28 +351,31 @@ public class LeaveApprovalService {
         employeeRepository.findByEmpId(leave.getSecondApproverId()).ifPresent(mgr -> {
             String empName = employeeRepository.findByEmpId(leave.getEmployee().getEmpId())
                     .map(Employee::getName).orElse("Employee");
+            String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+            String preposition = getPreposition(leave.getStartDate(), leave.getEndDate());
+
             notificationService.createNotification(
                     mgr.getEmpId(), firstApprover.getEmail(), mgr.getEmail(),
                     EventType.LEAVE_APPLIED, Channel.EMAIL,
-                    empName + "'s " + leave.getLeaveType().getLeaveType() + " leave ("
-                            + leave.getStartDate() + " to " + leave.getEndDate()
-                            + ") approved at level 1. Requires your final approval.");
+                    String.format("%s's %s leave %s %s approved at level 1. Requires your final approval.",
+                            empName, leave.getLeaveType().getLeaveType(), preposition, dateRange));
         });
     }
 
     private void notifyEmployee(LeaveApplication leave, Employee approver,
                                 RequestStatus decision) {
+
+        String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+        String preposition = getPreposition(leave.getStartDate(), leave.getEndDate());
         employeeRepository.findByEmpId(leave.getEmployee().getEmpId()).ifPresent(emp -> {
             String context = switch (decision) {
-                case APPROVED -> "Your " + leave.getLeaveType().getLeaveType() + " leave from "
-                        + leave.getStartDate() + " to " + leave.getEndDate()
-                        + " has been fully approved.";
-                case REJECTED -> "Your " + leave.getLeaveType().getLeaveType() + " leave from "
-                        + leave.getStartDate() + " to " + leave.getEndDate()
-                        + " has been rejected. Reason: "
-                        + (leave.getRejectionReason() != null ? leave.getRejectionReason() : "");
-                default -> "A meeting is required regarding your leave from "
-                        + leave.getStartDate() + " to " + leave.getEndDate() + ".";
+                case APPROVED -> String.format("Your %s leave %s %s has been fully approved.",
+                        leave.getLeaveType().getLeaveType(), preposition, dateRange);
+                case REJECTED -> String.format("Your %s leave %s %s has been rejected. Reason: %s",
+                        leave.getLeaveType().getLeaveType(), preposition, dateRange,
+                        (leave.getRejectionReason() != null ? leave.getRejectionReason() : ""));
+                default -> String.format("A meeting is required regarding your leave %s %s.",
+                        preposition, dateRange);
             };
             notificationService.createNotification(
                     emp.getEmpId(), approver.getEmail(), emp.getEmail(),
@@ -364,23 +383,51 @@ public class LeaveApprovalService {
                         case APPROVED -> EventType.LEAVE_APPROVED;
                         case REJECTED -> EventType.LEAVE_REJECTED;
                         default -> EventType.LEAVE_IN_PROGRESS;
-                    },  Channel.EMAIL, context);
+                    }, Channel.EMAIL, context);
         });
     }
 
     private void notifyEmployeeProgress(LeaveApplication leave, Employee approver, String message) {
+        String dateRange = DateUtils.formatLeaveDateRange(leave.getStartDate(), leave.getEndDate());
+        String preposition = getPreposition(leave.getStartDate(), leave.getEndDate());
+
         employeeRepository.findByEmpId(leave.getEmployee().getEmpId()).ifPresent(emp ->
                 notificationService.createNotification(
                         emp.getEmpId(), approver.getEmail(), emp.getEmail(),
                         EventType.LEAVE_IN_PROGRESS, Channel.EMAIL,
-                        message + " (Leave: " + leave.getStartDate()
-                                + " to " + leave.getEndDate() + ")")
+                        String.format("%s (Leave %s %s)", message, preposition, dateRange))
         );
     }
 
     // ═══════════════════════════════════════════════════════════════
     // UTILITIES
     // ═══════════════════════════════════════════════════════════════
+
+    private void sendNotificationToAdmin(String message, String senderEmail, EventType eventType) {
+        Employee admin = getAdmin();
+
+        // Safety check: if no admin exists, don't try to send
+        if (admin == null) {
+            System.out.println("No admin found to notify.");
+            return;
+        }
+
+        notificationService.createNotification(
+                admin.getEmpId(),       // Use the EMP_ID, not the email
+                senderEmail,            // From Email
+                admin.getEmail(),       // To (Target email for the record)
+                eventType,
+                Channel.EMAIL,
+                message
+        );
+    }
+
+    private Employee getAdmin() {
+        return employeeRepository.findAllByRoleName("ADMIN")
+                .stream()
+                .findFirst()
+                .orElse(null); // Handle cases where no admin is found
+    }
 
     private List<LeaveApplicationWithAttachmentsDto> convertToDto(List<LeaveApplication> leaves) {
         if (leaves == null || leaves.isEmpty()) return List.of();
@@ -440,4 +487,9 @@ public class LeaveApprovalService {
         if (comments == null || comments.isBlank()) {
             throw new BadRequestException("Remarks are mandatory for " + decision.toString().toLowerCase());
         }
-    }}
+    }
+
+    private String getPreposition(LocalDate start, LocalDate end) {
+        return start.isEqual(end) ? "on" : "from";
+    }
+}
