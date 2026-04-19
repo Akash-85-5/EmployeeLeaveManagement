@@ -106,8 +106,8 @@ public class AttendanceController {
             @RequestParam(defaultValue = "10")
             int size
     ) {
-
-        return service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
+        Page<AttendanceDetailDTO> res = service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
+        return res;
     }
 
     @GetMapping("/employee/{empId}/punch-records")
