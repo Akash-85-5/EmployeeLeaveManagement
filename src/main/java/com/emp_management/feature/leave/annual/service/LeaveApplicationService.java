@@ -87,14 +87,11 @@ public class LeaveApplicationService {
 //        this.separationService           = separationService;
     }
 
-    private String getAdminEmail() {
-        // Assuming your Employee entity has a Role enum or String field
-        // Adjust logic based on your specific entity structure
+    private Employee getAdmin() {
         return employeeRepository.findAllByRoleName("ADMIN")
                 .stream()
                 .findFirst()
-                .map(Employee::getEmail)
-                .orElse("admin@yourcompany.com"); // Fallback
+                .orElse(null); // Handle cases where no admin is found
     }
     // ═══════════════════════════════════════════════════════════════
     // APPLY LEAVE
@@ -113,12 +110,10 @@ public class LeaveApplicationService {
 
         BigDecimal calculatedDays = calculateLeaveDuration(leave);
         leave.setDays(calculatedDays);
-
         Employee employee = leave.getEmployee();
-
         validateLeaveTypeAndBalance(leave, employee, calculatedDays);
         setupApprovalChain(leave, employee);
-        String approverName = "Auto-Approved"; // Default for 0 levels
+        String approverName = "Auto-Approved";
         if (leave.getFirstApproverId() != null) {
             approverName = employeeRepository.findByEmpId(leave.getFirstApproverId())
                     .map(Employee::getName)
@@ -540,11 +535,18 @@ public class LeaveApplicationService {
     }
 
     private void sendNotificationToAdmin(String message, String senderEmail) {
-        String adminEmail = getAdminEmail();
+        Employee admin = getAdmin();
+
+        // Safety check: if no admin exists, don't try to send
+        if (admin == null) {
+            System.out.println("No admin found to notify.");
+            return;
+        }
+
         notificationService.createNotification(
-                adminEmail,              // Target Email (Admin)
-                senderEmail,             // From Email (Applicant)
-                adminEmail,              // To (For record)
+                admin.getEmpId(),       // Use the EMP_ID, not the email
+                senderEmail,            // From Email
+                admin.getEmail(),       // To (Target email for the record)
                 EventType.LEAVE_APPLIED,
                 Channel.EMAIL,
                 message
