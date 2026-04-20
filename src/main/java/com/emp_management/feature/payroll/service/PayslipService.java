@@ -117,14 +117,11 @@ public class PayslipService {
         p.setLop(safe(req.getLop()));
         p.setVariablePay(safe(req.getVariablePay()));
 
-        int prevMonth = req.getMonth() == 1 ? 12 : req.getMonth() - 1;
-        int prevYear  = req.getMonth() == 1 ? req.getYear() - 1 : req.getYear();
+        p.setLopDays(req.getLopDays() != null ? req.getLopDays() : 0.0);
 
 //        Double lopDays = lopService.getMyMonthlyLopTotal(
 //                req.getEmployeeId(), prevYear, prevMonth);
-//
-//        p.setLopDays(lopDays != null ? lopDays : 0.0);
-
+        p.setLopDays(0.0);
         calculatePayroll(p);
     }
 

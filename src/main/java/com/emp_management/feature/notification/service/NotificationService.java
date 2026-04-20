@@ -32,7 +32,7 @@ public class NotificationService {
         this.notificationMessageBuilder = notificationMessageBuilder;
     }
 
-    // ==================== EXISTING METHODS ====================
+    // ==================== EXISTING METHOD (unchanged — used by other features) ====================
 
     public Notification createNotification(String userId,
                                            String fromEmail,
@@ -52,7 +52,6 @@ public class NotificationService {
 
         Notification saved = notificationRepository.save(notification);
 
-        // for testing i have used my mail in here.
         if (channel == Channel.EMAIL) {
             emailSender.sendEmail(
                     fromEmail,
@@ -65,80 +64,93 @@ public class NotificationService {
         return saved;
     }
 
+    // ==================== NEW OVERLOAD — bypasses the builder, uses message directly ====================
+    // Use this when the caller has already built the full, formatted message body.
+    // VpnRequestService uses this so the email and in-app notification show the
+    // real content instead of the generic "You have a new notification." text.
+
+    public Notification createNotification(String userId,
+                                           String fromEmail,
+                                           String toEmail,
+                                           EventType eventType,
+                                           Channel channel,
+                                           String subject,
+                                           String messageBody) {
+
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setEventType(eventType);
+        notification.setChannel(channel);
+        notification.setMessage(messageBody);
+        notification.setNotificationStatus(NotificationStatus.UNREAD);
+
+        Notification saved = notificationRepository.save(notification);
+
+        if (channel == Channel.EMAIL) {
+            emailSender.sendEmail(
+                    fromEmail,
+                    toEmail,
+                    subject,
+                    messageBody
+            );
+        }
+
+        return saved;
+    }
+
+    // ==================== EXISTING METHODS (unchanged) ====================
+
     public Page<NotificationResponse> getNotifications(String userId, Pageable pageable) {
-        Page<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        Page<Notification> notifications = notificationRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, pageable);
         return notifications.map(this::mapToResponse);
     }
 
-
-    /**
-     * Get unread notification count
-     */
     public Long getUnreadCount(String userId) {
         return notificationRepository.countByUserIdAndNotificationStatus(
                 userId, NotificationStatus.UNREAD);
     }
 
-    /**
-     * Mark single notification as read
-     */
     @Transactional
     public void markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new BadRequestException("Notification not found with ID: " + notificationId));
-
+                .orElseThrow(() -> new BadRequestException(
+                        "Notification not found with ID: " + notificationId));
         notification.setNotificationStatus(NotificationStatus.READ);
         notificationRepository.save(notification);
     }
 
-    /**
-     * Mark all notifications as read for a user
-     */
     @Transactional
     public void markAllAsRead(String userId) {
         List<Notification> unreadNotifications = notificationRepository
                 .findByUserIdAndNotificationStatus(userId, NotificationStatus.UNREAD);
-
         for (Notification notification : unreadNotifications) {
             notification.setNotificationStatus(NotificationStatus.READ);
         }
-
         notificationRepository.saveAll(unreadNotifications);
     }
 
-    /**
-     * Delete single notification
-     */
     @Transactional
     public void deleteNotification(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new BadRequestException("Notification not found with ID: " + notificationId));
-
+                .orElseThrow(() -> new BadRequestException(
+                        "Notification not found with ID: " + notificationId));
         notificationRepository.delete(notification);
     }
 
-    /**
-     * Clear all read notifications for a user
-     */
     @Transactional
     public void clearReadNotifications(String userId) {
         List<Notification> readNotifications = notificationRepository
                 .findByUserIdAndNotificationStatus(userId, NotificationStatus.UNREAD);
-
         notificationRepository.deleteAll(readNotifications);
     }
 
-    /**
-     * Get single notification by ID
-     */
     public NotificationResponse getNotification(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new BadRequestException("Notification not found with ID: " + notificationId));
-
+                .orElseThrow(() -> new BadRequestException(
+                        "Notification not found with ID: " + notificationId));
         return mapToResponse(notification);
     }
-
-    // ==================== HELPER METHOD ====================
 
     private NotificationResponse mapToResponse(Notification notification) {
         NotificationResponse response = new NotificationResponse();
@@ -149,7 +161,6 @@ public class NotificationService {
         response.setChannel(notification.getChannel());
         response.setCreatedAt(notification.getCreatedAt());
         response.setNotificationStatus(notification.getNotificationStatus());
-
         return response;
     }
 }
