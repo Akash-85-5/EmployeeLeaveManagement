@@ -27,12 +27,12 @@ public class PayrollController {
     }
 
 
-    @PostMapping("/prepare")
-    public String preparePayroll(@RequestParam Integer year,
-                                 @RequestParam Integer month){
-
-        payrollService.preparePayroll(year,month);
-
-        return "Payroll prepared from previous month";
-    }
+//    @PostMapping("/prepare")
+//    public String preparePayroll(@RequestParam Integer year,
+//                                 @RequestParam Integer month){
+//
+//        payrollService.preparePayroll(year,month);
+//
+//        return "Payroll prepared from previous month";
+//    }
 }

@@ -33,6 +33,8 @@ public class PayslipMapper {
         r.setNetSalary(p.getNetSalary());
         r.setLopDays(p.getLopDays());
         r.setVariablePay(p.getVariablePay());
+        // Add this line in toResponse()
+        r.setTaxRegime(p.getTaxRegime() != null ? p.getTaxRegime().name() : "OLD");
 
         return r;
     }

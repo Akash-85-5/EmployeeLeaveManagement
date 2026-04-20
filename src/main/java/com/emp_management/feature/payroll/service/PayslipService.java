@@ -3,23 +3,27 @@ package com.emp_management.feature.payroll.service;
 import com.emp_management.feature.employee.entity.EmployeePersonalDetails;
 import com.emp_management.feature.employee.repository.EmployeePersonalDetailsRepository;
 import com.emp_management.feature.employee.service.EmployeeService;
-import com.emp_management.feature.payroll.dto.CreatePayslipRequest;
-import com.emp_management.feature.payroll.dto.MonthlyPayslipResponse;
-import com.emp_management.feature.payroll.dto.PayslipResponse;
-import com.emp_management.feature.payroll.dto.YearlySummaryResponse;
+import com.emp_management.feature.payroll.dto.*;
 import com.emp_management.feature.payroll.entity.Payslip;
 import com.emp_management.feature.payroll.mapper.PayslipMapper;
 import com.emp_management.feature.payroll.repository.PayslipRepository;
 import com.emp_management.shared.enums.PayrollStatus;
+import com.emp_management.shared.enums.TaxRegime;
 import com.emp_management.shared.exceptions.BadRequestException;
 import com.emp_management.shared.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.emp_management.feature.payroll.dto.EmployeePayslipStatusResponse;
+import com.emp_management.feature.payroll.dto.MonthlyPayrollSummaryResponse;
+import java.util.Map;
+
 
 @Service
 public class PayslipService {
@@ -56,21 +60,26 @@ public class PayslipService {
                         req.getMonth())
                 .orElse(null);
 
-        if(existing != null && existing.getStatus() != PayrollStatus.DELETED){
+        if(existing != null){
 
             if(existing.getStatus() == PayrollStatus.GENERATED){
-                throw new BadRequestException("Payslip already GENERATED for this month");
+                throw new BadRequestException("Payslip already GENERATED for this month. Delete it first.");
             }
 
-            throw new BadRequestException("Payslip already exists in DRAFT");
+            if(existing.getStatus() == PayrollStatus.DRAFT){
+                throw new BadRequestException("Payslip already exists in DRAFT. Use update instead.");
+            }
+
+            // ✅ Status is DELETED — reuse the same row, just refill and reactivate
+            fillPayslip(existing, req);
+            existing.setStatus(PayrollStatus.DRAFT);
+            return PayslipMapper.toResponse(payslipRepository.save(existing));
         }
 
+        // No existing record — fresh create
         Payslip p = new Payslip();
-
         fillPayslip(p, req);
-
         p.setStatus(PayrollStatus.DRAFT);
-
         return PayslipMapper.toResponse(payslipRepository.save(p));
     }
     // UPDATE
@@ -117,11 +126,11 @@ public class PayslipService {
         p.setLop(safe(req.getLop()));
         p.setVariablePay(safe(req.getVariablePay()));
 
+        // ✅ CFO enters lopDays manually — single line, no overwrite
         p.setLopDays(req.getLopDays() != null ? req.getLopDays() : 0.0);
+        // Add this line in fillPayslip()
+        p.setTaxRegime(req.getTaxRegime() != null ? req.getTaxRegime() : TaxRegime.OLD);
 
-//        Double lopDays = lopService.getMyMonthlyLopTotal(
-//                req.getEmployeeId(), prevYear, prevMonth);
-        p.setLopDays(0.0);
         calculatePayroll(p);
     }
 
@@ -313,11 +322,9 @@ public class PayslipService {
         }
 
         // ❗ RESET THESE EVERY MONTH
+        // ❗ RESET THESE EVERY MONTH — CFO fills lopDays fresh each month
         p.setLop(BigDecimal.ZERO);
-
-//        Double lopDays = lopService.getMyMonthlyLopTotal(employeeId, prevYear, prevMonth);
-//        p.setLopDays(lopDays != null ? lopDays : 0.0);
-
+        p.setLopDays(0.0);   // ✅ add this line
         calculatePayroll(p);
 
         return PayslipMapper.toResponse(p);
@@ -440,5 +447,134 @@ public class PayslipService {
                 })
                 .collect(Collectors.toList());
     }
+
+    public MonthlyPayrollSummaryResponse getMonthlyDashboard(Integer year, Integer month) {
+
+        // ── 1. All payslips for this month (excluding DELETED) ───────
+        List<Payslip> monthPayslips = payslipRepository
+                .findByYearAndMonthAndStatusNot(year, month, PayrollStatus.DELETED);
+
+        // ── 2. All employees who have personal details submitted ──────
+        //    (only these employees appear on payroll — no personal details = no payslip)
+        List<EmployeePersonalDetails> allEmployees =
+                employeePersonalDetailsRepository.findAll();
+
+        // ── 3. Quick lookup map: empId → Payslip ─────────────────────
+        Map<String, Payslip> payslipByEmpId = monthPayslips.stream()
+                .collect(Collectors.toMap(Payslip::getEmployeeId, p -> p));
+
+        // ── 4. Totals — count only GENERATED payslips for real totals
+        BigDecimal totalGross      = BigDecimal.ZERO;
+        BigDecimal totalDeductions = BigDecimal.ZERO;
+        BigDecimal totalNet        = BigDecimal.ZERO;
+        int generatedCount = 0;
+        int draftCount     = 0;
+
+        for (Payslip p : monthPayslips) {
+            if (p.getStatus() == PayrollStatus.GENERATED) {
+                generatedCount++;
+                totalGross = totalGross.add(safe(p.getGrossSalary()));
+                totalNet   = totalNet.add(safe(p.getNetSalary()));
+
+                BigDecimal ded = safe(p.getPf())
+                        .add(safe(p.getEsi()))
+                        .add(safe(p.getProfessionalTax()))
+                        .add(safe(p.getTds()))
+                        .add(safe(p.getLop()))
+                        .add(safe(p.getVariablePay()));
+                totalDeductions = totalDeductions.add(ded);
+
+            } else if (p.getStatus() == PayrollStatus.DRAFT) {
+                draftCount++;
+            }
+        }
+
+        int notCreatedCount = (int) allEmployees.stream()
+                .filter(e -> !payslipByEmpId.containsKey(
+                        e.getEmployee().getEmpId()))
+                .count();
+
+        // ── 5. Per-employee status list ───────────────────────────────
+        //    Sort order: NOT_CREATED first (needs action), then DRAFT, then GENERATED
+        List<EmployeePayslipStatusResponse> employeeStatuses = allEmployees.stream()
+                .map(emp -> {
+                    String empId = emp.getEmployee().getEmpId();
+                    EmployeePayslipStatusResponse row =
+                            new EmployeePayslipStatusResponse();
+
+                    row.setEmployeeId(empId);
+                    row.setEmployeeName(emp.getFirstName() + " " + emp.getLastName());
+                    row.setDesignation(emp.getDesignation());
+
+                    // ✅ ADD HERE
+                    TaxRegime regime = emp.getEmployee().getTaxRegime();
+                    row.setTaxRegime(regime != null ? regime.name() : "OLD");
+                    Payslip p = payslipByEmpId.get(empId);
+
+                    if (p == null) {
+                        row.setPayslipStatus("NOT_CREATED");
+                    } else {
+                        row.setPayslipStatus(p.getStatus().name());
+                        row.setGrossSalary(safe(p.getGrossSalary()));
+                        row.setNetSalary(safe(p.getNetSalary()));
+
+                        BigDecimal ded = safe(p.getPf())
+                                .add(safe(p.getEsi()))
+                                .add(safe(p.getProfessionalTax()))
+                                .add(safe(p.getTds()))
+                                .add(safe(p.getLop()))
+                                .add(safe(p.getVariablePay()));
+                        row.setTotalDeductions(ded);
+                    }
+
+                    return row;
+                })
+                // NOT_CREATED first → DRAFT → GENERATED
+                .sorted(Comparator.comparingInt(row -> {
+                    switch (row.getPayslipStatus()) {
+                        case "NOT_CREATED": return 0;
+                        case "DRAFT":       return 1;
+                        case "GENERATED":   return 2;
+                        default:            return 3;
+                    }
+                }))
+                .collect(Collectors.toList());
+
+        // ── 6. Assemble response ──────────────────────────────────────
+        MonthlyPayrollSummaryResponse res = new MonthlyPayrollSummaryResponse();
+        res.setYear(year);
+        res.setMonth(month);
+        res.setTotalGrossSalary(totalGross);
+        res.setTotalDeductions(totalDeductions);
+        res.setTotalNetSalary(totalNet);
+        res.setTotalEmployees(allEmployees.size());
+        res.setGeneratedCount(generatedCount);
+        res.setDraftCount(draftCount);
+        res.setNotCreatedCount(notCreatedCount);
+        res.setEmployeeStatuses(employeeStatuses);
+
+
+        return res;
+    }
+
+    public PayslipResponse generatePayslip(String employeeId, Integer year, Integer month) {
+
+        Payslip p = payslipRepository
+                .findByEmployeeIdAndYearAndMonth(employeeId, year, month)
+                .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
+
+        if (p.getStatus() == PayrollStatus.GENERATED) {
+            throw new BadRequestException("Already generated");
+        }
+        if (p.getStatus() == PayrollStatus.DELETED) {
+            throw new BadRequestException("Payslip is deleted");
+        }
+
+        p.setStatus(PayrollStatus.GENERATED);
+        p.setGeneratedDate(LocalDate.now());
+
+        return PayslipMapper.toResponse(payslipRepository.save(p));
+    }
+
 }
 

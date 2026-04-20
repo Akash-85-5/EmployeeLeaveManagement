@@ -3,6 +3,7 @@ package com.emp_management.feature.employee.controller;
 import com.emp_management.feature.employee.dto.EmployeeResponseDTO;
 import com.emp_management.feature.employee.dto.NameDto;
 import com.emp_management.feature.employee.dto.ProfileResponse;
+import com.emp_management.feature.employee.dto.TaxRegimeUpdateRequest;
 import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.repository.EmployeeRepository;
 import com.emp_management.feature.employee.service.EmployeeService;
@@ -202,5 +203,13 @@ public class EmployeeController {
         result.put("email", employee.getEmail());
 
         return ResponseEntity.ok(result);
+    }
+    @PutMapping("/{empId}/tax-regime")
+    public ResponseEntity<String> updateTaxRegime(
+            @PathVariable String empId,
+            @RequestBody TaxRegimeUpdateRequest request) {
+
+        employeeService.updateTaxRegime(empId, request.getTaxRegime());
+        return ResponseEntity.ok("Tax regime updated to " + request.getTaxRegime().name());
     }
 }
