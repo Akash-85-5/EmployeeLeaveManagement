@@ -24,6 +24,7 @@ public class CreatePayslipRequest {
     private BigDecimal tds;
     private BigDecimal lop;
     private BigDecimal variablePay;
+    private Double lopDays;
 
     // getters setters
 
@@ -161,5 +162,13 @@ public class CreatePayslipRequest {
 
     public void setVariablePay(BigDecimal variablePay) {
         this.variablePay = variablePay;
+    }
+
+    public Double getLopDays() {
+        return lopDays;
+    }
+
+    public void setLopDays(Double lopDays) {
+        this.lopDays = lopDays;
     }
 }
