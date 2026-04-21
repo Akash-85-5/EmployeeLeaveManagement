@@ -29,6 +29,13 @@ public class PayslipResponse {
     private BigDecimal grossSalary;
     private BigDecimal netSalary;
 
+    // Add to PayslipResponse.java
+
+    private String taxRegime;
+
+    public String getTaxRegime() { return taxRegime; }
+    public void setTaxRegime(String taxRegime) { this.taxRegime = taxRegime; }
+
     // getters setters
 
     public String getEmployeeId() {

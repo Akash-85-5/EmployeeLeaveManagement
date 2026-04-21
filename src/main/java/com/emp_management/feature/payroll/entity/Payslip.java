@@ -1,8 +1,9 @@
 package com.emp_management.feature.payroll.entity;
 
+import com.emp_management.shared.converter.AESBigDecimalConverter;
 import com.emp_management.shared.enums.PayrollStatus;
+import com.emp_management.shared.enums.TaxRegime;
 import jakarta.persistence.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -21,36 +22,51 @@ public class Payslip {
 
     private Integer year;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal basicSalary;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal hra;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal conveyance;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal medical;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal otherAllowance;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal bonus;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal incentive;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal stipend;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal grossSalary;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal pf;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal esi;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal professionalTax;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal tds;
 
     private Double lopDays;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal lop;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal netSalary;
 
     private LocalDate generatedDate;
@@ -58,7 +74,18 @@ public class Payslip {
     @Enumerated(EnumType.STRING)
     private PayrollStatus status;
 
+    @Convert(converter = AESBigDecimalConverter.class)
     private BigDecimal variablePay;
+
+    // In Payslip.java — add this field
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tax_regime")
+    private TaxRegime taxRegime = TaxRegime.OLD;
+
+    // getter + setter
+    public TaxRegime getTaxRegime() { return taxRegime; }
+    public void setTaxRegime(TaxRegime taxRegime) { this.taxRegime = taxRegime; }
 
     // getters setters
 
@@ -245,4 +272,5 @@ public class Payslip {
     public void setVariablePay(BigDecimal variablePay) {
         this.variablePay = variablePay;
     }
+
 }

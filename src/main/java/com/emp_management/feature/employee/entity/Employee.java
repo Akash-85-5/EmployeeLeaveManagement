@@ -3,10 +3,7 @@ package com.emp_management.feature.employee.entity;
 import com.emp_management.shared.entity.Branch;
 import com.emp_management.shared.entity.Department;
 import com.emp_management.shared.entity.Role;
-import com.emp_management.shared.enums.BiometricVpnStatus;
-import com.emp_management.shared.enums.EmployeeExperience;
-import com.emp_management.shared.enums.SeparationStatus;
-import com.emp_management.shared.enums.SeparationType;
+import com.emp_management.shared.enums.*;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -64,6 +61,10 @@ public class Employee {
 
     @OneToOne(mappedBy = "employee", cascade = CascadeType.ALL)
     private EmployeeOnboarding onboarding;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tax_regime", nullable = false)
+    private TaxRegime taxRegime = TaxRegime.OLD;
 
     @PrePersist
     protected void onCreate() {
@@ -186,6 +187,14 @@ public class Employee {
 
     public void setOnboarding(EmployeeOnboarding onboarding) {
         this.onboarding = onboarding;
+    }
+
+    public TaxRegime getTaxRegime() {
+        return taxRegime;
+    }
+
+    public void setTaxRegime(TaxRegime taxRegime) {
+        this.taxRegime = taxRegime;
     }
 }
 

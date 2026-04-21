@@ -1135,4 +1135,12 @@ public class EmployeeService {
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }
+    public void updateTaxRegime(String empId, TaxRegime taxRegime) {
+
+        Employee emp = employeeRepository.findByEmpId(empId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+
+        emp.setTaxRegime(taxRegime);
+        employeeRepository.save(emp);
+    }
 }

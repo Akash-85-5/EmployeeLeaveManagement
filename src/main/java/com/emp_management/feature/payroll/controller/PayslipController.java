@@ -1,9 +1,6 @@
 package com.emp_management.feature.payroll.controller;
 
-import com.emp_management.feature.payroll.dto.CreatePayslipRequest;
-import com.emp_management.feature.payroll.dto.MonthlyPayslipResponse;
-import com.emp_management.feature.payroll.dto.PayslipResponse;
-import com.emp_management.feature.payroll.dto.YearlySummaryResponse;
+import com.emp_management.feature.payroll.dto.*;
 import com.emp_management.feature.payroll.service.PayslipService;
 import com.emp_management.security.CustomUserDetails;
 import org.springframework.http.HttpHeaders;
@@ -171,5 +168,26 @@ public class PayslipController {
             @PathVariable Integer year){
 
         return payslipService.getEmployeeMonthlyBreakdown(employeeId, year);
+    }
+    // ───────────── CFO DASHBOARD ─────────────
+
+    // ───────────── CFO DASHBOARD ─────────────
+
+    // ───────────── CFO DASHBOARD ─────────────
+
+    @GetMapping("/dashboard/{year}/{month}")
+    public MonthlyPayrollSummaryResponse monthlyDashboard(
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+
+        return payslipService.getMonthlyDashboard(year, month);
+    }
+    @PutMapping("/generate/{employeeId}/{year}/{month}")
+    public PayslipResponse generate(
+            @PathVariable String employeeId,
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+
+        return payslipService.generatePayslip(employeeId, year, month);
     }
 }

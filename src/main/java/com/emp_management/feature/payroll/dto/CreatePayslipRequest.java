@@ -1,5 +1,7 @@
 package com.emp_management.feature.payroll.dto;
 
+import com.emp_management.shared.enums.TaxRegime;
+
 import java.math.BigDecimal;
 
 public class CreatePayslipRequest {
@@ -24,6 +26,14 @@ public class CreatePayslipRequest {
     private BigDecimal tds;
     private BigDecimal lop;
     private BigDecimal variablePay;
+    private Double lopDays;
+
+    // Add to CreatePayslipRequest.java
+
+    private TaxRegime taxRegime = TaxRegime.OLD; // default to OLD
+
+    public TaxRegime getTaxRegime() { return taxRegime; }
+    public void setTaxRegime(TaxRegime taxRegime) { this.taxRegime = taxRegime; }
 
     // getters setters
 
@@ -161,5 +171,13 @@ public class CreatePayslipRequest {
 
     public void setVariablePay(BigDecimal variablePay) {
         this.variablePay = variablePay;
+    }
+
+    public Double getLopDays() {
+        return lopDays;
+    }
+
+    public void setLopDays(Double lopDays) {
+        this.lopDays = lopDays;
     }
 }

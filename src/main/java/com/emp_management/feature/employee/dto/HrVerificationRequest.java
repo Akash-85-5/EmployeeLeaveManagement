@@ -13,6 +13,7 @@ import com.emp_management.shared.enums.VerificationStatus;
 public class HrVerificationRequest {
 
     private VerificationStatus status;
+
     private String remarks; // required when REJECTED
 
     public VerificationStatus getStatus() { return status; }
