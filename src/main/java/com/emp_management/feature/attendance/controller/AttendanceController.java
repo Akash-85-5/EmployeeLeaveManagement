@@ -3,8 +3,8 @@ package com.emp_management.feature.attendance.controller;
 import com.emp_management.feature.attendance.dto.*;
 import com.emp_management.feature.attendance.service.AttendanceService;
 import com.emp_management.feature.employee.dto.NameDto;
-import com.emp_management.feature.employee.entity.Employee;
 import com.emp_management.feature.employee.service.EmployeeService;
+import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -75,7 +75,7 @@ public class AttendanceController {
                 .body(new InputStreamResource(in));
     }
 
-    // 🔹 Daily View
+    // Daily View
     @GetMapping("/daily")
     public List<AttendanceDetailDTO> getDailyAttendance(
             @RequestParam
@@ -85,7 +85,7 @@ public class AttendanceController {
         return service.getDailyAttendance(date);
     }
 
-    // 🔹 All Employees (Filter + Pagination)
+    // All Employees (Filter + Pagination)
     @GetMapping("/all")
     public Page<AttendanceDetailDTO> getAllEmployeesAttendance(
 
@@ -106,8 +106,8 @@ public class AttendanceController {
             @RequestParam(defaultValue = "10")
             int size
     ) {
-
-        return service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
+        Page<AttendanceDetailDTO> res = service.getAllEmployeesAttendance(fromDate, toDate, status, page, size);
+        return res;
     }
 
     @GetMapping("/employee/{empId}/punch-records")
@@ -128,5 +128,71 @@ public class AttendanceController {
             @RequestParam(defaultValue = "10") int size) {
 
         return service.getTeamAttendance(reportingId, fromDate, toDate, status, page, size);
+    }
+
+    @PostMapping("/download/team/{managerId}")
+    public ResponseEntity<InputStreamResource> downloadTeamExcel(
+            @PathVariable String managerId,
+            @RequestBody AttendanceExportRequest request) {
+
+        List<AttendanceDetailDTO> records = service.getTeamAttendanceExportData(
+                request.getEmpIds(),
+                request.getFromDate(),
+                request.getToDate()
+        );
+
+        ByteArrayInputStream in = service.exportTeamAttendanceToExcel(records);
+
+        String fileName = "Team_Attendance_" + managerId + "_" + request.getFromDate() + "_to_" + request.getToDate() + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new InputStreamResource(in));
+    }
+
+    // 🔹 Universal Download: Allows Admin/Manager to download specific employee lists
+    @PostMapping("/download/selection")
+    public ResponseEntity<InputStreamResource> downloadSelectedEmployeesExcel(
+            @Valid @RequestBody AttendanceExportRequest request) {
+
+        // Validate that we have employees to fetch
+        if (request.getEmpIds() == null || request.getEmpIds().isEmpty()) {
+            throw new IllegalArgumentException("Employee list cannot be empty");
+        }
+
+        // Use the existing service method that fetches by List<String>
+        List<AttendanceDetailDTO> records = service.getTeamAttendanceExportData(
+                request.getEmpIds(),
+                request.getFromDate(),
+                request.getToDate()
+        );
+
+        ByteArrayInputStream in = service.exportTeamAttendanceToExcel(records);
+
+        String fileName = "Attendance_Report_" + request.getFromDate() + "_to_" + request.getToDate() + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new InputStreamResource(in));
+    }
+
+    @GetMapping("/download/all")
+    public ResponseEntity<InputStreamResource> downloadAllAttendanceExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) String status) {
+
+        List<AttendanceDetailDTO> records = service.getAllAttendanceExportData(fromDate, toDate, status);
+
+        ByteArrayInputStream in = service.exportTeamAttendanceToExcel(records);
+
+        String fileName = "Organization_Attendance_" + fromDate + "_to_" + toDate + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new InputStreamResource(in));
     }
 }

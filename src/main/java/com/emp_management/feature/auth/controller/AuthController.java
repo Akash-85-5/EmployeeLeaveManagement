@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * Auth controller — JWT-only (no cookies, no refresh tokens).
- *
+ * <p>
  * ┌──────────────────────────────────────────────────────────────────────┐
  * │  Endpoint                   │ Auth required │ Description            │
  * ├──────────────────────────────────────────────────────────────────────┤
@@ -19,7 +19,7 @@ import java.util.Map;
  * │  POST /api/auth/force-change │ Yes (JWT)     │ First-login pwd change │
  * │  PUT  /api/auth/change-pass  │ Yes (JWT)     │ Known-old-pwd change   │
  * └──────────────────────────────────────────────────────────────────────┘
- *
+ * <p>
  * Removed: /refresh, /logout  (stateless JWT — no server-side session to clear)
  */
 @RestController
@@ -37,23 +37,22 @@ public class AuthController {
     /**
      * POST /api/auth/login
      * Body: { "employeeId": "EMP001", "password": "Secret@1" }
-     *
+     * <p>
      * Returns:
      * {
-     *   "employeeId": "EMP001",
-     *   "role": "EMPLOYEE",
-     *   "token": "eyJ...",
-     *   "forcePasswordChange": false
+     * "employeeId": "EMP001",
+     * "role": "EMPLOYEE",
+     * "token": "eyJ...",
+     * "forcePasswordChange": false
      * }
-     *
+     * <p>
      * Frontend responsibility:
-     *  - Store token in sessionStorage.
-     *  - If forcePasswordChange == true → redirect to /force-change.
-     *  - Send token as: Authorization: Bearer <token>
+     * - Store token in sessionStorage.
+     * - If forcePasswordChange == true → redirect to /force-change.
+     * - Send token as: Authorization: Bearer <token>
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        System.out.printf(request.getIdentifier());
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
@@ -64,11 +63,11 @@ public class AuthController {
      * POST /api/auth/force-change
      * Header: Authorization: Bearer <token>
      * Body: { "newPassword": "MyNewPwd1" }
-     *
+     * <p>
      * Rules:
-     *  - No complexity / history check (admin default "1234" being replaced).
-     *  - Clears forcePasswordChange flag.
-     *  - Does NOT invalidate the current JWT (user stays logged in).
+     * - No complexity / history check (admin default "1234" being replaced).
+     * - Clears forcePasswordChange flag.
+     * - Does NOT invalidate the current JWT (user stays logged in).
      */
     @PostMapping("/force-change")
     public ResponseEntity<?> forceChangePassword(
@@ -85,12 +84,12 @@ public class AuthController {
      * PUT /api/auth/change-password
      * Header: Authorization: Bearer <token>
      * Body: { "oldPassword": "OldPass@1", "newPassword": "NewPass@2" }
-     *
+     * <p>
      * Rules:
-     *  - Old password must match.
-     *  - New password must pass complexity.
-     *  - Must not match last 3 passwords.
-     *  - Invalidates ALL previously issued tokens (session invalidation).
+     * - Old password must match.
+     * - New password must pass complexity.
+     * - Must not match last 3 passwords.
+     * - Invalidates ALL previously issued tokens (session invalidation).
      */
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request) {

@@ -54,6 +54,7 @@ public class DashboardController {
         return ResponseEntity.ok(
                 dashboardService.getMyLeaveCalendar(employeeId));
     }
+
     // ✅ UPDATED: Added @PreAuthorize — was missing before
     @GetMapping("/leave-counts/{employeeId}")
     public ResponseEntity<Map<RequestStatus, Long>> getLeaveCountsByStatus(
@@ -134,7 +135,7 @@ public class DashboardController {
     }
 
     @GetMapping("/team-on-leave/{id}")
-     public ResponseEntity<List<TeamMemberBalance>> getTeamMembersOnLeaveToday(
+    public ResponseEntity<List<TeamMemberBalance>> getTeamMembersOnLeaveToday(
             @PathVariable String id) {
         return ResponseEntity.ok(
                 dashboardService.getTeamMembersOnLeaveToday(id));
@@ -161,8 +162,7 @@ public class DashboardController {
 //        }
 //    }
 
-    @GetMapping("/hr/on-leave")
-    @PreAuthorize("hasRole('HR')")
+    @GetMapping("/on-leave")
     public ResponseEntity<List<EmployeeSummaryDTO>> getEmployeesOnLeave() {
         log.info("[API] GET employees on leave");
         try {
@@ -208,6 +208,7 @@ public class DashboardController {
         return ResponseEntity.ok(
                 dashboardService.getCompanyWideStats(year));
     }
+
     @GetMapping("/team-members/{Id}")
     public ResponseEntity<List<TeamMember>> getTeamMembers(
             @PathVariable String Id) {

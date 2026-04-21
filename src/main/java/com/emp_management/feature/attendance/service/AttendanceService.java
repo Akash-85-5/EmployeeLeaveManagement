@@ -137,7 +137,6 @@ public class AttendanceService {
                 .stream()
                 .map(Employee::getEmpId)
                 .toList();
-
         if (reporteeIds.isEmpty()) {
             return Page.empty();
         }
@@ -219,6 +218,59 @@ public class AttendanceService {
         }
     }
 
+    public ByteArrayInputStream exportTeamAttendanceToExcel(List<AttendanceDetailDTO> records) {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Team Attendance Report");
+
+            // 1. Create Style for Header
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+
+            CellStyle headerCellStyle = workbook.createCellStyle();
+            headerCellStyle.setFont(headerFont);
+            headerCellStyle.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
+            headerCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerCellStyle.setBorderBottom(BorderStyle.THIN);
+
+            // 2. Create Header Row
+            String[] columns = {"Emp ID", "Name", "Date", "Status", "Check In", "Check Out", "Working Hours", "Punches"};
+            Row headerRow = sheet.createRow(0);
+
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(headerCellStyle);
+            }
+
+            // 3. Fill Data Rows
+            int rowIdx = 1;
+            for (AttendanceDetailDTO record : records) {
+                Row row = sheet.createRow(rowIdx++);
+
+                row.createCell(0).setCellValue(record.getEmployeeId() != null ? record.getEmployeeId() : "");
+                row.createCell(1).setCellValue(record.getEmployeeName() != null ? record.getEmployeeName() : "");
+                row.createCell(2).setCellValue(record.getDate() != null ? record.getDate().toString() : "N/A");
+                row.createCell(3).setCellValue(record.getStatus() != null ? record.getStatus() : "N/A");
+                row.createCell(4).setCellValue(record.getCheckIn() != null ? record.getCheckIn().toString() : "--:--");
+                row.createCell(5).setCellValue(record.getCheckOut() != null ? record.getCheckOut().toString() : "--:--");
+                row.createCell(6).setCellValue(record.getWorkingHours() != null ? record.getWorkingHours().toString() : "00:00");
+                row.createCell(7).setCellValue(record.getPunchRecords() != null ? record.getPunchRecords() : "");
+            }
+
+            // 4. Auto-size all columns for better readability
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to generate Excel report", e);
+        }
+    }
+
 
     private AttendanceDetailDTO mapToDetail(AttendanceSummary att) {
 
@@ -244,5 +296,22 @@ public class AttendanceService {
         dto.setLopTriggered(att.isLopTriggered());
 
         return dto;
+    }
+
+    // In AttendanceService.java
+
+    public List<AttendanceDetailDTO> getTeamAttendanceExportData(List<String> empIds, LocalDate from, LocalDate to) {
+        // Uses a repository method that returns List<AttendanceSummary> instead of Page
+        return repo.findByEmployeeIdInAndAttendanceDateBetweenOrderByAttendanceDateAsc(empIds, from, to)
+                .stream()
+                .map(this::mapToDetail)
+                .toList();
+    }
+
+    public List<AttendanceDetailDTO> getAllAttendanceExportData(LocalDate from, LocalDate to, String status) {
+        return repo.findFilteredAttendanceList(status, from, to) // Need a non-paginated version in Repo
+                .stream()
+                .map(this::mapToDetail)
+                .toList();
     }
 }

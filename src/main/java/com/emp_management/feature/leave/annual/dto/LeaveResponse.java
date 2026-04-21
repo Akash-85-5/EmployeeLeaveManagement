@@ -4,19 +4,19 @@ import com.emp_management.feature.leave.annual.entity.LeaveApplication;
 
 public class LeaveResponse {
 
-    private LeaveApplication leaveApplication;
+    private LeaveApplicationResponseDTO leaveApplication;
     private String warning;
 
-    public LeaveResponse(LeaveApplication leaveApplication, String warning) {
+    public LeaveResponse(LeaveApplicationResponseDTO leaveApplication, String warning) {
         this.leaveApplication = leaveApplication;
         this.warning = warning;
-    }   
+    }
 
-    public LeaveApplication getLeaveApplication() {
+    public LeaveApplicationResponseDTO getLeaveApplication() {
         return leaveApplication;
     }
 
-    public void setLeaveApplication(LeaveApplication leaveApplication) {
+    public void setLeaveApplication(LeaveApplicationResponseDTO leaveApplication) {
         this.leaveApplication = leaveApplication;
     }
 

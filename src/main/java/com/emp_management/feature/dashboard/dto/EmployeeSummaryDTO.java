@@ -11,9 +11,10 @@ public class EmployeeSummaryDTO {
     private String role;
     private String reportingId;
 
-    public EmployeeSummaryDTO() {}
 
-    // ✅ Static factory method — easy to call from DashboardService
+    public EmployeeSummaryDTO() {
+    }
+
     public static EmployeeSummaryDTO from(Employee e) {
         EmployeeSummaryDTO dto = new EmployeeSummaryDTO();
         dto.id = e.getEmpId();
@@ -24,9 +25,23 @@ public class EmployeeSummaryDTO {
         return dto;
     }
 
-    public String getId() { return id; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public String getRole() { return role; }
-    public String getReportingId() { return reportingId; }
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getReportingId() {
+        return reportingId;
+    }
 }
