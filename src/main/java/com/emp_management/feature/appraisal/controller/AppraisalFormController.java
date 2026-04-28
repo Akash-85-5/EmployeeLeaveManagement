@@ -17,27 +17,27 @@ public class AppraisalFormController {
         this.formService = formService;
     }
 
-    @GetMapping("/{definitionId}")
+    @GetMapping("/{definitionId}/{employeeId}")
     public ResponseEntity<AppraisalFormResponse> getForm(
             @PathVariable Long definitionId,
-            @RequestHeader("X-Employee-Id") String employeeId,
-            @RequestHeader(value = "X-L1-Reviewer-Id", required = false) String l1ReviewerId,
-            @RequestHeader(value = "X-L2-Reviewer-Id", required = false) String l2ReviewerId) {
+            @PathVariable String employeeId,
+            @RequestParam(required = false) String l1ReviewerId,
+            @RequestParam(required = false) String l2ReviewerId) {
         return ResponseEntity.ok(
                 formService.getOrInitForm(definitionId, employeeId, l1ReviewerId, l2ReviewerId));
     }
 
-    @PostMapping("/save")
+    @PostMapping("/save/{employeeId}")
     public ResponseEntity<AppraisalFormResponse> saveDraft(
-            @Valid @RequestBody AppraisalFormSaveRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody AppraisalFormSaveRequest req) {
         return ResponseEntity.ok(formService.saveDraft(req, employeeId));
     }
 
-    @PostMapping("/submit")
+    @PostMapping("/submit/{employeeId}")
     public ResponseEntity<AppraisalFormResponse> submitForm(
-            @Valid @RequestBody AppraisalFormSaveRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody AppraisalFormSaveRequest req) {
         return ResponseEntity.ok(formService.submitForm(req, employeeId));
     }
 }

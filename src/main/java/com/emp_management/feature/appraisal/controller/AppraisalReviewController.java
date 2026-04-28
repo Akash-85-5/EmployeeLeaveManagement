@@ -20,29 +20,29 @@ public class AppraisalReviewController {
         this.reviewService = reviewService;
     }
 
-    @GetMapping("/pending/l1")
+    @GetMapping("/pending/l1/{reviewerId}")
     public ResponseEntity<List<AppraisalResponse>> pendingL1Reviews(
-            @RequestHeader("X-Employee-Id") String reviewerId) {
+            @PathVariable String reviewerId) {
         return ResponseEntity.ok(reviewService.getPendingL1Reviews(reviewerId));
     }
 
-    @GetMapping("/pending/l2")
+    @GetMapping("/pending/l2/{reviewerId}")
     public ResponseEntity<List<AppraisalResponse>> pendingL2Reviews(
-            @RequestHeader("X-Employee-Id") String reviewerId) {
+            @PathVariable String reviewerId) {
         return ResponseEntity.ok(reviewService.getPendingL2Reviews(reviewerId));
     }
 
-    @PostMapping("/l1")
+    @PostMapping("/l1/{reviewerId}")
     public ResponseEntity<AppraisalResponse> submitL1Review(
-            @Valid @RequestBody AppraisalReviewRequest req,
-            @RequestHeader("X-Employee-Id") String reviewerId) {
+            @PathVariable String reviewerId,
+            @Valid @RequestBody AppraisalReviewRequest req) {
         return ResponseEntity.ok(reviewService.submitL1Review(req, reviewerId));
     }
 
-    @PostMapping("/l2")
+    @PostMapping("/l2/{reviewerId}")
     public ResponseEntity<AppraisalResponse> submitL2Review(
-            @Valid @RequestBody AppraisalReviewRequest req,
-            @RequestHeader("X-Employee-Id") String reviewerId) {
+            @PathVariable String reviewerId,
+            @Valid @RequestBody AppraisalReviewRequest req) {
         return ResponseEntity.ok(reviewService.submitL2Review(req, reviewerId));
     }
 

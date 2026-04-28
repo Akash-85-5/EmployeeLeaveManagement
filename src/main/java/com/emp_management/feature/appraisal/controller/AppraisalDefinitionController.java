@@ -19,25 +19,25 @@ public class AppraisalDefinitionController {
         this.definitionService = definitionService;
     }
 
-    @PostMapping
+    @PostMapping("/{employeeId}")
     public ResponseEntity<AppraisalDefinition> create(
-            @Valid @RequestBody AppraisalDefinitionRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody AppraisalDefinitionRequest req) {
         return ResponseEntity.ok(definitionService.createDefinition(req, employeeId));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id}/{employeeId}")
     public ResponseEntity<AppraisalDefinition> update(
             @PathVariable Long id,
-            @Valid @RequestBody AppraisalDefinitionRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody AppraisalDefinitionRequest req) {
         return ResponseEntity.ok(definitionService.updateDefinition(id, req, employeeId));
     }
 
-    @PatchMapping("/{id}/publish")
+    @PatchMapping("/{id}/publish/{employeeId}")
     public ResponseEntity<AppraisalDefinition> publish(
             @PathVariable Long id,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId) {
         return ResponseEntity.ok(definitionService.publishDefinition(id, employeeId));
     }
 

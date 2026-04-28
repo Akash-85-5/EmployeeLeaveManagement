@@ -21,18 +21,20 @@ public class AppraisalMasterController {
         this.masterService = masterService;
     }
 
-    @PostMapping("/metrics")
+    // ── Metric endpoints ──────────────────────────────────────────
+
+    @PostMapping("/metrics/{employeeId}")
     public ResponseEntity<AppraisalMetricMaster> createMetric(
-            @Valid @RequestBody MetricMasterRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody MetricMasterRequest req) {
         return ResponseEntity.ok(masterService.createMetric(req, employeeId));
     }
 
-    @PutMapping("/metrics/{id}")
+    @PutMapping("/metrics/{id}/{employeeId}")
     public ResponseEntity<AppraisalMetricMaster> updateMetric(
             @PathVariable Long id,
-            @Valid @RequestBody MetricMasterRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody MetricMasterRequest req) {
         return ResponseEntity.ok(masterService.updateMetric(id, req, employeeId));
     }
 
@@ -45,27 +47,29 @@ public class AppraisalMasterController {
         return ResponseEntity.ok(metrics);
     }
 
-    @PatchMapping("/metrics/{id}/toggle")
+    @PatchMapping("/metrics/{id}/toggle/{employeeId}")
     public ResponseEntity<Void> toggleMetric(
             @PathVariable Long id,
-            @RequestParam boolean active,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @RequestParam boolean active) {
         masterService.toggleMetricActive(id, active, employeeId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/questions")
+    // ── Question endpoints ────────────────────────────────────────
+
+    @PostMapping("/questions/{employeeId}")
     public ResponseEntity<AppraisalQuestionMaster> createQuestion(
-            @Valid @RequestBody QuestionMasterRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody QuestionMasterRequest req) {
         return ResponseEntity.ok(masterService.createQuestion(req, employeeId));
     }
 
-    @PutMapping("/questions/{id}")
+    @PutMapping("/questions/{id}/{employeeId}")
     public ResponseEntity<AppraisalQuestionMaster> updateQuestion(
             @PathVariable Long id,
-            @Valid @RequestBody QuestionMasterRequest req,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @Valid @RequestBody QuestionMasterRequest req) {
         return ResponseEntity.ok(masterService.updateQuestion(id, req, employeeId));
     }
 
@@ -75,15 +79,16 @@ public class AppraisalMasterController {
     }
 
     @GetMapping("/questions/by-metric/{metricId}")
-    public ResponseEntity<List<AppraisalQuestionMaster>> getByMetric(@PathVariable Long metricId) {
+    public ResponseEntity<List<AppraisalQuestionMaster>> getByMetric(
+            @PathVariable Long metricId) {
         return ResponseEntity.ok(masterService.getQuestionsByMetric(metricId));
     }
 
-    @PatchMapping("/questions/{id}/toggle")
+    @PatchMapping("/questions/{id}/toggle/{employeeId}")
     public ResponseEntity<Void> toggleQuestion(
             @PathVariable Long id,
-            @RequestParam boolean active,
-            @RequestHeader("X-Employee-Id") String employeeId) {
+            @PathVariable String employeeId,
+            @RequestParam boolean active) {
         masterService.toggleQuestionActive(id, active, employeeId);
         return ResponseEntity.ok().build();
     }
