@@ -309,7 +309,7 @@ public class AttendanceService {
     }
 
     public List<AttendanceDetailDTO> getAllAttendanceExportData(LocalDate from, LocalDate to, String status) {
-        return repo.findFilteredAttendanceList(status, from, to) // Need a non-paginated version in Repo
+        return repo.findFilteredAttendanceList(status, from, to)
                 .stream()
                 .map(this::mapToDetail)
                 .toList();
